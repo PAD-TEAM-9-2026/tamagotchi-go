@@ -1,0 +1,2030 @@
+{
+  "info": {
+    "name": "Notification",
+    "description": "Every endpoint of the Notification service, in an order that runs start to finish. Requests capture ids into collection variables, so a full run needs no manual input beyond base_url.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.\n\nThe history is empty on a fresh service because a notification is only ever created by consuming an event from another service, and the contract exposes no route to inject one.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3008"
+    },
+    {
+      "key": "package_id",
+      "value": "0192f3c1-8a44-7c31-9e02-6b1d4f8a2c11"
+    },
+    {
+      "key": "package_other_id",
+      "value": "0192f3c1-9b55-7d42-af13-7c2e5a9b3d22"
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "other_id",
+      "value": ""
+    },
+    {
+      "key": "user_credential",
+      "value": ""
+    },
+    {
+      "key": "other_credential",
+      "value": ""
+    },
+    {
+      "key": "probe_credential",
+      "value": ""
+    },
+    {
+      "key": "android_device_id",
+      "value": ""
+    },
+    {
+      "key": "android_registered_at",
+      "value": ""
+    },
+    {
+      "key": "ios_device_id",
+      "value": ""
+    },
+    {
+      "key": "web_device_id",
+      "value": ""
+    },
+    {
+      "key": "first_page_device_id",
+      "value": ""
+    },
+    {
+      "key": "device_cursor",
+      "value": ""
+    },
+    {
+      "key": "preferences_etag",
+      "value": ""
+    },
+    {
+      "key": "preferences_version",
+      "value": ""
+    },
+    {
+      "key": "read_all_before",
+      "value": ""
+    },
+    {
+      "key": "read_all_key",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    },
+    {
+      "key": "replay_key",
+      "value": ""
+    },
+    {
+      "key": "fresh_uuid",
+      "value": ""
+    },
+    {
+      "key": "unknown_id",
+      "value": ""
+    },
+    {
+      "key": "android_token",
+      "value": ""
+    },
+    {
+      "key": "rotated_token",
+      "value": ""
+    },
+    {
+      "key": "ios_token",
+      "value": ""
+    },
+    {
+      "key": "web_token",
+      "value": ""
+    },
+    {
+      "key": "other_token",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function uuidv7() {",
+          "  const ms = Date.now();",
+          "  const bytes = new Uint8Array(16);",
+          "  bytes[0] = Math.floor(ms / 1099511627776) & 0xff;",
+          "  bytes[1] = Math.floor(ms / 4294967296) & 0xff;",
+          "  bytes[2] = Math.floor(ms / 16777216) & 0xff;",
+          "  bytes[3] = Math.floor(ms / 65536) & 0xff;",
+          "  bytes[4] = Math.floor(ms / 256) & 0xff;",
+          "  bytes[5] = ms & 0xff;",
+          "  for (let i = 6; i < 16; i += 1) {",
+          "    bytes[i] = Math.floor(Math.random() * 256);",
+          "  }",
+          "  bytes[6] = (bytes[6] & 0x0f) | 0x70;",
+          "  bytes[8] = (bytes[8] & 0x3f) | 0x80;",
+          "  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');",
+          "  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');",
+          "}",
+          "",
+          "pm.collectionVariables.set('idempotency_key', uuidv7());",
+          "pm.collectionVariables.set('fresh_uuid', uuidv7());",
+          "pm.collectionVariables.set('unknown_id', uuidv7());",
+          "pm.collectionVariables.set('probe_credential', 'dev.' + pm.collectionVariables.get('fresh_uuid'));",
+          "",
+          "function seed(key, value) {",
+          "  if (!pm.collectionVariables.get(key)) {",
+          "    pm.collectionVariables.set(key, value);",
+          "  }",
+          "}",
+          "",
+          "seed('user_id', uuidv7());",
+          "seed('other_id', uuidv7());",
+          "seed('user_credential', 'dev.' + pm.collectionVariables.get('user_id'));",
+          "seed('other_credential', 'dev.' + pm.collectionVariables.get('other_id'));",
+          "seed('read_all_before', new Date().toISOString());",
+          "seed('android_token', 'fcm-' + uuidv7());",
+          "seed('rotated_token', 'fcm-' + uuidv7());",
+          "seed('ios_token', 'fcm-' + uuidv7());",
+          "seed('web_token', 'fcm-' + uuidv7());",
+          "seed('other_token', 'fcm-' + uuidv7());"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Probes",
+      "item": [
+        {
+          "name": "Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 up', () => pm.response.to.have.status(200));",
+                  "pm.test('reports UP', () => pm.expect(pm.response.json()).to.eql({ status: 'UP' }));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ready",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 ready', () => pm.response.to.have.status(200));",
+                  "pm.test('reports READY', () => pm.expect(pm.response.json()).to.eql({ status: 'READY' }));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ready",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "Register an Android device",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 registered', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('android_device_id', body.id);",
+                  "pm.collectionVariables.set('android_registered_at', body.registered_at);",
+                  "pm.collectionVariables.set('replay_key', pm.collectionVariables.get('idempotency_key'));",
+                  "pm.test('never returns the push token', () => {",
+                  "  pm.expect(body).to.not.have.property('fcm_token');",
+                  "});",
+                  "pm.test('carries exactly the contract fields', () => {",
+                  "  pm.expect(Object.keys(body).sort()).to.eql(['id','locale','package_id','platform','registered_at','user_id']);",
+                  "});",
+                  "pm.test('belongs to the caller', () => {",
+                  "  pm.expect(body.user_id).to.eql(pm.collectionVariables.get('user_id'));",
+                  "  pm.expect(body.platform).to.eql('ANDROID');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"{{android_token}}\",\n  \"platform\": \"ANDROID\",\n  \"package_id\": \"{{package_id}}\",\n  \"locale\": \"en-GB\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Replay the registration with the same key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 replayed', () => pm.response.to.have.status(200));",
+                  "pm.test('returns the stored response rather than registering again', () => {",
+                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('android_device_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{replay_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"{{android_token}}\",\n  \"platform\": \"ANDROID\",\n  \"package_id\": \"{{package_id}}\",\n  \"locale\": \"en-GB\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Re-register the same device with a rotated token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 registered', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('stays one device per user, package and platform', () => {",
+                  "  pm.expect(body.id).to.eql(pm.collectionVariables.get('android_device_id'));",
+                  "});",
+                  "pm.test('keeps the original registration moment', () => {",
+                  "  pm.expect(body.registered_at).to.eql(pm.collectionVariables.get('android_registered_at'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"{{rotated_token}}\",\n  \"platform\": \"ANDROID\",\n  \"package_id\": \"{{package_id}}\",\n  \"locale\": \"en-GB\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register an iOS device for the same package",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 registered', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('ios_device_id', body.id);",
+                  "pm.test('another platform is another device', () => {",
+                  "  pm.expect(body.id).to.not.eql(pm.collectionVariables.get('android_device_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"{{ios_token}}\",\n  \"platform\": \"IOS\",\n  \"package_id\": \"{{package_id}}\",\n  \"locale\": \"ro-MD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register a web device for another package",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 registered', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('web_device_id', body.id);",
+                  "pm.test('another package is another device', () => {",
+                  "  pm.expect(body.id).to.not.eql(pm.collectionVariables.get('android_device_id'));",
+                  "  pm.expect(body.id).to.not.eql(pm.collectionVariables.get('ios_device_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"{{web_token}}\",\n  \"platform\": \"WEB\",\n  \"package_id\": \"{{package_other_id}}\",\n  \"locale\": \"en-GB\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List the devices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('every registered device, newest first', () => {",
+                  "  pm.expect(body.items.map((item) => item.id)).to.eql([",
+                  "    pm.collectionVariables.get('web_device_id'),",
+                  "    pm.collectionVariables.get('ios_device_id'),",
+                  "    pm.collectionVariables.get('android_device_id'),",
+                  "  ]);",
+                  "});",
+                  "pm.test('a page that fits carries no cursor', () => {",
+                  "  pm.expect(body.next_cursor).to.be.null;",
+                  "});",
+                  "pm.test('a page never leaks a push token', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('fcm_token');",
+                  "  pm.expect(pm.response.text()).to.not.include(pm.collectionVariables.get('android_token'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List the first page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('device_cursor', body.next_cursor);",
+                  "pm.collectionVariables.set('first_page_device_id', body.items[0].id);",
+                  "pm.test('one device on the page', () => pm.expect(body.items).to.have.lengthOf(1));",
+                  "pm.test('a cursor points at the rest', () => pm.expect(body.next_cursor).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices?limit=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Follow the cursor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('moves on rather than repeating the first device', () => {",
+                  "  pm.expect(body.items[0].id).to.not.eql(pm.collectionVariables.get('first_page_device_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices?limit=1&cursor={{device_cursor}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                },
+                {
+                  "key": "cursor",
+                  "value": "{{device_cursor}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove the web device",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 removed', () => pm.response.to.have.status(204));",
+                  "pm.test('answers with no body', () => pm.expect(pm.response.text()).to.eql(''));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices/{{web_device_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices",
+                "{{web_device_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List after the removal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().items.map((item) => item.id);",
+                  "pm.test('the removed device is gone', () => {",
+                  "  pm.expect(ids).to.not.include(pm.collectionVariables.get('web_device_id'));",
+                  "});",
+                  "pm.test('the others are untouched', () => {",
+                  "  pm.expect(ids).to.eql([",
+                  "    pm.collectionVariables.get('ios_device_id'),",
+                  "    pm.collectionVariables.get('android_device_id'),",
+                  "  ]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Read the history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('the page is well formed', () => {",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('next_cursor');",
+                  "  pm.expect(body.items).to.be.an('array');",
+                  "});",
+                  "pm.test('nothing yet, because a notification only arrives from an event', () => {",
+                  "  pm.expect(body.items).to.have.lengthOf(0);",
+                  "  pm.expect(body.next_cursor).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Read everything up to a moment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 receipt', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('read_all_key', pm.collectionVariables.get('idempotency_key'));",
+                  "pm.test('the receipt counts what changed', () => {",
+                  "  pm.expect(body).to.eql({ updated_count: 0 });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/notifications/read-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "notifications",
+                "read-all"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"created_before\": \"{{read_all_before}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Replay the read-all with the same key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 replayed', () => pm.response.to.have.status(200));",
+                  "pm.test('returns the stored receipt', () => {",
+                  "  pm.expect(pm.response.json()).to.eql({ updated_count: 0 });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{read_all_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/notifications/read-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "notifications",
+                "read-all"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"created_before\": \"{{read_all_before}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Preferences",
+      "item": [
+        {
+          "name": "Defaults for a user who set nothing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 read', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('nothing muted, at version 1', () => {",
+                  "  pm.expect(body).to.eql({ muted_categories: [], version: 1 });",
+                  "});",
+                  "pm.test('the ETag matches the version', () => {",
+                  "  pm.expect(pm.response.headers.get('ETag')).to.eql('\"1\"');",
+                  "});",
+                  "pm.test('the path carries the user, so the body does not', () => {",
+                  "  pm.expect(body).to.not.have.property('user_id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{probe_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{fresh_uuid}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{fresh_uuid}}",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Read the current preferences",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 read', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('preferences_etag', pm.response.headers.get('ETag'));",
+                  "pm.collectionVariables.set('preferences_version', body.version);",
+                  "pm.test('carries exactly the contract fields', () => {",
+                  "  pm.expect(Object.keys(body).sort()).to.eql(['muted_categories','version']);",
+                  "});",
+                  "pm.test('the ETag matches the version', () => {",
+                  "  pm.expect(pm.response.headers.get('ETag')).to.eql('\"' + body.version + '\"');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mute two categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 changed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('preferences_etag', pm.response.headers.get('ETag'));",
+                  "pm.test('stores what was asked for', () => {",
+                  "  pm.expect(body.muted_categories).to.eql(['RAID_STARTED', 'PLAYER_NEARBY']);",
+                  "});",
+                  "pm.test('the version moves on by one', () => {",
+                  "  pm.expect(body.version).to.eql(Number(pm.collectionVariables.get('preferences_version')) + 1);",
+                  "});",
+                  "pm.collectionVariables.set('preferences_version', body.version);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{preferences_etag}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "preferences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"muted_categories\": [\n    \"RAID_STARTED\",\n    \"PLAYER_NEARBY\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Read the muted categories back",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 read', () => pm.response.to.have.status(200));",
+                  "pm.test('the change survived', () => {",
+                  "  pm.expect(pm.response.json().muted_categories).to.eql(['RAID_STARTED', 'PLAYER_NEARBY']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unmute everything",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 changed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('preferences_etag', pm.response.headers.get('ETag'));",
+                  "pm.test('nothing is muted', () => pm.expect(body.muted_categories).to.eql([]));",
+                  "pm.test('the version moves on by one', () => {",
+                  "  pm.expect(body.version).to.eql(Number(pm.collectionVariables.get('preferences_version')) + 1);",
+                  "});",
+                  "pm.collectionVariables.set('preferences_version', body.version);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{preferences_etag}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "preferences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"muted_categories\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "Mute with a wildcard If-Match",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 changed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('preferences_etag', pm.response.headers.get('ETag'));",
+                  "pm.test('a wildcard skips the version check', () => {",
+                  "  pm.expect(body.muted_categories).to.eql(['FRIEND_REQUEST']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "If-Match",
+                "value": "*"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "preferences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"muted_categories\": [\n    \"FRIEND_REQUEST\"\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refusals",
+      "item": [
+        {
+          "name": "Register with an empty push token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid device', () => pm.response.to.have.status(400));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('invalid_device');",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"\",\n  \"platform\": \"ANDROID\",\n  \"package_id\": \"{{package_id}}\",\n  \"locale\": \"en-GB\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register with an unknown platform",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid device', () => pm.response.to.have.status(400));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().code).to.eql('invalid_device'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"{{android_token}}\",\n  \"platform\": \"SYMBIAN\",\n  \"package_id\": \"{{package_id}}\",\n  \"locale\": \"en-GB\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register with an oversized locale",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid device', () => pm.response.to.have.status(400));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().code).to.eql('invalid_device'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"{{android_token}}\",\n  \"platform\": \"ANDROID\",\n  \"package_id\": \"{{package_id}}\",\n  \"locale\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register without an Idempotency-Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 key required', () => pm.response.to.have.status(400));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('idempotency_key_required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"{{android_token}}\",\n  \"platform\": \"ANDROID\",\n  \"package_id\": \"{{package_id}}\",\n  \"locale\": \"en-GB\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reuse a key with a different body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 key reuse', () => pm.response.to.have.status(409));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('idempotency_key_reuse');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{replay_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"{{other_token}}\",\n  \"platform\": \"ANDROID\",\n  \"package_id\": \"{{package_id}}\",\n  \"locale\": \"en-GB\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List devices with a cursor it never issued",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid cursor', () => pm.response.to.have.status(400));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().code).to.eql('invalid_cursor'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices?cursor=zzz!!",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "cursor",
+                  "value": "zzz!!"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List devices past the maximum page size",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid limit', () => pm.response.to.have.status(400));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().code).to.eql('invalid_limit'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices?limit=101",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "101"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove another user's device",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 another user', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('another_users_device');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{other_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices/{{android_device_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices",
+                "{{android_device_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove a device that does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 unknown device', () => pm.response.to.have.status(404));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().code).to.eql('unknown_device'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices/{{unknown_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices",
+                "{{unknown_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Read another user's history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 another user', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('another_users_notifications');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{other_id}}/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{other_id}}",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark a notification that does not exist as read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 unknown notification', () => pm.response.to.have.status(404));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('unknown_notification');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/notifications/{{unknown_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "notifications",
+                "{{unknown_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"read\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Mark a notification unread",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid read', () => pm.response.to.have.status(400));",
+                  "pm.test('the contract only allows marking as read', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('invalid_read');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/notifications/{{unknown_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "notifications",
+                "{{unknown_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"read\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Read all before a timestamp that is not UTC",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid created_before', () => pm.response.to.have.status(400));",
+                  "pm.test('timestamps are ISO 8601 UTC', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('invalid_read_all');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/notifications/read-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "notifications",
+                "read-all"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"created_before\": \"2026-09-20T17:19:40+02:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Read another user's preferences",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 another user', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('another_users_preferences');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{other_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{other_id}}",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change preferences without an If-Match",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 If-Match required', () => pm.response.to.have.status(400));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('if_match_required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "preferences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"muted_categories\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "Change preferences from a stale version",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('412 version mismatch', () => pm.response.to.have.status(412));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('version_mismatch');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "If-Match",
+                "value": "\"1\""
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "preferences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"muted_categories\": [\n    \"BATTLE_REQUEST\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Mute a category the contract does not define",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid preferences', () => pm.response.to.have.status(400));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('invalid_preferences');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{preferences_etag}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{user_id}}",
+                "preferences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"muted_categories\": [\n    \"SOMETHING_ELSE\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "No token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 with WWW-Authenticate', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.eql('Bearer');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A body that is not JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('415 unsupported media type', () => pm.response.to.have.status(415));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().code).to.eql('unsupported_media_type');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "devices"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "not json"
+            }
+          }
+        },
+        {
+          "name": "A route that does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 unknown route', () => pm.response.to.have.status(404));",
+                  "pm.test('answers with a problem document', () => {",
+                  "const body = pm.response.json();",
+                  "  pm.expect(body.code).to.eql('unknown_route');",
+                  "  pm.expect(body.type).to.eql('about:blank');",
+                  "  pm.expect(body).to.have.property('correlation_id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/nothing-here",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "nothing-here"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
