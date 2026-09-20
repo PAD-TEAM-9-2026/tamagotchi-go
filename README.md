@@ -322,7 +322,7 @@ here instead, as a global currency credit with reason `BATTLE_ACCESS_CAP`.
 | `POST /v1/tamagotchis/{id}/holders` | GrantAccessInput, Idempotency-Key | 200 AccessGrantReceipt | service |
 | `GET /v1/tamagotchis/{id}/holders` | none | 200 Holders | user or service |
 | `DELETE /v1/tamagotchis/{id}/holders/{userId}` | If-Match | 204 | user |
-| `GET /v1/users/{userId}/collection` | query limit, cursor, expand | 200 Collection | user or service |
+| `GET /v1/users/{userId}/collection` | query limit, cursor | 200 Collection | user or service |
 | `GET /v1/users/{userId}/collection/primary` | none | 200 PrimarySelection | user |
 | `PUT /v1/users/{userId}/collection/primary` | PrimaryInput, If-Match | 200 PrimarySelection | user |
 | `DELETE /v1/users/{userId}/collection/{id}` | If-Match | 204 | user |
