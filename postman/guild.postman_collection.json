@@ -1,0 +1,1230 @@
+{
+  "info": {
+    "name": "Guild",
+    "description": "Every endpoint of the Guild service, in an order that runs start to finish against an empty or populated database. Requests capture ids into collection variables, so a full run needs no manual input beyond base_url.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.\n\nThe guild chat endpoint is a WebSocket and is not exercised here; see the service README.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "guild_id",
+      "value": ""
+    },
+    {
+      "key": "guild_version",
+      "value": ""
+    },
+    {
+      "key": "leader_id",
+      "value": ""
+    },
+    {
+      "key": "officer_to_be_id",
+      "value": ""
+    },
+    {
+      "key": "decliner_id",
+      "value": ""
+    },
+    {
+      "key": "revokee_id",
+      "value": ""
+    },
+    {
+      "key": "kicked_id",
+      "value": ""
+    },
+    {
+      "key": "outsider_id",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    },
+    {
+      "key": "run_suffix",
+      "value": ""
+    },
+    {
+      "key": "officer_invitation_id",
+      "value": ""
+    },
+    {
+      "key": "decline_invitation_id",
+      "value": ""
+    },
+    {
+      "key": "revoke_invitation_id",
+      "value": ""
+    },
+    {
+      "key": "kick_invitation_id",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function uuidv7() {",
+          "  const ms = Date.now();",
+          "  const bytes = new Uint8Array(16);",
+          "  bytes[0] = Math.floor(ms / 1099511627776) & 0xff;",
+          "  bytes[1] = Math.floor(ms / 4294967296) & 0xff;",
+          "  bytes[2] = Math.floor(ms / 16777216) & 0xff;",
+          "  bytes[3] = Math.floor(ms / 65536) & 0xff;",
+          "  bytes[4] = Math.floor(ms / 256) & 0xff;",
+          "  bytes[5] = ms & 0xff;",
+          "  for (let i = 6; i < 16; i += 1) {",
+          "    bytes[i] = Math.floor(Math.random() * 256);",
+          "  }",
+          "  bytes[6] = (bytes[6] & 0x0f) | 0x70;",
+          "  bytes[8] = (bytes[8] & 0x3f) | 0x80;",
+          "  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');",
+          "  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');",
+          "}",
+          "",
+          "function seed(key, value) {",
+          "  if (!pm.collectionVariables.get(key)) {",
+          "    pm.collectionVariables.set(key, value);",
+          "  }",
+          "}",
+          "",
+          "pm.collectionVariables.set('idempotency_key', uuidv7());",
+          "",
+          "seed('leader_id', uuidv7());",
+          "seed('officer_to_be_id', uuidv7());",
+          "seed('decliner_id', uuidv7());",
+          "seed('revokee_id', uuidv7());",
+          "seed('kicked_id', uuidv7());",
+          "seed('outsider_id', uuidv7());",
+          "seed('run_suffix', Date.now().toString());",
+          ""
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Probes",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ready",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 READY', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('READY'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Guilds",
+      "item": [
+        {
+          "name": "Create the guild",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Dragons {{run_suffix}}\",\n  \"description\": \"Created by the Postman collection\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created, leader is the only member', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.leader_id).to.eql(pm.collectionVariables.get('leader_id'));",
+                  "  pm.expect(body.member_count).to.eql(1);",
+                  "  pm.expect(body.version).to.eql(1);",
+                  "  pm.collectionVariables.set('guild_id', body.guild_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List guilds",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds?limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds?limit=10"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, the new guild is in the page', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map((g) => g.guild_id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('guild_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the guild",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, matches what was created', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().guild_id).to.eql(pm.collectionVariables.get('guild_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the guild as a service",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Service-Name",
+                "value": "monster-raid"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('services may read guilds too', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invitations",
+      "item": [
+        {
+          "name": "Invite the future officer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "invitations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invited_user_id\": \"{{officer_to_be_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 PENDING', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('PENDING');",
+                  "  pm.collectionVariables.set('officer_invitation_id', body.invitation_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The invitee sees it in their inbox",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{officer_to_be_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/invitations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "invitations"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the pending invitation is listed', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map((i) => i.invitation_id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('officer_invitation_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept the invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{officer_to_be_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations/{{officer_invitation_id}}/accept",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "invitations",
+                "{{officer_invitation_id}}",
+                "accept"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 ACCEPTED', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('ACCEPTED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite a second user, to decline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "invitations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invited_user_id\": \"{{decliner_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 PENDING', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('decline_invitation_id', pm.response.json().invitation_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decline the invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{decliner_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations/{{decline_invitation_id}}/decline",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "invitations",
+                "{{decline_invitation_id}}",
+                "decline"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 DECLINED', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('DECLINED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite a third user, to revoke",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "invitations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invited_user_id\": \"{{revokee_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 PENDING', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('revoke_invitation_id', pm.response.json().invitation_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revoke the invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations/{{revoke_invitation_id}}/revoke",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "invitations",
+                "{{revoke_invitation_id}}",
+                "revoke"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 REVOKED', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('REVOKED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Members and roles",
+      "item": [
+        {
+          "name": "List members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "members"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('leader and the accepted officer-to-be are members', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  const ids = body.members.map((m) => m.user_id);",
+                  "  pm.expect(ids).to.include.members([pm.collectionVariables.get('leader_id'), pm.collectionVariables.get('officer_to_be_id')]);",
+                  "  pm.collectionVariables.set('guild_version', body.version);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Promote the new member to officer",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/members/{{officer_to_be_id}}/role",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "members",
+                "{{officer_to_be_id}}",
+                "role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"OFFICER\",\n  \"expected_guild_version\": {{guild_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, now OFFICER, version bumped', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  const officer = body.members.find((m) => m.user_id === pm.collectionVariables.get('officer_to_be_id'));",
+                  "  pm.expect(officer.role).to.eql('OFFICER');",
+                  "  pm.collectionVariables.set('guild_version', body.version);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite a member to kick",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "invitations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invited_user_id\": \"{{kicked_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => { pm.response.to.have.status(201); pm.collectionVariables.set('kick_invitation_id', pm.response.json().invitation_id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "They accept",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{kicked_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations/{{kick_invitation_id}}/accept",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "invitations",
+                "{{kick_invitation_id}}",
+                "accept"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 ACCEPTED', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The officer kicks them",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{officer_to_be_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/members/{{kicked_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "members",
+                "{{kicked_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204, officers may remove plain members', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transfer leadership to the officer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/leadership",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "leadership"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{officer_to_be_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, leadership moved', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().leader_id).to.eql(pm.collectionVariables.get('officer_to_be_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chat history",
+      "item": [
+        {
+          "name": "Read the chat history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{officer_to_be_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "messages"
+              ]
+            },
+            "description": "Chat itself is a WebSocket (GET /v1/guilds/{guildId}/chat, upgraded), which a plain HTTP collection cannot exercise. See the service README for a wscat example."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, page shape even with no messages', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('next_cursor');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Refusals",
+      "item": [
+        {
+          "name": "No credentials at all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 unauthorized', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing Idempotency-Key on a command",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{outsider_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"No key guild\",\n  \"description\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 idempotency_key_required', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().code).to.eql('idempotency_key_required');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An unknown guild",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{outsider_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/00000000-0000-7000-8000-000000000000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "00000000-0000-7000-8000-000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 guild_not_found', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.json().code).to.eql('guild_not_found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An outsider cannot invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{outsider_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "invitations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invited_user_id\": \"{{outsider_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403, not a member of this guild', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An officer cannot delete the guild",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{leader_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/guilds/{{guild_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}"
+              ]
+            },
+            "description": "leader_id was demoted to OFFICER by the leadership transfer above, so this checks that officers still cannot delete the guild."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403, only the leader may delete', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
