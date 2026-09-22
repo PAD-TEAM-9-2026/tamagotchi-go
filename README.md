@@ -620,6 +620,22 @@ their services, add them to `deploy/compose.yaml` the same way.
 Each service's own README documents running it individually, its full
 configuration, and how to publish a new image version.
 
+### Seeding test data
+
+Each image ships its own seed script (`node dist/db/seed.js`), which only
+fills an empty database and does nothing otherwise (`--force` wipes and
+reseeds). Runnable directly against the shared stack once it is up:
+
+```bash
+docker compose exec guild node dist/db/seed.js
+docker compose exec registry node dist/db/seed.js
+```
+
+Guild's script creates 3 guilds with members in every role and invitations in
+every status; Registry's creates 2 packages (one active with stats
+configured, one inactive), a boss and a raid occurrence in each of the
+scheduled and active states.
+
 ## GitHub workflow
 
 Branches: `main` is the release branch, `develop` is the integration branch.
