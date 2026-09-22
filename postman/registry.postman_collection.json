@@ -1,0 +1,1437 @@
+{
+  "info": {
+    "name": "Package Registry",
+    "description": "Every endpoint of the Package Registry service, in an order that runs start to finish against an empty or populated database.\n\nAdmin endpoints (creating packages, bosses, raid occurrences) need a user id configured in the service's ADMIN_USER_IDS. This collection's `admin_id` variable is fixed (not randomly generated) so you can add it once: set ADMIN_USER_IDS=00000000-0000-4000-8000-00000000a11e in the service's .env and restart it before running this collection.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "admin_id",
+      "value": "00000000-0000-4000-8000-00000000a11e"
+    },
+    {
+      "key": "package_id",
+      "value": ""
+    },
+    {
+      "key": "package_revision",
+      "value": ""
+    },
+    {
+      "key": "boss_id",
+      "value": ""
+    },
+    {
+      "key": "boss_version",
+      "value": ""
+    },
+    {
+      "key": "occurrence_id",
+      "value": ""
+    },
+    {
+      "key": "developer_id",
+      "value": ""
+    },
+    {
+      "key": "moderator_id",
+      "value": ""
+    },
+    {
+      "key": "outsider_id",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    },
+    {
+      "key": "run_suffix",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function uuidv7() {",
+          "  const ms = Date.now();",
+          "  const bytes = new Uint8Array(16);",
+          "  bytes[0] = Math.floor(ms / 1099511627776) & 0xff;",
+          "  bytes[1] = Math.floor(ms / 4294967296) & 0xff;",
+          "  bytes[2] = Math.floor(ms / 16777216) & 0xff;",
+          "  bytes[3] = Math.floor(ms / 65536) & 0xff;",
+          "  bytes[4] = Math.floor(ms / 256) & 0xff;",
+          "  bytes[5] = ms & 0xff;",
+          "  for (let i = 6; i < 16; i += 1) {",
+          "    bytes[i] = Math.floor(Math.random() * 256);",
+          "  }",
+          "  bytes[6] = (bytes[6] & 0x0f) | 0x70;",
+          "  bytes[8] = (bytes[8] & 0x3f) | 0x80;",
+          "  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');",
+          "  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');",
+          "}",
+          "",
+          "function seed(key, value) {",
+          "  if (!pm.collectionVariables.get(key)) {",
+          "    pm.collectionVariables.set(key, value);",
+          "  }",
+          "}",
+          "",
+          "pm.collectionVariables.set('idempotency_key', uuidv7());",
+          "",
+          "seed('developer_id', uuidv7());",
+          "seed('moderator_id', uuidv7());",
+          "seed('outsider_id', uuidv7());",
+          "seed('run_suffix', Date.now().toString());",
+          ""
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Probes",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ready",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 READY', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('READY'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Packages",
+      "item": [
+        {
+          "name": "Create the package",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{admin_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Dragons {{run_suffix}}\",\n  \"description\": \"Created by the Postman collection\",\n  \"version\": \"1.0.0\",\n  \"developer_user_ids\": [\n    \"{{developer_id}}\"\n  ],\n  \"moderator_user_ids\": [\n    \"{{moderator_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created, active, no config yet', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('active');",
+                  "  pm.expect(body.config_version).to.eql(null);",
+                  "  pm.expect(body.revision).to.eql(1);",
+                  "  pm.collectionVariables.set('package_id', body.package_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List packages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/packages?limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages?limit=10"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, the new package is in the page', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map((p) => p.package_id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('package_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the package, capturing the ETag",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, ETag matches revision', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(pm.response.headers.get('ETag')).to.eql('\"' + body.revision + '\"');",
+                  "  pm.collectionVariables.set('package_revision', body.revision);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The moderator edits the package",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{moderator_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{package_revision}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dragon Tamers {{run_suffix}}\",\n  \"description\": \"updated by Postman\",\n  \"version\": \"1.0.1\",\n  \"status\": \"active\",\n  \"developer_user_ids\": [\n    \"{{developer_id}}\"\n  ],\n  \"moderator_user_ids\": [\n    \"{{moderator_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, revision bumped', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.name).to.eql('Dragon Tamers {{run_suffix}}'.replace('{{run_suffix}}', pm.collectionVariables.get('run_suffix')));",
+                  "  pm.collectionVariables.set('package_revision', body.revision);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The moderator writes the stats config",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{moderator_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}",
+                "stats"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_package_revision\": {{package_revision}},\n  \"definition\": {\n    \"stats\": [\n      {\n        \"key\": \"hunger\",\n        \"value_type\": \"NUMBER\",\n        \"minimum\": 0,\n        \"maximum\": 100,\n        \"allowed_strings\": null\n      }\n    ],\n    \"bonuses\": [\n      {\n        \"stat_key\": \"hunger\",\n        \"operator\": \"GTE\",\n        \"threshold\": 80,\n        \"effect\": \"ATTACK_BPS\",\n        \"value_bps\": 500\n      }\n    ],\n    \"care_actions\": [\n      {\n        \"action\": \"feed\",\n        \"deltas\": [\n          {\n            \"stat_key\": \"hunger\",\n            \"delta\": 20\n          }\n        ],\n        \"xp\": 5,\n        \"cooldown_seconds\": 3600,\n        \"local_currency\": 2\n      }\n    ],\n    \"daily_currency_cap\": 100,\n    \"starter\": {\n      \"name\": \"Ember\",\n      \"combat_type\": \"FLAME\",\n      \"sprite_ref\": \"postman/ember\",\n      \"initial_stats\": {\n        \"hunger\": 80\n      }\n    },\n    \"assets\": [\n      {\n        \"sprite_ref\": \"postman/ember\",\n        \"url\": \"https://example.com/ember.png\"\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, config_version 1', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().config_version).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Service reads stat-definitions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Service-Name",
+                "value": "battle"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}/stat-definitions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}",
+                "stat-definitions"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, hunger is defined', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().stats[0].key).to.eql('hunger');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Service reads stat-bonuses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Service-Name",
+                "value": "battle"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}/stat-bonuses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}",
+                "stat-bonuses"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, one bonus rule', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().bonuses).to.have.lengthOf(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Service reads currency-rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Service-Name",
+                "value": "battle"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}/currency-rules",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}",
+                "currency-rules"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, daily cap is 100', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().daily_currency_cap).to.eql(100); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Service reads starter-pet",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Service-Name",
+                "value": "tamagotchi"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}/starter-pet",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}",
+                "starter-pet"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, starter is Ember', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().starter.name).to.eql('Ember'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public reads assets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}/assets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}",
+                "assets"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, no auth needed', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().items).to.have.lengthOf(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eligibility check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Service-Name",
+                "value": "guild"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/eligibility-check",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "eligibility-check"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_packages\": [\n    \"{{package_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, eligible on this active package', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.eligible).to.eql(true);",
+                  "  pm.expect(body.eligible_package_ids).to.eql([pm.collectionVariables.get('package_id')]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bosses",
+      "item": [
+        {
+          "name": "Create the boss",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{admin_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/bosses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "bosses"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"spooky\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 100000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201, config_version 1', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.config_version).to.eql(1);",
+                  "  pm.collectionVariables.set('boss_id', body.boss_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List bosses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{admin_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/bosses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "bosses"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, includes the new boss', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map((b) => b.boss_id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('boss_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the boss, capturing the ETag",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{outsider_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/bosses/{{boss_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "bosses",
+                "{{boss_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, ETag matches config_version', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(pm.response.headers.get('ETag')).to.eql('\"' + body.config_version + '\"');",
+                  "  pm.collectionVariables.set('boss_version', body.config_version);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update the boss",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{admin_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{boss_version}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/bosses/{{boss_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "bosses",
+                "{{boss_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"even spookier\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 200000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, config_version advances, old max_hp changed', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.config_version).to.eql(2);",
+                  "  pm.expect(body.definition.max_hp).to.eql(200000);",
+                  "  pm.collectionVariables.set('boss_version', body.config_version);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Raid occurrences",
+      "item": [
+        {
+          "name": "Create the occurrence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{admin_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/raid-occurrences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raid-occurrences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": {{boss_version}},\n  \"available_from\": \"2026-01-01T00:00:00.000Z\",\n  \"available_until\": \"2026-01-01T01:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201, scheduled', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('scheduled');",
+                  "  pm.collectionVariables.set('occurrence_id', body.occurrence_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List occurrences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{outsider_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/raid-occurrences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raid-occurrences"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, includes it', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map((o) => o.occurrence_id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('occurrence_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the occurrence",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Service-Name",
+                "value": "monster-raid"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/raid-occurrences/{{occurrence_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raid-occurrences",
+                "{{occurrence_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{admin_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/raid-occurrences/{{occurrence_id}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raid-occurrences",
+                "{{occurrence_id}}",
+                "activate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, active, propagation pending', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.occurrence.status).to.eql('active');",
+                  "  pm.expect(body.runtime_propagation).to.eql('PENDING');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{admin_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/raid-occurrences/{{occurrence_id}}/deactivate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raid-occurrences",
+                "{{occurrence_id}}",
+                "deactivate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, inactive', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().occurrence.status).to.eql('inactive'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{admin_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/raid-occurrences/{{occurrence_id}}/cancel",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raid-occurrences",
+                "{{occurrence_id}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, cancelled', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().occurrence.status).to.eql('cancelled'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Refusals",
+      "item": [
+        {
+          "name": "No credentials at all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}/stat-definitions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}",
+                "stat-definitions"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 unauthorized', () => { pm.response.to.have.status(401); pm.expect(pm.response.json().code).to.eql('unauthorized'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A non-admin cannot create a package",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{outsider_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nope\",\n  \"description\": \"\",\n  \"version\": \"1.0.0\",\n  \"developer_user_ids\": [\n    \"{{developer_id}}\"\n  ],\n  \"moderator_user_ids\": [\n    \"{{moderator_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 admin_required', () => { pm.response.to.have.status(403); pm.expect(pm.response.json().code).to.eql('admin_required'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A non-moderator cannot edit the package",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{outsider_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{package_revision}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hijack\",\n  \"description\": \"\",\n  \"version\": \"1.0.0\",\n  \"status\": \"active\",\n  \"developer_user_ids\": [\n    \"{{developer_id}}\"\n  ],\n  \"moderator_user_ids\": [\n    \"{{moderator_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 moderator_required', () => { pm.response.to.have.status(403); pm.expect(pm.response.json().code).to.eql('moderator_required'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editing without If-Match is refused",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{moderator_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"No etag\",\n  \"description\": \"\",\n  \"version\": \"1.0.0\",\n  \"status\": \"active\",\n  \"developer_user_ids\": [\n    \"{{developer_id}}\"\n  ],\n  \"moderator_user_ids\": [\n    \"{{moderator_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 if_match_required', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().code).to.eql('if_match_required'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A stale If-Match is refused",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{moderator_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "999"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Stale\",\n  \"description\": \"\",\n  \"version\": \"1.0.0\",\n  \"status\": \"active\",\n  \"developer_user_ids\": [\n    \"{{developer_id}}\"\n  ],\n  \"moderator_user_ids\": [\n    \"{{moderator_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('412 precondition_failed', () => { pm.response.to.have.status(412); pm.expect(pm.response.json().code).to.eql('precondition_failed'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An unknown package",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/00000000-0000-7000-8000-000000000000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "00000000-0000-7000-8000-000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 package_not_found', () => { pm.response.to.have.status(404); pm.expect(pm.response.json().code).to.eql('package_not_found'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A user cannot call a service-only endpoint",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{outsider_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/packages/{{package_id}}/stat-definitions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages",
+                "{{package_id}}",
+                "stat-definitions"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An invalid boss_version is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{admin_id}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/raid-occurrences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raid-occurrences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": 999,\n  \"available_from\": \"2026-01-01T00:00:00.000Z\",\n  \"available_until\": \"2026-01-01T01:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid_boss_version', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().code).to.eql('invalid_boss_version'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
