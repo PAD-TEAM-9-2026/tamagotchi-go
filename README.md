@@ -438,13 +438,12 @@ contract above did not spell out:
   `If-Match` header, since the general ETag/If-Match convention is written for a
   single resource version, not a role change nested under a member. A stale
   value answers `409 version_conflict`.
-- Until User Management exists, Guild proposes one addition to its contract:
-  `GET /v1/internal/users/{userId}/membership` (service access, returns
-  `MembershipSnapshot`), needed to read a user's `package_ids` before calling
-  Package Registry's eligibility check. Until that call exists for real, both
-  User Management and Package Registry are stood in for with a mock behind the
-  same interface the real HTTP client uses, so swapping in the real services
-  later is a configuration change, not a code change.
+- Guild calls the already-contracted `GET /v1/internal/users/{userId}/membership`
+  to read a user's `package_ids` before calling Package Registry's eligibility
+  check; no contract change was needed for this. Until User Management and
+  Package Registry exist for real, both are stood in for with a mock behind
+  the same interface the real HTTP client uses, so swapping in the real
+  services later is a configuration change, not a code change.
 - Error codes added beyond the shared `Problem` shape: `already_in_guild`,
   `guild_name_taken`, `guild_full`, `invitation_pending`, `invitation_expired`,
   `invitation_not_pending`, `not_invitee`, `insufficient_role`,
