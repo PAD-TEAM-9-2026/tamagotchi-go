@@ -1,0 +1,87 @@
+# Common deployment file for the services published to Docker Hub so far, per Lab 1 Grade 6:
+# it points at the uploaded images, not at local Dockerfiles.
+#
+# As the rest of the team publishes their services, add them here the same way: an environment
+# block reading POSTGRES_* for that service's own database, and its own db/<service> init scripts.
+#
+# Usage:
+#   cp .env.example .env      # then fill in the two passwords
+#   docker compose up -d --wait
+#
+# Each service migrates its own database on startup; the SQL files under db/ are for reference
+# and for anyone who wants to inspect or apply them by hand (e.g. psql -f db/guild/001_init.sql).
+services:
+  guild-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${GUILD_DB_USER:-guild}
+      POSTGRES_PASSWORD: ${GUILD_DB_PASSWORD:?set GUILD_DB_PASSWORD in .env}
+      POSTGRES_DB: ${GUILD_DB_NAME:-guild}
+    volumes:
+      - guild-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  guild:
+    image: mihaelacatan/guild-service:0.2.0
+    depends_on:
+      guild-db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_HOST: guild-db
+      DB_PORT: 5432
+      POSTGRES_USER: ${GUILD_DB_USER:-guild}
+      POSTGRES_PASSWORD: ${GUILD_DB_PASSWORD:?set GUILD_DB_PASSWORD in .env}
+      POSTGRES_DB: ${GUILD_DB_NAME:-guild}
+      AUTH_MODE: dev
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  registry-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${REGISTRY_DB_USER:-registry}
+      POSTGRES_PASSWORD: ${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD in .env}
+      POSTGRES_DB: ${REGISTRY_DB_NAME:-registry}
+    volumes:
+      - registry-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  registry:
+    image: mihaelacatan/package-registry-service:0.2.0
+    depends_on:
+      registry-db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_HOST: registry-db
+      DB_PORT: 5432
+      POSTGRES_USER: ${REGISTRY_DB_USER:-registry}
+      POSTGRES_PASSWORD: ${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD in .env}
+      POSTGRES_DB: ${REGISTRY_DB_NAME:-registry}
+      AUTH_MODE: dev
+      ADMIN_USER_IDS: ${REGISTRY_ADMIN_USER_IDS:-}
+    ports:
+      - "3001:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  guild-db-data:
+  registry-db-data:
