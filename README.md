@@ -429,6 +429,29 @@ Registry only for package eligibility. The topic text points at Registry Service
 for identity checks, which is a wording error: User Management is the authority
 on who a user is and who they are friends with.
 
+**Implementation notes (Lab 1).** A few decisions the code needed that the
+contract above did not spell out:
+
+- A user belongs to at most one guild at a time.
+- An invitation expires 7 days after it is created.
+- `PATCH .../role` locks on `expected_guild_version` in the body rather than an
+  `If-Match` header, since the general ETag/If-Match convention is written for a
+  single resource version, not a role change nested under a member. A stale
+  value answers `409 version_conflict`.
+- Until User Management exists, Guild proposes one addition to its contract:
+  `GET /v1/internal/users/{userId}/membership` (service access, returns
+  `MembershipSnapshot`), needed to read a user's `package_ids` before calling
+  Package Registry's eligibility check. Until that call exists for real, both
+  User Management and Package Registry are stood in for with a mock behind the
+  same interface the real HTTP client uses, so swapping in the real services
+  later is a configuration change, not a code change.
+- Error codes added beyond the shared `Problem` shape: `already_in_guild`,
+  `guild_name_taken`, `guild_full`, `invitation_pending`, `invitation_expired`,
+  `invitation_not_pending`, `not_invitee`, `insufficient_role`,
+  `leader_cannot_leave`, `leader_role_fixed`, `already_leader`,
+  `version_conflict`, `relationship_blocked`, `package_not_eligible`,
+  `dependency_unavailable`, `dependency_error`.
+
 ### Package Registry, `/registry`
 
 | Method and path | Request | Response | Access |
@@ -465,6 +488,29 @@ value in basis points. Battle evaluates those rules mechanically against the
 creature's `package_stats` without interpreting any of them, which is how a
 package-specific bonus applies without any service sharing the package's data
 model.
+
+**Implementation notes (Lab 1).** Decisions the code needed beyond the contract:
+
+- Package `name` is not required to be unique; nothing in the contract asks for
+  it, unlike a guild's name which doubles as its public identity.
+- `revision` and `config_version` are two separate counters on the same
+  `Package` row: `revision` is the optimistic-lock counter shared by
+  `PATCH /packages/{id}` (`If-Match` header) and `PUT /packages/{id}/stats`
+  (`expected_package_revision` in the body); `config_version` only tracks which
+  `package_configs` snapshot is current, and is what the `?config_version=`
+  query parameter on the read endpoints selects among.
+- `POST /packages/eligibility-check` treats a submitted package as eligible if
+  it exists and its `status` is `active`; the caller is eligible overall if at
+  least one submitted package qualifies.
+- Admins are identified by a fixed, configured list (`ADMIN_USER_IDS`) rather
+  than a real claim, until User Management can issue one. A package's
+  moderators are read directly from that package's own `moderator_user_ids`,
+  which needed no mock since it is the service's own data.
+- Error codes added beyond the shared `Problem` shape: `admin_required`,
+  `moderator_required`, `if_match_required`, `precondition_failed`,
+  `revision_conflict`, `config_not_found`, `invalid_boss_version`,
+  `invalid_window`, `invalid_transition`, `package_not_found`,
+  `boss_not_found`, `occurrence_not_found`.
 
 ### Map, `/map`
 
@@ -546,6 +592,49 @@ nothing. Each event payload is an `...Event` shape in
 Each consumer has a work queue, two retry queues at 5 s and 30 s, and a dead
 letter queue. Three attempts, then the message parks in the DLQ and the owner
 replays it with the same event ID.
+
+## Deployment
+
+Services published to Docker Hub so far, per Lab 1 Grade 4/6:
+
+| Service | Image | Platforms |
+|---|---|---|
+| Guild | [`mihaelacatan/guild-service`](https://hub.docker.com/r/mihaelacatan/guild-service) | `linux/amd64`, `linux/arm64` |
+| Package Registry | [`mihaelacatan/package-registry-service`](https://hub.docker.com/r/mihaelacatan/package-registry-service) | `linux/amd64`, `linux/arm64` |
+
+`deploy/compose.yaml` runs both against their own PostgreSQL databases, using
+the uploaded images directly rather than building from a Dockerfile:
+
+```bash
+cd deploy
+cp .env.example .env   # set the two database passwords, and an admin id for Registry
+docker compose --env-file .env up -d --wait
+```
+
+Guild listens on `3000`, Package Registry on `3001`. Each service applies its
+own database migrations on startup; the same SQL is also kept under
+`deploy/db/guild/` and `deploy/db/registry/` for reference or manual use
+(`psql -f deploy/db/guild/001_init.sql`). As the rest of the team publishes
+their services, add them to `deploy/compose.yaml` the same way.
+
+Each service's own README documents running it individually, its full
+configuration, and how to publish a new image version.
+
+### Seeding test data
+
+Each image ships its own seed script (`node dist/db/seed.js`), which only
+fills an empty database and does nothing otherwise (`--force` wipes and
+reseeds). Runnable directly against the shared stack once it is up:
+
+```bash
+docker compose exec guild node dist/db/seed.js
+docker compose exec registry node dist/db/seed.js
+```
+
+Guild's script creates 3 guilds with members in every role and invitations in
+every status; Registry's creates 2 packages (one active with stats
+configured, one inactive), a boss and a raid occurrence in each of the
+scheduled and active states.
 
 ## GitHub workflow
 
