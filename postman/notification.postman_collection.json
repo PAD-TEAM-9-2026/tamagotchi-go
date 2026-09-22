@@ -112,6 +112,34 @@
     {
       "key": "other_token",
       "value": ""
+    },
+    {
+      "key": "seed_user_id",
+      "value": "0192f3d0-0001-7000-8000-000000000001"
+    },
+    {
+      "key": "seed_other_id",
+      "value": "0192f3d0-0002-7000-8000-000000000002"
+    },
+    {
+      "key": "seed_raid_id",
+      "value": "0192f3e2-0006-7000-8000-000000000006"
+    },
+    {
+      "key": "seed_credential",
+      "value": ""
+    },
+    {
+      "key": "seed_other_credential",
+      "value": ""
+    },
+    {
+      "key": "seed_cursor",
+      "value": ""
+    },
+    {
+      "key": "seed_nearby_event_id",
+      "value": ""
     }
   ],
   "event": [
@@ -158,7 +186,10 @@
           "seed('rotated_token', 'fcm-' + uuidv7());",
           "seed('ios_token', 'fcm-' + uuidv7());",
           "seed('web_token', 'fcm-' + uuidv7());",
-          "seed('other_token', 'fcm-' + uuidv7());"
+          "seed('other_token', 'fcm-' + uuidv7());",
+          "",
+          "pm.collectionVariables.set('seed_credential', 'dev.' + pm.collectionVariables.get('seed_user_id'));",
+          "pm.collectionVariables.set('seed_other_credential', 'dev.' + pm.collectionVariables.get('seed_other_id'));"
         ]
       }
     }
@@ -1150,6 +1181,379 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"muted_categories\": [\n    \"FRIEND_REQUEST\"\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seeded history",
+      "item": [
+        {
+          "name": "The seed script has been run",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('the demo history is present, run ./scripts/run.sh seed if this fails', () => {",
+                  "  pm.expect(body.items.length).to.be.at.least(4);",
+                  "});",
+                  "const nearby = body.items.find((item) => item.type === 'PLAYER_NEARBY');",
+                  "pm.collectionVariables.set('seed_nearby_event_id', nearby ? nearby.event_id : '');",
+                  "pm.test('the history is newest first', () => {",
+                  "  const ids = body.items.map((item) => item.id);",
+                  "  pm.expect(ids).to.eql([...ids].sort().reverse());",
+                  "});",
+                  "pm.test('every notification carries the contract fields', () => {",
+                  "  ['id','user_id','type','event_id','params','created_at','read_at','delivery_status'].forEach((field) => {",
+                  "    pm.expect(body.items[0]).to.have.property(field);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seed_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{seed_user_id}}",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A muted category is kept, not dropped",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 read', () => pm.response.to.have.status(200));",
+                  "pm.test('the demo user muted raids', () => {",
+                  "  pm.expect(pm.response.json().muted_categories).to.include('RAID_STARTED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seed_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{seed_user_id}}",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The muted notification is suppressed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const raid = pm.response.json().items.find((item) => item.type === 'RAID_STARTED');",
+                  "pm.test('a muted category still reaches the history', () => {",
+                  "  pm.expect(raid).to.not.be.undefined;",
+                  "});",
+                  "pm.test('it was suppressed rather than delivered', () => {",
+                  "  pm.expect(raid.delivery_status).to.eql('SUPPRESSED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seed_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{seed_user_id}}",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A user with no device gets NO_DEVICE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('the second demo user has a history', () => {",
+                  "  pm.expect(body.items.length).to.be.at.least(2);",
+                  "});",
+                  "pm.test('nothing could be delivered, because no device is registered', () => {",
+                  "  body.items.forEach((item) => pm.expect(item.delivery_status).to.eql('NO_DEVICE'));",
+                  "});",
+                  "pm.test('one event reached both users, which is why the index is on the pair', () => {",
+                  "  const nearby = body.items.find((item) => item.type === 'PLAYER_NEARBY');",
+                  "  pm.expect(nearby.event_id).to.eql(pm.collectionVariables.get('seed_nearby_event_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seed_other_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{seed_other_id}}/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{seed_other_id}}",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark a seeded notification read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 marked read', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('it comes back with the moment it was read', () => {",
+                  "  pm.expect(body.read_at).to.not.be.null;",
+                  "  pm.expect(Date.parse(body.read_at)).to.not.be.NaN;",
+                  "});",
+                  "pm.test('nothing else about it changed', () => {",
+                  "  pm.expect(body.id).to.eql(pm.collectionVariables.get('seed_raid_id'));",
+                  "  pm.expect(body.type).to.eql('RAID_STARTED');",
+                  "  pm.expect(body.delivery_status).to.eql('SUPPRESSED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seed_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/notifications/{{seed_raid_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "notifications",
+                "{{seed_raid_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"read\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Marking it read again keeps the first moment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 marked read', () => pm.response.to.have.status(200));",
+                  "pm.test('the read moment is not moved forward', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.read_at).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seed_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/notifications/{{seed_raid_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "notifications",
+                "{{seed_raid_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"read\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Page through the seeded history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('seed_cursor', body.next_cursor);",
+                  "pm.test('two on the page', () => pm.expect(body.items).to.have.lengthOf(2));",
+                  "pm.test('a cursor points at the rest', () => pm.expect(body.next_cursor).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seed_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/notifications?limit=2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{seed_user_id}}",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Follow the cursor into the older half",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('older notifications, none repeated', () => {",
+                  "  pm.expect(body.items.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seed_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/notifications?limit=2&cursor={{seed_cursor}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{seed_user_id}}",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                },
+                {
+                  "key": "cursor",
+                  "value": "{{seed_cursor}}"
+                }
+              ]
             }
           }
         }
