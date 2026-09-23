@@ -82,6 +82,72 @@ services:
       timeout: 3s
       retries: 10
 
+  tamagotchi-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${TAMAGOTCHI_DB_USER:-tamagotchi}
+      POSTGRES_PASSWORD: ${TAMAGOTCHI_DB_PASSWORD:?set TAMAGOTCHI_DB_PASSWORD in .env}
+      POSTGRES_DB: ${TAMAGOTCHI_DB_NAME:-tamagotchi}
+    volumes:
+      - tamagotchi-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  tamagotchi:
+    image: victoriamutruc/tamagotchi:1.0.0
+    depends_on:
+      tamagotchi-db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      STORAGE: postgres
+      DATABASE_URL: postgres://${TAMAGOTCHI_DB_USER:-tamagotchi}:${TAMAGOTCHI_DB_PASSWORD}@tamagotchi-db:5432/${TAMAGOTCHI_DB_NAME:-tamagotchi}
+      AUTH_MODE: dev
+    ports:
+      - "3002:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  notification-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${NOTIFICATION_DB_USER:-notification}
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?set NOTIFICATION_DB_PASSWORD in .env}
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME:-notification}
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  notification:
+    image: victoriamutruc/notification:1.0.0
+    depends_on:
+      notification-db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      STORAGE: postgres
+      DATABASE_URL: postgres://${NOTIFICATION_DB_USER:-notification}:${NOTIFICATION_DB_PASSWORD}@notification-db:5432/${NOTIFICATION_DB_NAME:-notification}
+      AUTH_MODE: dev
+    ports:
+      - "3008:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   guild-db-data:
   registry-db-data:
+  tamagotchi-db-data:
+  notification-db-data:

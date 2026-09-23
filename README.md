@@ -600,8 +600,10 @@ Services published to Docker Hub so far, per Lab 1 Grade 4/6:
 |---|---|---|
 | Guild | [`mihaelacatan/guild-service`](https://hub.docker.com/r/mihaelacatan/guild-service) | `linux/amd64`, `linux/arm64` |
 | Package Registry | [`mihaelacatan/package-registry-service`](https://hub.docker.com/r/mihaelacatan/package-registry-service) | `linux/amd64`, `linux/arm64` |
+| Tamagotchi | [`victoriamutruc/tamagotchi`](https://hub.docker.com/r/victoriamutruc/tamagotchi) | `linux/amd64`, `linux/arm64` |
+| Notification | [`victoriamutruc/notification`](https://hub.docker.com/r/victoriamutruc/notification) | `linux/amd64`, `linux/arm64` |
 
-`deploy/compose.yaml` runs both against their own PostgreSQL databases, using
+`deploy/compose.yaml` runs them against their own PostgreSQL databases, using
 the uploaded images directly rather than building from a Dockerfile:
 
 ```bash
@@ -610,11 +612,11 @@ cp .env.example .env   # set the two database passwords, and an admin id for Reg
 docker compose --env-file .env up -d --wait
 ```
 
-Guild listens on `3000`, Package Registry on `3001`. Each service applies its
-own database migrations on startup; the same SQL is also kept under
-`deploy/db/guild/` and `deploy/db/registry/` for reference or manual use
-(`psql -f deploy/db/guild/001_init.sql`). As the rest of the team publishes
-their services, add them to `deploy/compose.yaml` the same way.
+Guild listens on `3000`, Package Registry on `3001`, Tamagotchi on `3002` and
+Notification on `3008`. Each service applies its own database migrations on
+startup; the same SQL is also kept under `deploy/db/<service>/` for reference or
+manual use (`psql -f deploy/db/guild/001_init.sql`). As the rest of the team
+publishes their services, add them to `deploy/compose.yaml` the same way.
 
 Each service's own README documents running it individually, its full
 configuration, and how to publish a new image version.
@@ -628,12 +630,17 @@ reseeds). Runnable directly against the shared stack once it is up:
 ```bash
 docker compose exec guild node dist/db/seed.js
 docker compose exec registry node dist/db/seed.js
+docker compose exec tamagotchi node dist/db/seed.js
+docker compose exec notification node dist/db/seed.js
 ```
 
 Guild's script creates 3 guilds with members in every role and invitations in
 every status; Registry's creates 2 packages (one active with stats
 configured, one inactive), a boss and a raid occurrence in each of the
-scheduled and active states.
+scheduled and active states. Tamagotchi's creates 3 creatures across two
+packages, one of them held by two users, and a primary selection each.
+Notification's creates 2 devices and 6 notifications covering a suppressed
+category, a user with no device, and one event delivered to two recipients.
 
 ## GitHub workflow
 
