@@ -604,13 +604,21 @@ Services published to Docker Hub so far, per Lab 1 Grade 4/6:
 | Notification | [`victoriamutruc/notification`](https://hub.docker.com/r/victoriamutruc/notification) | `linux/amd64`, `linux/arm64` |
 
 `deploy/compose.yaml` runs them against their own PostgreSQL databases, using
-the uploaded images directly rather than building from a Dockerfile:
+the uploaded images directly rather than building from a Dockerfile.
+
+Requirements: Docker with Compose v2. Nothing is built locally and no source
+checkout is needed, the images are pulled from Docker Hub. Each service brings
+its own PostgreSQL, so ports 3000, 3001, 3002 and 3008 must be free.
 
 ```bash
 cd deploy
-cp .env.example .env   # set the two database passwords, and an admin id for Registry
+cp .env.example .env   # set the four database passwords, and an admin id for Registry
 docker compose --env-file .env up -d --wait
 ```
+
+Every `*_DB_PASSWORD` has no default and Compose refuses to start until it is
+set, so a database is never brought up with a password someone could guess from
+the repository.
 
 Guild listens on `3000`, Package Registry on `3001`, Tamagotchi on `3002` and
 Notification on `3008`. Each service applies its own database migrations on
