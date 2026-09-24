@@ -632,25 +632,22 @@ on first boot instead (`psql -f deploy/db/guild/001_init.sql` also works by
 hand for any of them). As the rest of the team publishes their services, add
 them to `deploy/compose.yaml` the same way.
 
-Seeding: `docker compose exec battle dotnet Battle.dll seed` and
-`docker compose exec user-management dotnet UserManagement.dll seed`
-populate each database with sample data if it's empty (add `--force` to wipe
-and reseed).
-
 Each service's own README documents running it individually, its full
 configuration, and how to publish a new image version.
 
 ### Seeding test data
 
-Each image ships its own seed script (`node dist/db/seed.js`), which only
-fills an empty database and does nothing otherwise (`--force` wipes and
-reseeds). Runnable directly against the shared stack once it is up:
+Each image ships its own seed script, which only fills an empty database and
+does nothing otherwise (`--force` wipes and reseeds). Runnable directly
+against the shared stack once it is up:
 
 ```bash
 docker compose exec guild node dist/db/seed.js
 docker compose exec registry node dist/db/seed.js
 docker compose exec tamagotchi node dist/db/seed.js
 docker compose exec notification node dist/db/seed.js
+docker compose exec user-management dotnet UserManagement.dll seed
+docker compose exec battle dotnet Battle.dll seed
 ```
 
 Guild's script creates 3 guilds with members in every role and invitations in
@@ -660,6 +657,9 @@ scheduled and active states. Tamagotchi's creates 3 creatures across two
 packages, one of them held by two users, and a primary selection each.
 Notification's creates 2 devices and 6 notifications covering a suppressed
 category, a user with no device, and one event delivered to two recipients.
+User Management's creates 4 users, package memberships, wallets, friend
+requests and boosts. Battle's creates 4 battles covering every status this
+service implements. Both are idempotent unless `--force` is passed.
 
 ## GitHub workflow
 
