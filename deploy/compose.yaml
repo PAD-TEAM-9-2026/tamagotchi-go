@@ -10,14 +10,6 @@
 #
 # Each service migrates its own database on startup; the SQL files under db/ are for reference
 # and for anyone who wants to inspect or apply them by hand (e.g. psql -f db/guild/001_init.sql).
-#
-# KNOWN PORT CONFLICT: user-management below publishes host port 3001, its correct port per the
-# team's port table. guild (3000) and registry (3001) were wired up before that table existed and
-# still use their old placeholder ports, so registry currently collides with user-management on
-# 3001 (`docker compose up` will fail to bind it) — guild's 3000 doesn't collide with anything yet
-# but is also wrong (should be 3004). user-management and battle (3003) are on their real,
-# team-assigned ports; guild/registry/tamagotchi need the same treatment in a follow-up PR from
-# their owners.
 services:
   guild-db:
     image: postgres:17-alpine
@@ -47,7 +39,7 @@ services:
       POSTGRES_DB: ${GUILD_DB_NAME:-guild}
       AUTH_MODE: dev
     ports:
-      - "3000:3000"
+      - "3004:3000"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
       interval: 5s
@@ -83,7 +75,7 @@ services:
       AUTH_MODE: dev
       ADMIN_USER_IDS: ${REGISTRY_ADMIN_USER_IDS:-}
     ports:
-      - "3001:3000"
+      - "3005:3000"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
       interval: 5s

@@ -610,7 +610,7 @@ the uploaded images directly rather than building from a Dockerfile.
 
 Requirements: Docker with Compose v2. Nothing is built locally and no source
 checkout is needed, the images are pulled from Docker Hub. Each service brings
-its own PostgreSQL, so ports 3000, 3001, 3002, 3003 and 3008 must be free.
+its own PostgreSQL, so ports 3001, 3002, 3003, 3004, 3005 and 3008 must be free.
 
 ```bash
 cd deploy
@@ -622,15 +622,11 @@ Every `*_DB_PASSWORD` has no default and Compose refuses to start until it is
 set, so a database is never brought up with a password someone could guess from
 the repository.
 
-Guild listens on `3000` (placeholder — should be `3004` per the team's port
-table), Package Registry on `3001` (placeholder — should be `3005`), Tamagotchi
-on `3002`, User Management on `3001` and Battle on `3003` (both on their real,
-team-assigned ports). **Package Registry and User Management currently collide
-on host port 3001** — Guild/Package Registry/Tamagotchi were wired up before
-the port table existed; whoever owns them needs to move them to their real
-ports in a follow-up PR. Notification listens on `3008`. Each service applies
-its own database migrations on startup, except User Management and Battle,
-which don't auto-migrate — the same SQL each one would have run is kept under
+User Management listens on `3001`, Tamagotchi on `3002`, Battle on `3003`,
+Guild on `3004`, Package Registry on `3005` and Notification on `3008` — all
+on their real, team-assigned ports. Each service applies its own database
+migrations on startup, except User Management and Battle, which don't
+auto-migrate — the same SQL each one would have run is kept under
 `deploy/db/<service>/` and mounted into that service's own Postgres container
 on first boot instead (`psql -f deploy/db/guild/001_init.sql` also works by
 hand for any of them). As the rest of the team publishes their services, add
