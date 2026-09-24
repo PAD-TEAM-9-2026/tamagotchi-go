@@ -146,8 +146,72 @@ services:
       timeout: 3s
       retries: 10
 
+  user-management-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${USER_MANAGEMENT_DB_USER:-user_management}
+      POSTGRES_PASSWORD: ${USER_MANAGEMENT_DB_PASSWORD:?set USER_MANAGEMENT_DB_PASSWORD in .env}
+      POSTGRES_DB: ${USER_MANAGEMENT_DB_NAME:-user_management}
+    volumes:
+      - user-management-db-data:/var/lib/postgresql/data
+      - ./db/user-management:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  user-management:
+    image: patriciamoraru/user-management:1.2.0   # not 1.0.0/1.1.0 — those still listen on 8080
+    depends_on:
+      user-management-db:
+        condition: service_healthy
+    environment:
+      PORT: 3001
+      ConnectionStrings__UserManagementDb: Host=user-management-db;Port=5432;Database=${USER_MANAGEMENT_DB_NAME:-user_management};Username=${USER_MANAGEMENT_DB_USER:-user_management};Password=${USER_MANAGEMENT_DB_PASSWORD}
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3001 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q READY'"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  battle-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${BATTLE_DB_USER:-battle}
+      POSTGRES_PASSWORD: ${BATTLE_DB_PASSWORD:?set BATTLE_DB_PASSWORD in .env}
+      POSTGRES_DB: ${BATTLE_DB_NAME:-battle}
+    volumes:
+      - battle-db-data:/var/lib/postgresql/data
+      - ./db/battle:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  battle:
+    image: patriciamoraru/battle:1.2.0   # not 1.0.0/1.1.0 — those still listen on 8080
+    depends_on:
+      battle-db:
+        condition: service_healthy
+    environment:
+      PORT: 3003
+      ConnectionStrings__BattleDb: Host=battle-db;Port=5432;Database=${BATTLE_DB_NAME:-battle};Username=${BATTLE_DB_USER:-battle};Password=${BATTLE_DB_PASSWORD}
+    ports:
+      - "3003:3003"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3003 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q READY'"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   guild-db-data:
   registry-db-data:
   tamagotchi-db-data:
   notification-db-data:
+  user-management-db-data:
+  battle-db-data:

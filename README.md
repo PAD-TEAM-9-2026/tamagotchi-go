@@ -602,17 +602,19 @@ Services published to Docker Hub so far, per Lab 1 Grade 4/6:
 | Package Registry | [`mihaelacatan/package-registry-service`](https://hub.docker.com/r/mihaelacatan/package-registry-service) | `linux/amd64`, `linux/arm64` |
 | Tamagotchi | [`victoriamutruc/tamagotchi`](https://hub.docker.com/r/victoriamutruc/tamagotchi) | `linux/amd64`, `linux/arm64` |
 | Notification | [`victoriamutruc/notification`](https://hub.docker.com/r/victoriamutruc/notification) | `linux/amd64`, `linux/arm64` |
+| User Management | [`patriciamoraru/user-management:1.2.0`](https://hub.docker.com/r/patriciamoraru/user-management) | `linux/amd64` |
+| Battle | [`patriciamoraru/battle:1.2.0`](https://hub.docker.com/r/patriciamoraru/battle) | `linux/amd64` |
 
 `deploy/compose.yaml` runs them against their own PostgreSQL databases, using
 the uploaded images directly rather than building from a Dockerfile.
 
 Requirements: Docker with Compose v2. Nothing is built locally and no source
 checkout is needed, the images are pulled from Docker Hub. Each service brings
-its own PostgreSQL, so ports 3002, 3004, 3005 and 3008 must be free.
+its own PostgreSQL, so ports 3001, 3002, 3003, 3004, 3005 and 3008 must be free.
 
 ```bash
 cd deploy
-cp .env.example .env   # set the four database passwords, and an admin id for Registry
+cp .env.example .env   # set the database passwords, and an admin id for Registry
 docker compose --env-file .env up -d --wait
 ```
 
@@ -620,26 +622,32 @@ Every `*_DB_PASSWORD` has no default and Compose refuses to start until it is
 set, so a database is never brought up with a password someone could guess from
 the repository.
 
-Guild listens on `3004`, Package Registry on `3005`, Tamagotchi on `3002` and
-Notification on `3008`. Each service applies its own database migrations on
-startup; the same SQL is also kept under `deploy/db/<service>/` for reference or
-manual use (`psql -f deploy/db/guild/001_init.sql`). As the rest of the team
-publishes their services, add them to `deploy/compose.yaml` the same way.
+User Management listens on `3001`, Tamagotchi on `3002`, Battle on `3003`,
+Guild on `3004`, Package Registry on `3005` and Notification on `3008` — all
+on their real, team-assigned ports. Each service applies its own database
+migrations on startup, except User Management and Battle, which don't
+auto-migrate — the same SQL each one would have run is kept under
+`deploy/db/<service>/` and mounted into that service's own Postgres container
+on first boot instead (`psql -f deploy/db/guild/001_init.sql` also works by
+hand for any of them). As the rest of the team publishes their services, add
+them to `deploy/compose.yaml` the same way.
 
 Each service's own README documents running it individually, its full
 configuration, and how to publish a new image version.
 
 ### Seeding test data
 
-Each image ships its own seed script (`node dist/db/seed.js`), which only
-fills an empty database and does nothing otherwise (`--force` wipes and
-reseeds). Runnable directly against the shared stack once it is up:
+Each image ships its own seed script, which only fills an empty database and
+does nothing otherwise (`--force` wipes and reseeds). Runnable directly
+against the shared stack once it is up:
 
 ```bash
 docker compose exec guild node dist/db/seed.js
 docker compose exec registry node dist/db/seed.js
 docker compose exec tamagotchi node dist/db/seed.js
 docker compose exec notification node dist/db/seed.js
+docker compose exec user-management dotnet UserManagement.dll seed
+docker compose exec battle dotnet Battle.dll seed
 ```
 
 Guild's script creates 3 guilds with members in every role and invitations in
@@ -649,6 +657,9 @@ scheduled and active states. Tamagotchi's creates 3 creatures across two
 packages, one of them held by two users, and a primary selection each.
 Notification's creates 2 devices and 6 notifications covering a suppressed
 category, a user with no device, and one event delivered to two recipients.
+User Management's creates 4 users, package memberships, wallets, friend
+requests and boosts. Battle's creates 4 battles covering every status this
+service implements. Both are idempotent unless `--force` is passed.
 
 ## GitHub workflow
 
