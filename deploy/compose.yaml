@@ -154,6 +154,11 @@ services:
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MAP_DB_NAME:-map};Username=${MAP_DB_USER:-map};Password=${MAP_DB_PASSWORD}
     ports:
       - "3006:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q \"200 OK\"'"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   monster-raid:
     image: sergedbs/monster-raid:1.0.0
@@ -166,6 +171,11 @@ services:
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD}
     ports:
       - "3007:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q \"200 OK\"'"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   notification:
     image: victoriamutruc/notification:1.0.0
