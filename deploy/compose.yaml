@@ -30,6 +30,8 @@ services:
       NOTIFICATION_DB_USER: ${NOTIFICATION_DB_USER:-notification}
       NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?set NOTIFICATION_DB_PASSWORD in .env}
       NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:-notification}
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - shared-postgres-data:/var/lib/postgresql/data
       - ./db/init-service-databases.sh:/docker-entrypoint-initdb.d/20_service_databases.sh:ro
