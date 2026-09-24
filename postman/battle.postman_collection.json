@@ -1,0 +1,696 @@
+{
+  "info": {
+    "name": "Battle",
+    "description": "Every endpoint currently implemented by the Battle service (Lab 1 CRUD scope), in an order that runs start to finish against an empty or populated database. Requests capture ids into collection variables, so a full run needs no manual input beyond base_url.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.\n\nNot exercised here, because the code doesn't implement them yet (see the service's README \"Current implementation\" section and PROGRESS.md):\n- POST /v1/battles/{battleId}/attack (no route mapped at all)\n- 410 challenge_expired on accept (the request is correct, but the 2-minute challenge window can't be forced to elapse inside a single automated run without an artificial delay; verified manually instead)\n- Idempotency-Key replay (the header is sent on every command for forward-compatibility with the contract, but no idempotency store exists yet, so a repeated key does not currently return the first response)\n\n'base_url' defaults to http://localhost:3003, Battle's assigned port in the team's shared port plan (same as scripts/run.sh, dotnet run, and the published image).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3003"
+    },
+    {
+      "key": "battle_id",
+      "value": ""
+    },
+    {
+      "key": "reject_battle_id",
+      "value": ""
+    },
+    {
+      "key": "challenger_id",
+      "value": ""
+    },
+    {
+      "key": "opponent_id",
+      "value": ""
+    },
+    {
+      "key": "outsider_id",
+      "value": ""
+    },
+    {
+      "key": "challenger_primary_id",
+      "value": ""
+    },
+    {
+      "key": "challenger_secondary_id",
+      "value": ""
+    },
+    {
+      "key": "opponent_primary_id",
+      "value": ""
+    },
+    {
+      "key": "opponent_secondary_id",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function uuidv7() {",
+          "  const ms = Date.now();",
+          "  const bytes = new Uint8Array(16);",
+          "  bytes[0] = Math.floor(ms / 1099511627776) & 0xff;",
+          "  bytes[1] = Math.floor(ms / 4294967296) & 0xff;",
+          "  bytes[2] = Math.floor(ms / 16777216) & 0xff;",
+          "  bytes[3] = Math.floor(ms / 65536) & 0xff;",
+          "  bytes[4] = Math.floor(ms / 256) & 0xff;",
+          "  bytes[5] = ms & 0xff;",
+          "  for (let i = 6; i < 16; i += 1) {",
+          "    bytes[i] = Math.floor(Math.random() * 256);",
+          "  }",
+          "  bytes[6] = (bytes[6] & 0x0f) | 0x70;",
+          "  bytes[8] = (bytes[8] & 0x3f) | 0x80;",
+          "  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');",
+          "  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');",
+          "}",
+          "",
+          "function seed(key, value) {",
+          "  if (!pm.collectionVariables.get(key)) {",
+          "    pm.collectionVariables.set(key, value);",
+          "  }",
+          "}",
+          "",
+          "pm.collectionVariables.set('idempotency_key', uuidv7());",
+          "",
+          "seed('challenger_id', uuidv7());",
+          "seed('opponent_id', uuidv7());",
+          "seed('outsider_id', uuidv7());",
+          "seed('challenger_primary_id', uuidv7());",
+          "seed('challenger_secondary_id', uuidv7());",
+          "seed('opponent_primary_id', uuidv7());",
+          "seed('opponent_secondary_id', uuidv7());",
+          ""
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Probes",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ready",
+              "host": ["{{base_url}}"],
+              "path": ["ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 READY', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('READY'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Battles",
+      "item": [
+        {
+          "name": "Create the challenge",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"opponent_id\": \"{{opponent_id}}\",\n  \"primary_id\": \"{{challenger_primary_id}}\",\n  \"secondary_id\": \"{{challenger_secondary_id}}\",\n  \"boost_ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 PENDING_ACCEPT, challenger side only', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('PENDING_ACCEPT');",
+                  "  pm.expect(body.challenger_id).to.eql(pm.collectionVariables.get('challenger_id'));",
+                  "  pm.expect(body.opponent_id).to.eql(pm.collectionVariables.get('opponent_id'));",
+                  "  pm.expect(body.sides).to.have.lengthOf(1);",
+                  "  pm.expect(body.version).to.eql(1);",
+                  "  pm.collectionVariables.set('battle_id', body.battle_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List battles as the challenger",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{challenger_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/battles?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles"],
+              "query": [{ "key": "limit", "value": "10" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, the new challenge is in the page', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map((b) => b.battle_id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('battle_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the battle as the challenger",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{challenger_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{battle_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{battle_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, matches what was created', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().battle_id).to.eql(pm.collectionVariables.get('battle_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the battle as the opponent",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{opponent_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{battle_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{battle_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, the opponent is a participant too', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept the challenge",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{opponent_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{battle_id}}/accept",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{battle_id}}", "accept"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_id\": \"{{opponent_primary_id}}\",\n  \"secondary_id\": \"{{opponent_secondary_id}}\",\n  \"boost_ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('202 ONGOING, both sides now present', () => {",
+                  "  pm.response.to.have.status(202);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('ONGOING');",
+                  "  pm.expect(body.sides).to.have.lengthOf(2);",
+                  "  pm.expect(body.version).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forfeit the battle",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{battle_id}}/forfeit",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{battle_id}}", "forfeit"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 COMPLETED, the forfeiter loses', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('COMPLETED');",
+                  "  pm.expect(body.loser_id).to.eql(pm.collectionVariables.get('challenger_id'));",
+                  "  pm.expect(body.winner_id).to.eql(pm.collectionVariables.get('opponent_id'));",
+                  "  pm.expect(body.settlement_status).to.eql('DELIVERED');",
+                  "  pm.expect(body.access_grant_status).to.eql('GRANTED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reject flow",
+      "item": [
+        {
+          "name": "Create a second challenge, to reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"opponent_id\": \"{{opponent_id}}\",\n  \"primary_id\": \"{{challenger_primary_id}}\",\n  \"secondary_id\": \"{{challenger_secondary_id}}\",\n  \"boost_ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 PENDING_ACCEPT', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('reject_battle_id', pm.response.json().battle_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject the challenge",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{opponent_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{reject_battle_id}}/reject",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{reject_battle_id}}", "reject"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 REJECTED', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('REJECTED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Refusals",
+      "item": [
+        {
+          "name": "No credentials at all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/battles",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 unauthorized', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing secondary_id on create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"opponent_id\": \"{{opponent_id}}\",\n  \"primary_id\": \"{{challenger_primary_id}}\",\n  \"secondary_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"boost_ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 validation_error', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().code).to.eql('validation_error');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cannot challenge yourself",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"opponent_id\": \"{{challenger_id}}\",\n  \"primary_id\": \"{{challenger_primary_id}}\",\n  \"secondary_id\": \"{{challenger_secondary_id}}\",\n  \"boost_ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 self_challenge', () => {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(pm.response.json().code).to.eql('self_challenge');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An unknown battle",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{outsider_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/00000000-0000-7000-8000-000000000000",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "00000000-0000-7000-8000-000000000000"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 battle_not_found', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.json().code).to.eql('battle_not_found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An outsider cannot read the battle",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{outsider_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{battle_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{battle_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 not_participant', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().code).to.eql('not_participant');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An outsider cannot accept someone else's challenge",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{outsider_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{reject_battle_id}}/accept",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{reject_battle_id}}", "accept"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_id\": \"{{opponent_primary_id}}\",\n  \"secondary_id\": \"{{opponent_secondary_id}}\",\n  \"boost_ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 not_opponent', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().code).to.eql('not_opponent');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cannot accept a battle that already resolved",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{opponent_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{battle_id}}/accept",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{battle_id}}", "accept"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"primary_id\": \"{{opponent_primary_id}}\",\n  \"secondary_id\": \"{{opponent_secondary_id}}\",\n  \"boost_ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "battle_id was already forfeited (COMPLETED) above, so this checks the 409 path for 'no longer pending', distinct from the 410 'expired while still pending' path (not exercised here \u2014 see the collection description)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 not_pending', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().code).to.eql('not_pending');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cannot reject a battle that already resolved",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{opponent_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{reject_battle_id}}/reject",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{reject_battle_id}}", "reject"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 not_pending', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().code).to.eql('not_pending');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cannot forfeit a battle that already resolved",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/battles/{{battle_id}}/forfeit",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "battles", "{{battle_id}}", "forfeit"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 not_ongoing', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().code).to.eql('not_ongoing');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
