@@ -602,17 +602,19 @@ Services published to Docker Hub so far, per Lab 1 Grade 4/6:
 | Package Registry | [`mihaelacatan/package-registry-service`](https://hub.docker.com/r/mihaelacatan/package-registry-service) | `linux/amd64`, `linux/arm64` |
 | Tamagotchi | [`victoriamutruc/tamagotchi`](https://hub.docker.com/r/victoriamutruc/tamagotchi) | `linux/amd64`, `linux/arm64` |
 | Notification | [`victoriamutruc/notification`](https://hub.docker.com/r/victoriamutruc/notification) | `linux/amd64`, `linux/arm64` |
+| User Management | [`patriciamoraru/user-management:1.2.0`](https://hub.docker.com/r/patriciamoraru/user-management) | `linux/amd64` |
+| Battle | [`patriciamoraru/battle:1.2.0`](https://hub.docker.com/r/patriciamoraru/battle) | `linux/amd64` |
 
 `deploy/compose.yaml` runs them against their own PostgreSQL databases, using
 the uploaded images directly rather than building from a Dockerfile.
 
 Requirements: Docker with Compose v2. Nothing is built locally and no source
 checkout is needed, the images are pulled from Docker Hub. Each service brings
-its own PostgreSQL, so ports 3000, 3001, 3002 and 3008 must be free.
+its own PostgreSQL, so ports 3000, 3001, 3002, 3003 and 3008 must be free.
 
 ```bash
 cd deploy
-cp .env.example .env   # set the four database passwords, and an admin id for Registry
+cp .env.example .env   # set the database passwords, and an admin id for Registry
 docker compose --env-file .env up -d --wait
 ```
 
@@ -620,11 +622,24 @@ Every `*_DB_PASSWORD` has no default and Compose refuses to start until it is
 set, so a database is never brought up with a password someone could guess from
 the repository.
 
-Guild listens on `3000`, Package Registry on `3001`, Tamagotchi on `3002` and
-Notification on `3008`. Each service applies its own database migrations on
-startup; the same SQL is also kept under `deploy/db/<service>/` for reference or
-manual use (`psql -f deploy/db/guild/001_init.sql`). As the rest of the team
-publishes their services, add them to `deploy/compose.yaml` the same way.
+Guild listens on `3000` (placeholder — should be `3004` per the team's port
+table), Package Registry on `3001` (placeholder — should be `3005`), Tamagotchi
+on `3002`, User Management on `3001` and Battle on `3003` (both on their real,
+team-assigned ports). **Package Registry and User Management currently collide
+on host port 3001** — Guild/Package Registry/Tamagotchi were wired up before
+the port table existed; whoever owns them needs to move them to their real
+ports in a follow-up PR. Notification listens on `3008`. Each service applies
+its own database migrations on startup, except User Management and Battle,
+which don't auto-migrate — the same SQL each one would have run is kept under
+`deploy/db/<service>/` and mounted into that service's own Postgres container
+on first boot instead (`psql -f deploy/db/guild/001_init.sql` also works by
+hand for any of them). As the rest of the team publishes their services, add
+them to `deploy/compose.yaml` the same way.
+
+Seeding: `docker compose exec battle dotnet Battle.dll seed` and
+`docker compose exec user-management dotnet UserManagement.dll seed`
+populate each database with sample data if it's empty (add `--force` to wipe
+and reseed).
 
 Each service's own README documents running it individually, its full
 configuration, and how to publish a new image version.
