@@ -1,14 +1,10 @@
 {
   "info": {
     "name": "Tamagotchi",
-    "description": "Every endpoint of the Tamagotchi service, in an order that runs start to finish. Requests capture ids into collection variables, so a full run needs no manual input beyond base_url.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
+    "description": "Every endpoint of the Tamagotchi service, in an order that runs start to finish. Requests capture ids into collection variables, so a full run needs no manual input beyond the Tamagotchi Go Local environment.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3002"
-    },
     {
       "key": "package_id",
       "value": "0192f3c1-8a44-7c31-9e02-6b1d4f8a2c11"
@@ -175,9 +171,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/health",
+              "raw": "{{tamagotchi_base_url}}/health",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "health"
@@ -205,9 +201,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/ready",
+              "raw": "{{tamagotchi_base_url}}/ready",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "ready"
@@ -243,9 +239,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/types",
+              "raw": "{{tamagotchi_base_url}}/v1/types",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -279,9 +275,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/types/matrix",
+              "raw": "{{tamagotchi_base_url}}/v1/types/matrix",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -349,9 +345,9 @@
               "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -399,9 +395,9 @@
               "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -445,9 +441,9 @@
               "raw": "{\n  \"origin_owner_id\": \"{{winner_id}}\",\n  \"package_id\": \"{{package_sprouts_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -494,9 +490,9 @@
               "raw": "{\n  \"origin_owner_id\": \"{{winner_id}}\",\n  \"package_id\": \"{{package_sprouts_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -533,9 +529,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -573,9 +569,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis?holder_id={{owner_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis?holder_id={{owner_id}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -617,9 +613,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis?holder_id={{owner_id}}&limit=1",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis?holder_id={{owner_id}}&limit=1",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -684,9 +680,9 @@
               "raw": "{\n  \"action\": \"feed\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/care",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/care",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -738,9 +734,9 @@
               "raw": "{\n  \"action\": \"feed\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/care",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/care",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -788,9 +784,9 @@
               "raw": "{\n  \"action\": \"sing\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/care",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/care",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -838,9 +834,9 @@
               "raw": "{\n  \"action\": \"play\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/care",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/care",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -904,9 +900,9 @@
               "raw": "{\n  \"amount\": 6600,\n  \"source\": \"BATTLE\",\n  \"source_id\": \"{{replay_source_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/xp",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -955,9 +951,9 @@
               "raw": "{\n  \"amount\": 6600,\n  \"source\": \"BATTLE\",\n  \"source_id\": \"{{replay_source_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/xp",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1025,9 +1021,9 @@
               "raw": "{\n  \"source\": \"BATTLE\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"ttl_seconds\": 300,\n  \"lineups\": [\n    {\n      \"user_id\": \"{{owner_id}}\",\n      \"primary_id\": \"{{pet_id}}\",\n      \"secondary_id\": \"{{pet_secondary_id}}\"\n    },\n    {\n      \"user_id\": \"{{winner_id}}\",\n      \"primary_id\": \"{{winner_pet_id}}\",\n      \"secondary_id\": \"{{winner_pet_secondary_id}}\"\n    }\n  ]\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/internal/engagements",
+              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1074,9 +1070,9 @@
               "raw": "{\n  \"source\": \"RAID\",\n  \"reference_id\": \"{{fresh_uuid}}\",\n  \"ttl_seconds\": 300,\n  \"lineups\": [\n    {\n      \"user_id\": \"{{owner_id}}\",\n      \"primary_id\": \"{{pet_id}}\"\n    }\n  ]\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/internal/engagements",
+              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1111,9 +1107,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/internal/engagements/{{battle_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements/{{battle_id}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1170,9 +1166,9 @@
               "raw": "{\n  \"to_user_id\": \"{{winner_id}}\",\n  \"reason\": \"BATTLE_LOSS\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"engagement_id\": \"{{engagement_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/holders",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1223,9 +1219,9 @@
               "raw": "{\n  \"to_user_id\": \"{{winner_id}}\",\n  \"reason\": \"BATTLE_LOSS\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"engagement_id\": \"{{engagement_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/holders",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1264,9 +1260,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/holders",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1305,9 +1301,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1346,9 +1342,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/holders/{{owner_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders/{{owner_id}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1389,9 +1385,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/holders/{{winner_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders/{{winner_id}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1429,9 +1425,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_id}}/holders/{{winner_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders/{{winner_id}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1482,9 +1478,9 @@
               "raw": "{\n  \"to_user_id\": \"{{winner_id}}\",\n  \"reason\": \"BATTLE_LOSS\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"engagement_id\": \"{{engagement_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{pet_secondary_id}}/holders",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_secondary_id}}/holders",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1528,9 +1524,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{owner_id}}/collection",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1566,9 +1562,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{owner_id}}/collection",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1605,9 +1601,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{owner_id}}/collection/primary",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection/primary",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1657,9 +1653,9 @@
               "raw": "{\n  \"tamagotchi_id\": \"{{pet_secondary_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/users/{{owner_id}}/collection/primary",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection/primary",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1708,9 +1704,9 @@
               "raw": "{\n  \"tamagotchi_id\": \"{{pet_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/users/{{owner_id}}/collection/primary",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection/primary",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1759,9 +1755,9 @@
               "raw": "{\n  \"tamagotchi_id\": \"{{winner_pet_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/users/{{owner_id}}/collection/primary",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection/primary",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1802,9 +1798,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{owner_id}}/collection/{{pet_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection/{{pet_id}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1842,9 +1838,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{winner_id}}/collection/{{pet_secondary_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{winner_id}}/collection/{{pet_secondary_id}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1890,9 +1886,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/internal/engagements/{{battle_id}}/release",
+              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements/{{battle_id}}/release",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1941,9 +1937,9 @@
               "raw": "{\n  \"source\": \"RAID\",\n  \"reference_id\": \"{{fresh_uuid}}\",\n  \"ttl_seconds\": 300,\n  \"lineups\": [\n    {\n      \"user_id\": \"{{owner_id}}\",\n      \"primary_id\": \"{{pet_id}}\"\n    }\n  ]\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/internal/engagements",
+              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1978,9 +1974,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{owner_id}}/collection",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2028,9 +2024,9 @@
               "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2064,9 +2060,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis/{{fresh_uuid}}",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{fresh_uuid}}",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2109,9 +2105,9 @@
               "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2157,9 +2153,9 @@
               "raw": "not json"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2204,9 +2200,9 @@
               "raw": "{\n  \"origin_owner_id\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\",\n  \"package_id\": \"{{package_id}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2240,9 +2236,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/tamagotchis?type=ICE",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis?type=ICE",
               "host": [
-                "{{base_url}}"
+                "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",

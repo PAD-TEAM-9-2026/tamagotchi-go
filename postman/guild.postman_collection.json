@@ -1,14 +1,10 @@
 {
   "info": {
     "name": "Guild",
-    "description": "Every endpoint of the Guild service, in an order that runs start to finish against an empty or populated database. Requests capture ids into collection variables, so a full run needs no manual input beyond base_url.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.\n\nThe guild chat endpoint is a WebSocket and is not exercised here; see the service README.",
+    "description": "Every endpoint of the Guild service, in an order that runs start to finish against an empty or populated database. Requests capture ids into collection variables, so a full run needs no manual input beyond the Tamagotchi Go Local environment.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.\n\nThe guild chat endpoint is a WebSocket and is not exercised here; see the service README.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3004"
-    },
     {
       "key": "guild_id",
       "value": ""
@@ -120,9 +116,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/health",
+              "raw": "{{guild_base_url}}/health",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "health"
@@ -147,9 +143,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/ready",
+              "raw": "{{guild_base_url}}/ready",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "ready"
@@ -192,9 +188,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds",
+              "raw": "{{guild_base_url}}/v1/guilds",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -241,9 +237,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds?limit=10",
+              "raw": "{{guild_base_url}}/v1/guilds?limit=10",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -278,9 +274,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -315,9 +311,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -362,9 +358,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/invitations",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -411,9 +407,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/invitations",
+              "raw": "{{guild_base_url}}/v1/invitations",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -452,9 +448,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations/{{officer_invitation_id}}/accept",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/invitations/{{officer_invitation_id}}/accept",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -500,9 +496,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/invitations",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -551,9 +547,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations/{{decline_invitation_id}}/decline",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/invitations/{{decline_invitation_id}}/decline",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -599,9 +595,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/invitations",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -650,9 +646,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations/{{revoke_invitation_id}}/revoke",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/invitations/{{revoke_invitation_id}}/revoke",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -695,9 +691,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/members",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/members",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -744,9 +740,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/members/{{officer_to_be_id}}/role",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/members/{{officer_to_be_id}}/role",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -804,9 +800,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/invitations",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -852,9 +848,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations/{{kick_invitation_id}}/accept",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/invitations/{{kick_invitation_id}}/accept",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -889,9 +885,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/members/{{kicked_id}}",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/members/{{kicked_id}}",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -933,9 +929,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/leadership",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/leadership",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -985,9 +981,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/messages",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/messages",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1026,9 +1022,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/guilds",
+              "raw": "{{guild_base_url}}/v1/guilds",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1066,9 +1062,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds",
+              "raw": "{{guild_base_url}}/v1/guilds",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1111,9 +1107,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/00000000-0000-7000-8000-000000000000",
+              "raw": "{{guild_base_url}}/v1/guilds/00000000-0000-7000-8000-000000000000",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1156,9 +1152,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}/invitations",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/invitations",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1200,9 +1196,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/guilds/{{guild_id}}",
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}",
               "host": [
-                "{{base_url}}"
+                "{{guild_base_url}}"
               ],
               "path": [
                 "v1",
