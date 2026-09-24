@@ -626,6 +626,14 @@ Management and Battle SQL, and enables PostGIS for Map. The remaining services
 create their own schema at startup. The shared volume is separate from each
 service's standalone volume. Initialization does not rerun on an existing volume.
 
+If the shared volume predates User Management and Battle, apply their SQL once
+after starting the database:
+
+```bash
+docker compose exec database sh -c 'psql -U "$USER_MANAGEMENT_DB_USER" -d "$USER_MANAGEMENT_DB_NAME" -v ON_ERROR_STOP=1 -f /service-schema/user-management.sql'
+docker compose exec database sh -c 'psql -U "$BATTLE_DB_USER" -d "$BATTLE_DB_NAME" -v ON_ERROR_STOP=1 -f /service-schema/battle.sql'
+```
+
 ### Seed data
 
 Run the included seed commands after the stack starts:
