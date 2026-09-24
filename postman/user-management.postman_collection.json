@@ -1,11 +1,10 @@
 {
   "info": {
     "name": "User Management",
-    "description": "Every implemented endpoint of the User Management service, in an order that runs start to finish against an empty or populated database. Requests capture ids into collection variables, so a full run needs no manual input beyond base_url.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.\n\nAuthentication (login, refresh, service tokens, JWKS) is not implemented yet — see the service's PROGRESS notes — so every request here identifies itself with the temporary X-User-Id header mock instead of a real JWT. Endpoints marked \"service\"-only in the contract (the /v1/internal/* group, and the currency/boost mutation endpoints) currently have no service-token auth wired up either, so they are called here without any special header.",
+    "description": "User Management API. Run requests in order when they share state. Requests use X-User-Id while JWT authentication is unavailable. Internal and currency mutation endpoints currently have no service-token authentication.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:3001" },
     { "key": "run_suffix", "value": "" },
     { "key": "idempotency_key", "value": "" },
     { "key": "pkg1_id", "value": "" },
@@ -75,7 +74,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+            "url": { "raw": "{{user_management_base_url}}/health", "host": ["{{user_management_base_url}}"], "path": ["health"] }
           },
           "event": [
             {
@@ -94,7 +93,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{base_url}}/ready", "host": ["{{base_url}}"], "path": ["ready"] }
+            "url": { "raw": "{{user_management_base_url}}/ready", "host": ["{{user_management_base_url}}"], "path": ["ready"] }
           },
           "event": [
             {
@@ -121,7 +120,7 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"alice_{{run_suffix}}\",\n  \"email\": \"alice_{{run_suffix}}@example.com\",\n  \"password\": \"SuperSecurePassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
@@ -155,7 +154,7 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"bob_{{run_suffix}}\",\n  \"email\": \"bob_{{run_suffix}}@example.com\",\n  \"password\": \"SuperSecurePassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
@@ -185,7 +184,7 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"carol_{{run_suffix}}\",\n  \"email\": \"carol_{{run_suffix}}@example.com\",\n  \"password\": \"SuperSecurePassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
@@ -212,7 +211,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
-            "url": { "raw": "{{base_url}}/v1/users/me", "host": ["{{base_url}}"], "path": ["v1", "users", "me"] }
+            "url": { "raw": "{{user_management_base_url}}/v1/users/me", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "me"] }
           },
           "event": [
             {
@@ -237,11 +236,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{bob_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{bob_id}}",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{bob_id}}"]
             },
-            "description": "This endpoint has no auth check in the current implementation — see the service README's contract table (\"user or service\")."
+            "description": "This endpoint has no auth check in the current implementation; see the service README's contract table (\"user or service\")."
           },
           "event": [
             {
@@ -270,7 +269,7 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{base_url}}/v1/users/me/packages", "host": ["{{base_url}}"], "path": ["v1", "users", "me", "packages"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/users/me/packages", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "me", "packages"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"package_id\": \"{{pkg2_id}}\"\n}",
@@ -308,7 +307,7 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{base_url}}/v1/friend-requests", "host": ["{{base_url}}"], "path": ["v1", "friend-requests"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/friend-requests", "host": ["{{user_management_base_url}}"], "path": ["v1", "friend-requests"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"to_user_id\": \"{{bob_id}}\"\n}",
@@ -337,7 +336,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{bob_id}}" }],
-            "url": { "raw": "{{base_url}}/v1/friend-requests?limit=10", "host": ["{{base_url}}"], "path": ["v1", "friend-requests"], "query": [{ "key": "limit", "value": "10" }] }
+            "url": { "raw": "{{user_management_base_url}}/v1/friend-requests?limit=10", "host": ["{{user_management_base_url}}"], "path": ["v1", "friend-requests"], "query": [{ "key": "limit", "value": "10" }] }
           },
           "event": [
             {
@@ -364,8 +363,8 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/friend-requests/{{friend_request_ab_id}}/accept",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/friend-requests/{{friend_request_ab_id}}/accept",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "friend-requests", "{{friend_request_ab_id}}", "accept"]
             }
           },
@@ -390,8 +389,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/relationship/{{bob_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/relationship/{{bob_id}}",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "relationship", "{{bob_id}}"]
             }
           },
@@ -418,8 +417,8 @@
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/relationships?limit=10",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/relationships?limit=10",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "relationships"],
               "query": [{ "key": "limit", "value": "10" }]
             }
@@ -451,7 +450,7 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{base_url}}/v1/friend-requests", "host": ["{{base_url}}"], "path": ["v1", "friend-requests"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/friend-requests", "host": ["{{user_management_base_url}}"], "path": ["v1", "friend-requests"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"to_user_id\": \"{{carol_id}}\"\n}",
@@ -482,8 +481,8 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/friend-requests/{{friend_request_ac_id}}/reject",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/friend-requests/{{friend_request_ac_id}}/reject",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "friend-requests", "{{friend_request_ac_id}}", "reject"]
             }
           },
@@ -508,8 +507,8 @@
             "method": "PUT",
             "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/enemies/{{carol_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/enemies/{{carol_id}}",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "enemies", "{{carol_id}}"]
             }
           },
@@ -536,8 +535,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{carol_id}}/relationship/{{alice_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{carol_id}}/relationship/{{alice_id}}",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{carol_id}}", "relationship", "{{alice_id}}"]
             }
           },
@@ -564,8 +563,8 @@
             "method": "DELETE",
             "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/enemies/{{carol_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/enemies/{{carol_id}}",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "enemies", "{{carol_id}}"]
             }
           },
@@ -582,8 +581,8 @@
             "method": "DELETE",
             "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/friends/{{bob_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/friends/{{bob_id}}",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "friends", "{{bob_id}}"]
             }
           },
@@ -600,8 +599,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{bob_id}}/relationship/{{alice_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{bob_id}}/relationship/{{alice_id}}",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{bob_id}}", "relationship", "{{alice_id}}"]
             }
           },
@@ -633,8 +632,8 @@
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/global",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/global",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "global"]
             }
           },
@@ -659,8 +658,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/global/add",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/global/add",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "global", "add"]
             },
             "body": {
@@ -694,8 +693,8 @@
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/{{pkg1_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/{{pkg1_id}}",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "local", "{{pkg1_id}}"]
             }
           },
@@ -720,8 +719,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
             },
             "body": {
@@ -729,7 +728,7 @@
               "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"FEED\",\n  \"care_action_id\": \"{{care_action_id}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "description": "The reward amount, valid action names and daily cap come from Package Registry's CurrencyRules/CareRule config, which isn't queryable yet — MockPackageRegistryClient mocks a fixed rule set: FEED=10, PLAY=5, CLEAN=8, daily cap 30 per package. Action names are matched case-sensitively against that mocked set."
+            "description": "The reward amount, valid action names and daily cap come from Package Registry's CurrencyRules/CareRule config, which isn't queryable yet; MockPackageRegistryClient mocks a fixed rule set: FEED=10, PLAY=5, CLEAN=8, daily cap 30 per package. Action names are matched case-sensitively against that mocked set."
           },
           "event": [
             {
@@ -755,8 +754,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
             },
             "body": {
@@ -787,8 +786,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
             },
             "body": {
@@ -821,8 +820,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
             },
             "body": {
@@ -853,8 +852,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
             },
             "body": {
@@ -885,8 +884,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
             },
             "body": {
@@ -917,8 +916,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
             },
             "body": {
@@ -949,8 +948,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
             },
             "body": {
@@ -984,7 +983,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
-            "url": { "raw": "{{base_url}}/v1/users/me/boosts", "host": ["{{base_url}}"], "path": ["v1", "users", "me", "boosts"] }
+            "url": { "raw": "{{user_management_base_url}}/v1/users/me/boosts", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "me", "boosts"] }
           },
           "event": [
             {
@@ -1008,13 +1007,13 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/v1/internal/boost-consumptions", "host": ["{{base_url}}"], "path": ["v1", "internal", "boost-consumptions"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/internal/boost-consumptions", "host": ["{{user_management_base_url}}"], "path": ["v1", "internal", "boost-consumptions"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"user_id\": \"{{alice_id}}\",\n  \"boost_id\": \"ATTACK_10\"\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "description": "No endpoint grants boost charges yet (Battle would be the caller in the real system), so a fresh account always has zero — this exercises the 422 no-charges path."
+            "description": "No endpoint grants boost charges yet (Battle would be the caller in the real system), so a fresh account always has zero; this exercises the 422 no-charges path."
           },
           "event": [
             {
@@ -1042,8 +1041,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/internal/users/{{alice_id}}/membership",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/internal/users/{{alice_id}}/membership",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "internal", "users", "{{alice_id}}", "membership"]
             }
           },
@@ -1070,8 +1069,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/internal/memberships?limit=50",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/internal/memberships?limit=50",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "internal", "memberships"],
               "query": [{ "key": "limit", "value": "50" }]
             }
@@ -1102,13 +1101,13 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/v1/internal/battle-settlements", "host": ["{{base_url}}"], "path": ["v1", "internal", "battle-settlements"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/internal/battle-settlements", "host": ["{{user_management_base_url}}"], "path": ["v1", "internal", "battle-settlements"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"winner_id\": \"{{bob_id}}\",\n  \"loser_id\": \"{{carol_id}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "description": "Both Bob and Carol still have a global balance of 0 at this point, so loser_debit clamps to 0 — see BattleSettlementEndpoints for the clamping rule."
+            "description": "Both Bob and Carol still have a global balance of 0 at this point, so loser_debit clamps to 0; see BattleSettlementEndpoints for the clamping rule."
           },
           "event": [
             {
@@ -1134,7 +1133,7 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/v1/internal/battle-settlements", "host": ["{{base_url}}"], "path": ["v1", "internal", "battle-settlements"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/internal/battle-settlements", "host": ["{{user_management_base_url}}"], "path": ["v1", "internal", "battle-settlements"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"winner_id\": \"{{unknown_user_id}}\",\n  \"loser_id\": \"{{carol_id}}\"\n}",
@@ -1166,7 +1165,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{base_url}}/v1/users/me", "host": ["{{base_url}}"], "path": ["v1", "users", "me"] }
+            "url": { "raw": "{{user_management_base_url}}/v1/users/me", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "me"] }
           },
           "event": [
             {
@@ -1191,7 +1190,7 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"alice_{{run_suffix}}\",\n  \"email\": \"alice_{{run_suffix}}@example.com\",\n  \"password\": \"AnotherPassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
@@ -1222,7 +1221,7 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"shortpw_{{run_suffix}}\",\n  \"email\": \"shortpw_{{run_suffix}}@example.com\",\n  \"password\": \"short\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
@@ -1250,8 +1249,8 @@
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{bob_id}}/currency/global",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{bob_id}}/currency/global",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{bob_id}}", "currency", "global"]
             }
           },
@@ -1276,8 +1275,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{unknown_user_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{user_management_base_url}}/v1/users/{{unknown_user_id}}",
+              "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{unknown_user_id}}"]
             }
           },
@@ -1305,7 +1304,7 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{base_url}}/v1/friend-requests", "host": ["{{base_url}}"], "path": ["v1", "friend-requests"] },
+            "url": { "raw": "{{user_management_base_url}}/v1/friend-requests", "host": ["{{user_management_base_url}}"], "path": ["v1", "friend-requests"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"to_user_id\": \"{{alice_id}}\"\n}",
