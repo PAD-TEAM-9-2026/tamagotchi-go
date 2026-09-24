@@ -1,0 +1,1333 @@
+{
+  "info": {
+    "name": "User Management",
+    "description": "Every implemented endpoint of the User Management service, in an order that runs start to finish against an empty or populated database. Requests capture ids into collection variables, so a full run needs no manual input beyond base_url.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.\n\nAuthentication (login, refresh, service tokens, JWKS) is not implemented yet — see the service's PROGRESS notes — so every request here identifies itself with the temporary X-User-Id header mock instead of a real JWT. Endpoints marked \"service\"-only in the contract (the /v1/internal/* group, and the currency/boost mutation endpoints) currently have no service-token auth wired up either, so they are called here without any special header.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3001" },
+    { "key": "run_suffix", "value": "" },
+    { "key": "idempotency_key", "value": "" },
+    { "key": "pkg1_id", "value": "" },
+    { "key": "pkg2_id", "value": "" },
+    { "key": "unknown_package_id", "value": "" },
+    { "key": "unknown_user_id", "value": "" },
+    { "key": "reference_id", "value": "" },
+    { "key": "care_action_id", "value": "" },
+    { "key": "battle_id", "value": "" },
+    { "key": "alice_id", "value": "" },
+    { "key": "bob_id", "value": "" },
+    { "key": "carol_id", "value": "" },
+    { "key": "friend_request_ab_id", "value": "" },
+    { "key": "friend_request_ac_id", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function uuidv7() {",
+          "  const ms = Date.now();",
+          "  const bytes = new Uint8Array(16);",
+          "  bytes[0] = Math.floor(ms / 1099511627776) & 0xff;",
+          "  bytes[1] = Math.floor(ms / 4294967296) & 0xff;",
+          "  bytes[2] = Math.floor(ms / 16777216) & 0xff;",
+          "  bytes[3] = Math.floor(ms / 65536) & 0xff;",
+          "  bytes[4] = Math.floor(ms / 256) & 0xff;",
+          "  bytes[5] = ms & 0xff;",
+          "  for (let i = 6; i < 16; i += 1) {",
+          "    bytes[i] = Math.floor(Math.random() * 256);",
+          "  }",
+          "  bytes[6] = (bytes[6] & 0x0f) | 0x70;",
+          "  bytes[8] = (bytes[8] & 0x3f) | 0x80;",
+          "  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');",
+          "  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');",
+          "}",
+          "",
+          "function seed(key, value) {",
+          "  if (!pm.collectionVariables.get(key)) {",
+          "    pm.collectionVariables.set(key, value);",
+          "  }",
+          "}",
+          "",
+          "pm.collectionVariables.set('idempotency_key', uuidv7());",
+          "",
+          "seed('run_suffix', Date.now().toString());",
+          "seed('pkg1_id', uuidv7());",
+          "seed('pkg2_id', uuidv7());",
+          "seed('unknown_package_id', uuidv7());",
+          "seed('unknown_user_id', uuidv7());",
+          "seed('reference_id', uuidv7());",
+          "seed('care_action_id', uuidv7());",
+          "seed('battle_id', uuidv7());",
+          ""
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Probes",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/ready", "host": ["{{base_url}}"], "path": ["ready"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 READY', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('READY'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Registration and profile",
+      "item": [
+        {
+          "name": "Register Alice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"alice_{{run_suffix}}\",\n  \"email\": \"alice_{{run_suffix}}@example.com\",\n  \"password\": \"SuperSecurePassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201, starter registration', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.global_currency).to.eql(0);",
+                  "  pm.expect(body.starter_status).to.eql('PENDING');",
+                  "  pm.expect(body.user.package_ids).to.include(pm.collectionVariables.get('pkg1_id'));",
+                  "  pm.collectionVariables.set('alice_id', body.user.user_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register Bob",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"bob_{{run_suffix}}\",\n  \"email\": \"bob_{{run_suffix}}@example.com\",\n  \"password\": \"SuperSecurePassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201, Bob is registered', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('bob_id', pm.response.json().user.user_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register Carol",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"carol_{{run_suffix}}\",\n  \"email\": \"carol_{{run_suffix}}@example.com\",\n  \"password\": \"SuperSecurePassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201, Carol is registered', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('carol_id', pm.response.json().user.user_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alice reads her own full profile (me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "url": { "raw": "{{base_url}}/v1/users/me", "host": ["{{base_url}}"], "path": ["v1", "users", "me"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, matches Alice', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.user_id).to.eql(pm.collectionVariables.get('alice_id'));",
+                  "  pm.expect(body.package_ids).to.include(pm.collectionVariables.get('pkg1_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anyone can read Bob's limited public profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{bob_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{bob_id}}"]
+            },
+            "description": "This endpoint has no auth check in the current implementation — see the service README's contract table (\"user or service\")."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, limited profile shape', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.user_id).to.eql(pm.collectionVariables.get('bob_id'));",
+                  "  pm.expect(body).to.have.property('username');",
+                  "  pm.expect(body).to.not.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alice joins a second package",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{alice_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/v1/users/me/packages", "host": ["{{base_url}}"], "path": ["v1", "users", "me", "packages"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{pkg2_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, membership version bumped', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.package_ids).to.include.members([pm.collectionVariables.get('pkg1_id'), pm.collectionVariables.get('pkg2_id')]);",
+                  "  pm.expect(body.membership_version).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Friend requests and relationships",
+      "item": [
+        {
+          "name": "Alice sends a friend request to Bob",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{alice_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/v1/friend-requests", "host": ["{{base_url}}"], "path": ["v1", "friend-requests"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to_user_id\": \"{{bob_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 PENDING', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('PENDING');",
+                  "  pm.collectionVariables.set('friend_request_ab_id', body.request_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bob lists his friend requests",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{bob_id}}" }],
+            "url": { "raw": "{{base_url}}/v1/friend-requests?limit=10", "host": ["{{base_url}}"], "path": ["v1", "friend-requests"], "query": [{ "key": "limit", "value": "10" }] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, Alice\\'s request is in the page', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map((r) => r.request_id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('friend_request_ab_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bob accepts the friend request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{bob_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/friend-requests/{{friend_request_ab_id}}/accept",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "friend-requests", "{{friend_request_ab_id}}", "accept"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 ACCEPTED', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('ACCEPTED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alice and Bob are now mutual friends",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/relationship/{{bob_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "relationship", "{{bob_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, friend both ways', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.relationship).to.eql('friend');",
+                  "  pm.expect(body.reverse_relationship).to.eql('friend');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alice's relationship list includes Bob",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/relationships?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "relationships"],
+              "query": [{ "key": "limit", "value": "10" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, Bob is listed as a friend', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const items = pm.response.json().items;",
+                  "  const bob = items.find((i) => i.user_id === pm.collectionVariables.get('bob_id'));",
+                  "  pm.expect(bob).to.not.be.undefined;",
+                  "  pm.expect(bob.relationship).to.eql('friend');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alice sends a friend request to Carol, to reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{alice_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/v1/friend-requests", "host": ["{{base_url}}"], "path": ["v1", "friend-requests"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to_user_id\": \"{{carol_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 PENDING', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('friend_request_ac_id', pm.response.json().request_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Carol rejects the friend request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{carol_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/friend-requests/{{friend_request_ac_id}}/reject",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "friend-requests", "{{friend_request_ac_id}}", "reject"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 REJECTED', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('REJECTED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alice marks Carol as an enemy",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/enemies/{{carol_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "enemies", "{{carol_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, one-directional enemy', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.relationship).to.eql('enemy');",
+                  "  pm.expect(body.reverse_relationship).to.eql('stranger');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The enemy mark does not apply the other way",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{carol_id}}/relationship/{{alice_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{carol_id}}", "relationship", "{{alice_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, stranger forward, enemy reverse', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.relationship).to.eql('stranger');",
+                  "  pm.expect(body.reverse_relationship).to.eql('enemy');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alice removes the enemy mark",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/enemies/{{carol_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "enemies", "{{carol_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": ["pm.test('204', () => pm.response.to.have.status(204));"] }
+            }
+          ]
+        },
+        {
+          "name": "Alice removes Bob as a friend",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/friends/{{bob_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "friends", "{{bob_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": ["pm.test('204', () => pm.response.to.have.status(204));"] }
+            }
+          ]
+        },
+        {
+          "name": "The friendship is gone on both sides",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{bob_id}}/relationship/{{alice_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{bob_id}}", "relationship", "{{alice_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, stranger both ways', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.relationship).to.eql('stranger');",
+                  "  pm.expect(body.reverse_relationship).to.eql('stranger');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Currency",
+      "item": [
+        {
+          "name": "Alice's global wallet starts at zero",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/global",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "global"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, amount 0', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().amount).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Alice's global currency (service call)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/global/add",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "global", "add"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 100,\n  \"reason\": \"RAID_WIN\",\n  \"reference_id\": \"{{reference_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "\"service\"-only per the contract. No service-token auth exists yet, so no auth header is sent here."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, credited', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.credited_amount).to.eql(100);",
+                  "  pm.expect(body.new_balance).to.eql(100);",
+                  "  pm.expect(body.reference_id).to.eql(pm.collectionVariables.get('reference_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alice's local wallet in package 1 starts at zero",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/{{pkg1_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "{{pkg1_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, amount 0', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().amount).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Alice's local currency for a care action (service call)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"FEED\",\n  \"care_action_id\": \"{{care_action_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "The reward amount, valid action names and daily cap come from Package Registry's CurrencyRules/CareRule config, which isn't queryable yet — MockPackageRegistryClient mocks a fixed rule set: FEED=10, PLAY=5, CLEAN=8, daily cap 30 per package. Action names are matched case-sensitively against that mocked set."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, credited the mocked FEED reward', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.credited_amount).to.eql(10);",
+                  "  pm.expect(body.new_balance).to.eql(10);",
+                  "  pm.expect(body.reference_id).to.eql(pm.collectionVariables.get('care_action_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crediting an unknown care action is rejected",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"NOT_A_REAL_ACTION\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "An action not in the mocked package's rule set must be rejected before any balance changes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 unknown_care_action', () => {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(pm.response.json().code).to.eql('unknown_care_action');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Alice's local currency again (PLAY) #1",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Running total after the FEED credit above: 10. PLAY's mocked reward is 5, so this should land at 15, still under the package's 30 daily cap."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, balance now 15', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.credited_amount).to.eql(5);",
+                  "  pm.expect(body.new_balance).to.eql(15);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Alice's local currency again (PLAY) #2",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, balance now 20', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.new_balance).to.eql(20);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Alice's local currency again (PLAY) #3",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, balance now 25', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.new_balance).to.eql(25);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Alice's local currency again (PLAY) #4, lands exactly on the cap",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, balance now exactly at the 30 daily cap', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.new_balance).to.eql(30);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A 5th local credit the same day exceeds the daily cap",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Alice's package-1 balance is already at the mocked 30 daily cap, so crediting another 5 must be refused rather than over-crediting."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 daily_cap_reached', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().code).to.eql('daily_cap_reached');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Local currency 404s for a package Alice never joined",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{alice_id}}/currency/local/add",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{unknown_package_id}}\",\n  \"config_version\": 1,\n  \"action\": \"FEED\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 not_a_member', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.json().code).to.eql('not_a_member');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Boosts",
+      "item": [
+        {
+          "name": "Alice's boost list has the page shape",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "url": { "raw": "{{base_url}}/v1/users/me/boosts", "host": ["{{base_url}}"], "path": ["v1", "users", "me", "boosts"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, page shape', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('items');",
+                  "  pm.expect(body).to.have.property('next_cursor');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consuming a boost Alice doesn't have fails (service call)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/v1/internal/boost-consumptions", "host": ["{{base_url}}"], "path": ["v1", "internal", "boost-consumptions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"user_id\": \"{{alice_id}}\",\n  \"boost_id\": \"ATTACK_10\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "No endpoint grants boost charges yet (Battle would be the caller in the real system), so a fresh account always has zero — this exercises the 422 no-charges path."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 no_charges', () => {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(pm.response.json().code).to.eql('no_charges');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Internal (service) endpoints",
+      "item": [
+        {
+          "name": "Alice's membership snapshot",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/internal/users/{{alice_id}}/membership",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "internal", "users", "{{alice_id}}", "membership"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, both packages listed', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.package_ids).to.include.members([pm.collectionVariables.get('pkg1_id'), pm.collectionVariables.get('pkg2_id')]);",
+                  "  pm.expect(body.membership_version).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Membership list includes Alice",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/internal/memberships?limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "internal", "memberships"],
+              "query": [{ "key": "limit", "value": "50" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, Alice is in the page', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map((m) => m.user_id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('alice_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Battle settlements",
+      "item": [
+        {
+          "name": "Settle a battle between Bob and Carol",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/v1/internal/battle-settlements", "host": ["{{base_url}}"], "path": ["v1", "internal", "battle-settlements"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"winner_id\": \"{{bob_id}}\",\n  \"loser_id\": \"{{carol_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Both Bob and Carol still have a global balance of 0 at this point, so loser_debit clamps to 0 — see BattleSettlementEndpoints for the clamping rule."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, winner credited, debit clamped to available balance', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.winner_credit).to.eql(50);",
+                  "  pm.expect(body.loser_debit).to.eql(0);",
+                  "  pm.expect(body.winner_balance).to.eql(50);",
+                  "  pm.expect(body.loser_balance).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Battle settlement 404s for an unknown user",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/v1/internal/battle-settlements", "host": ["{{base_url}}"], "path": ["v1", "internal", "battle-settlements"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"winner_id\": \"{{unknown_user_id}}\",\n  \"loser_id\": \"{{carol_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 wallet_not_found', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.json().code).to.eql('wallet_not_found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Refusals",
+      "item": [
+        {
+          "name": "No credentials at all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/v1/users/me", "host": ["{{base_url}}"], "path": ["v1", "users", "me"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 unauthorized', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate registration is rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"alice_{{run_suffix}}\",\n  \"email\": \"alice_{{run_suffix}}@example.com\",\n  \"password\": \"AnotherPassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Same username/email as \"Register Alice\" above."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 account_exists', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().code).to.eql('account_exists');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A password that's too short fails validation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/v1/users/register", "host": ["{{base_url}}"], "path": ["v1", "users", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"shortpw_{{run_suffix}}\",\n  \"email\": \"shortpw_{{run_suffix}}@example.com\",\n  \"password\": \"short\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 validation_error', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().code).to.eql('validation_error');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accessing someone else's wallet is forbidden",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{bob_id}}/currency/global",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{bob_id}}", "currency", "global"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 not_self', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().code).to.eql('not_self');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An unknown user profile 404s",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/users/{{unknown_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "{{unknown_user_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 user_not_found', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.json().code).to.eql('user_not_found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sending a friend request to yourself is rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-User-Id", "value": "{{alice_id}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/v1/friend-requests", "host": ["{{base_url}}"], "path": ["v1", "friend-requests"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to_user_id\": \"{{alice_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 self_request', () => {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(pm.response.json().code).to.eql('self_request');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
