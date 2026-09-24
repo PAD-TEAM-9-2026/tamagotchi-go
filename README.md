@@ -16,8 +16,7 @@ creatures, art and care rules, and all of them run on these eight services.
 
 ## Repository
 
-Each service has its own private repository. Only the professor is invited to
-them, not teammates. They are linked here as submodules.
+Each service has its own private repository. They are linked here as submodules.
 
 | Service | Submodule path | Owner |
 |---|---|---|
@@ -94,7 +93,7 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
-![Tamagotchi Go architecture — 8 microservices, PostgreSQL per service, RabbitMQ event bus](docs/img/architecture_diagram.png)
+![Tamagotchi Go architecture with 8 microservices, PostgreSQL per service, and RabbitMQ](docs/img/architecture_diagram.png)
 
 Every client goes through the HTTP Gateway. It routes by path prefix to the eight
 services, so a frontend package never learns where a service lives or how many
@@ -134,7 +133,7 @@ copy when it drifts.
 | Map | C#, ASP.NET Core, EF Core | PostgreSQL with PostGIS | Distance queries need a spatial index |
 | Monster Raid | C#, ASP.NET Core, EF Core | PostgreSQL | Counters under concurrent attacks |
 
-Two languages, as the lab requires. TypeScript for the four services that mostly
+The services use two languages. TypeScript for the four services that mostly
 move JSON around, C# for the four that hold money, turns, counters and
 coordinates.
 
@@ -429,7 +428,7 @@ Registry only for package eligibility. The topic text points at Registry Service
 for identity checks, which is a wording error: User Management is the authority
 on who a user is and who they are friends with.
 
-**Implementation notes (Lab 1).** A few decisions the code needed that the
+**Implementation notes.** A few decisions the code needed that the
 contract above did not spell out:
 
 - A user belongs to at most one guild at a time.
@@ -482,13 +481,13 @@ Packages are abstract to this backend. A package defines its own creatures, art
 and care rules in its own frontend, and nothing here knows what `hunger` or
 `discipline` is supposed to mean. What Registry stores is a *declaration*: a
 `StatDefinition` gives a key a type and bounds so a value can be validated, and a
-`BonusRule` is a generic comparison — stat key, operator, threshold, effect,
+`BonusRule` is a generic comparison with a stat key, operator, threshold, effect,
 value in basis points. Battle evaluates those rules mechanically against the
 creature's `package_stats` without interpreting any of them, which is how a
 package-specific bonus applies without any service sharing the package's data
 model.
 
-**Implementation notes (Lab 1).** Decisions the code needed beyond the contract:
+**Implementation notes.** Decisions the code needed beyond the contract:
 
 - Package `name` is not required to be unique; nothing in the contract asks for
   it, unlike a guild's name which doubles as its public identity.
@@ -516,7 +515,9 @@ model.
 | Method and path | Request | Response | Access |
 |---|---|---|---|
 | `POST /v1/location` | LocationInput, Idempotency-Key | 200 LocationReceipt | user |
+| `GET /v1/location/{userId}` | none | 200 Location | user |
 | `GET /v1/location/nearby/{userId}` | query limit, cursor | 200 Nearby | user |
+| `DELETE /v1/location/{userId}` | none | 204 | user |
 
 Friends and enemies are visible while their location is fresh. Strangers appear
 within 6 metres, which is configurable.
@@ -530,11 +531,13 @@ within 6 metres, which is configurable.
 | `GET /v1/raids/{raidId}` | none | 200 Raid | user or service |
 | `POST /v1/raids/{raidId}/attack` | ActorInput, Idempotency-Key | 200 RaidAttack | user |
 | `GET /v1/raids/{raidId}/leaderboard` | query limit, cursor | 200 Leaderboard | user or service |
+| `DELETE /v1/raids/{raidId}` | none | 204 | user |
 
-A member contributes their primary, which is reserved through the same
-`POST /internal/engagements` lock Battle uses, so a creature cannot fight a boss
-and a player at once. A shared creature may be contributed by whichever holder
-fields it first; the others get `409 creature_engaged` until the raid ends.
+The current Monster Raid implementation accepts `X-User-Id` with a UUID v7 on domain requests while mock identity is enabled. This local header does not replace gateway authentication in the target contract.
+
+The shared contract requires Tamagotchi engagement reservation when a member
+contributes a primary creature. Mock integration mode does not acquire the
+cross-service lock.
 
 ### Notification, `/notification`
 
@@ -594,52 +597,38 @@ replays it with the same event ID.
 
 ## Deployment
 
-Services published to Docker Hub so far, per Lab 1 Grade 4/6:
+`deploy/compose.yaml` pulls eight versioned images. Each service has its own
+credentials and database in one PostGIS-enabled PostgreSQL container.
 
-| Service | Image | Platforms |
+| Service | Image | Host port |
 |---|---|---|
-| Guild | [`mihaelacatan/guild-service`](https://hub.docker.com/r/mihaelacatan/guild-service) | `linux/amd64`, `linux/arm64` |
-| Package Registry | [`mihaelacatan/package-registry-service`](https://hub.docker.com/r/mihaelacatan/package-registry-service) | `linux/amd64`, `linux/arm64` |
-| Tamagotchi | [`victoriamutruc/tamagotchi`](https://hub.docker.com/r/victoriamutruc/tamagotchi) | `linux/amd64`, `linux/arm64` |
-| Notification | [`victoriamutruc/notification`](https://hub.docker.com/r/victoriamutruc/notification) | `linux/amd64`, `linux/arm64` |
-| User Management | [`patriciamoraru/user-management:1.2.0`](https://hub.docker.com/r/patriciamoraru/user-management) | `linux/amd64` |
-| Battle | [`patriciamoraru/battle:1.2.0`](https://hub.docker.com/r/patriciamoraru/battle) | `linux/amd64` |
+| User Management | `patriciamoraru/user-management:1.2.0` | 3001 |
+| Tamagotchi | `victoriamutruc/tamagotchi:1.0.0` | 3002 |
+| Battle | `patriciamoraru/battle:1.2.0` | 3003 |
+| Guild | `mihaelacatan/guild-service:0.2.0` | 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:0.2.0` | 3005 |
+| Map | `sergedbs/map:1.0.0` | 3006 |
+| Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
+| Notification | `victoriamutruc/notification:1.0.0` | 3008 |
 
-`deploy/compose.yaml` runs them against their own PostgreSQL databases, using
-the uploaded images directly rather than building from a Dockerfile.
-
-Requirements: Docker with Compose v2. Nothing is built locally and no source
-checkout is needed, the images are pulled from Docker Hub. Each service brings
-its own PostgreSQL, so ports 3001, 3002, 3003, 3004, 3005 and 3008 must be free.
+Requires Docker with Compose v2 and free host ports 3001 through 3008.
 
 ```bash
 cd deploy
-cp .env.example .env   # set the database passwords, and an admin id for Registry
+cp .env.example .env
+# Set every database password and any Registry admin IDs in .env.
 docker compose --env-file .env up -d --wait
 ```
 
-Every `*_DB_PASSWORD` has no default and Compose refuses to start until it is
-set, so a database is never brought up with a password someone could guess from
-the repository.
+Use distinct URL-safe passwords in the untracked `.env`. On first start, the
+database initializer creates eight databases and roles, applies the User
+Management and Battle SQL, and enables PostGIS for Map. The remaining services
+create their own schema at startup. The shared volume is separate from each
+service's standalone volume. Initialization does not rerun on an existing volume.
 
-User Management listens on `3001`, Tamagotchi on `3002`, Battle on `3003`,
-Guild on `3004`, Package Registry on `3005` and Notification on `3008` — all
-on their real, team-assigned ports. Each service applies its own database
-migrations on startup, except User Management and Battle, which don't
-auto-migrate — the same SQL each one would have run is kept under
-`deploy/db/<service>/` and mounted into that service's own Postgres container
-on first boot instead (`psql -f deploy/db/guild/001_init.sql` also works by
-hand for any of them). As the rest of the team publishes their services, add
-them to `deploy/compose.yaml` the same way.
+### Seed data
 
-Each service's own README documents running it individually, its full
-configuration, and how to publish a new image version.
-
-### Seeding test data
-
-Each image ships its own seed script, which only fills an empty database and
-does nothing otherwise (`--force` wipes and reseeds). Runnable directly
-against the shared stack once it is up:
+Run the included seed commands after the stack starts:
 
 ```bash
 docker compose exec guild node dist/db/seed.js
@@ -650,16 +639,17 @@ docker compose exec user-management dotnet UserManagement.dll seed
 docker compose exec battle dotnet Battle.dll seed
 ```
 
-Guild's script creates 3 guilds with members in every role and invitations in
-every status; Registry's creates 2 packages (one active with stats
-configured, one inactive), a boss and a raid occurrence in each of the
-scheduled and active states. Tamagotchi's creates 3 creatures across two
-packages, one of them held by two users, and a primary selection each.
-Notification's creates 2 devices and 6 notifications covering a suppressed
-category, a user with no device, and one event delivered to two recipients.
-User Management's creates 4 users, package memberships, wallets, friend
-requests and boosts. Battle's creates 4 battles covering every status this
-service implements. Both are idempotent unless `--force` is passed.
+Map and Monster Raid seed through their APIs. From their standalone repositories,
+run `scripts/seed.sh` with `MAP_BASE_URL=http://localhost:3006` or
+`MONSTER_RAID_BASE_URL=http://localhost:3007`, respectively.
+
+### API collections
+
+Import the eight collections in `postman/` and select
+`postman/tamagotchi-go.postman_environment.json`. The environment defines one
+base URL per service. Map and Monster Raid requests create their own fixtures.
+Run the other service collections in order when a request depends on a previous
+response. See [Postman instructions](postman/README.md).
 
 ## GitHub workflow
 
@@ -681,16 +671,12 @@ A PR says what changed and why, links its issue, lists affected services, shows
 any contract diff and says how it was checked. The template is in
 `.github/pull_request_template.md`.
 
-Versioning: each lab is a release. Nothing merges into `main` before the lab is
-presented. After the presentation `develop` merges into `main` and `main` is
-tagged with a new version, `v0.1.0` for Lab 0, `v1.0.0` for Lab 1 and so on.
-The private service repositories follow the same rule and carry their own tags.
+Versioning: merge tested changes from `develop` into `main` for a release and
+tag the resulting commit. Service repositories carry their own release tags.
 
-Testing: Lab 0 checks documents, schemas and links with
-`python3 tools/check_contracts.py`. From Lab 1, unit tests for domain rules,
-transaction tests against a real PostgreSQL and consumer tests against the event
-schemas. Target 80 % line coverage in domain code, and concurrency, idempotency
-and recovery paths covered regardless of the number.
+Testing: run `python3 tools/check_contracts.py` for shared contracts. Service
+repositories test domain rules and persistence against PostgreSQL. Target at
+least 80 % line coverage in domain code and cover concurrency and failure paths.
 
 Nobody commits `.env` files, API keys, `node_modules` or build output. Each
 service ships a `.env.example` with empty values.
