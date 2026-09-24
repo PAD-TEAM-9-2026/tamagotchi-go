@@ -1,0 +1,388 @@
+{
+  "info": {
+    "name": "Map",
+    "description": "Each request is independently runnable against Map. GET and DELETE requests create their own location first.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function uuidv7() {",
+          "  const ms = Date.now();",
+          "  const bytes = new Uint8Array(16);",
+          "  for (let i = 0; i < 6; i++) bytes[i] = Math.floor(ms / 2 ** (8 * (5 - i))) & 255;",
+          "  for (let i = 6; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);",
+          "  bytes[6] = (bytes[6] & 15) | 112;",
+          "  bytes[8] = (bytes[8] & 63) | 128;",
+          "  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');",
+          "  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');",
+          "}",
+          "pm.variables.set('map_user_id', uuidv7());",
+          "pm.variables.set('map_timestamp', new Date().toISOString());"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Probes",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{map_base_url}}/health",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"service is up\", () => { pm.expect(pm.response.json().status).to.eql('UP') });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{map_base_url}}/ready",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"database is ready\", () => { pm.expect(pm.response.json().status).to.eql('READY') });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Create or update location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\":\"{{map_user_id}}\",\"lat\":47.0105,\"lng\":28.8638,\"timestamp\":\"{{map_timestamp}}\",\"accuracy_m\":5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"accepted\", () => { pm.expect(pm.response.json().accepted).to.eql(true) });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location/{{map_user_id}}",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location",
+                "{{map_user_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.environment.get('map_base_url') + '/v1/location',",
+                  "  method: 'POST',",
+                  "  header: {'Content-Type': 'application/json'},",
+                  "  body: {mode: 'raw', raw: \"{\\\"user_id\\\":\\\"{{map_user_id}}\\\",\\\"lat\\\":47.0105,\\\"lng\\\":28.8638,\\\"timestamp\\\":\\\"{{map_timestamp}}\\\",\\\"accuracy_m\\\":5}\".replace('{{map_user_id}}', pm.variables.get('map_user_id')).replace('{{map_timestamp}}', pm.variables.get('map_timestamp'))}",
+                  "}, (error, response) => {",
+                  "  if (error || response.code !== 200) throw new Error('Map fixture creation failed');",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"matching user\", () => { pm.expect(pm.response.json().user_id).to.eql(pm.variables.get('map_user_id')) });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read nearby locations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location/nearby/{{map_user_id}}?limit=10",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location",
+                "nearby",
+                "{{map_user_id}}?limit=10"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('map_neighbor_id', pm.variables.get('map_user_id').slice(0, -2) + '04');",
+                  "const url = pm.environment.get('map_base_url') + '/v1/location';",
+                  "const timestamp = pm.variables.get('map_timestamp');",
+                  "const viewer = {user_id: pm.variables.get('map_user_id'), lat: 47.0105, lng: 28.8638, timestamp, accuracy_m: 5};",
+                  "const neighbor = {user_id: pm.variables.get('map_neighbor_id'), lat: 47.01051, lng: 28.8638, timestamp, accuracy_m: 5};",
+                  "const send = (body, next) => pm.sendRequest({url, method: 'POST', header: {'Content-Type': 'application/json'}, body: {mode: 'raw', raw: JSON.stringify(body)}}, (error, response) => {",
+                  "  if (error || response.code !== 200) throw new Error('Map nearby fixture creation failed');",
+                  "  next();",
+                  "});",
+                  "send(viewer, () => send(neighbor, () => {}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"nearby list\", () => { pm.expect(pm.response.json().nearby).to.be.an('array') });",
+                  "pm.test('nearby stranger is visible', () => pm.expect(pm.response.json().nearby.map(x => x.user_id)).to.include(pm.variables.get('map_neighbor_id')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete location",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location/{{map_user_id}}",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location",
+                "{{map_user_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.environment.get('map_base_url') + '/v1/location',",
+                  "  method: 'POST',",
+                  "  header: {'Content-Type': 'application/json'},",
+                  "  body: {mode: 'raw', raw: \"{\\\"user_id\\\":\\\"{{map_user_id}}\\\",\\\"lat\\\":47.0105,\\\"lng\\\":28.8638,\\\"timestamp\\\":\\\"{{map_timestamp}}\\\",\\\"accuracy_m\\\":5}\".replace('{{map_user_id}}', pm.variables.get('map_user_id')).replace('{{map_timestamp}}', pm.variables.get('map_timestamp'))}",
+                  "}, (error, response) => {",
+                  "  if (error || response.code !== 200) throw new Error('Map fixture creation failed');",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Refusals",
+      "item": [
+        {
+          "name": "Invalid user ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location/not-a-uuid",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location",
+                "not-a-uuid"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"problem code\", () => { pm.expect(pm.response.json().code).to.eql('invalid_user_id') });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location/{{map_user_id}}",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location",
+                "{{map_user_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"problem code\", () => { pm.expect(pm.response.json().code).to.eql('location_not_found') });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid latitude",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\":\"{{map_user_id}}\",\"lat\":91,\"lng\":28.8638,\"timestamp\":\"{{map_timestamp}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
