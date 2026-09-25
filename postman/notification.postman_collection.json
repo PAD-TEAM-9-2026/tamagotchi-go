@@ -1,14 +1,10 @@
 {
   "info": {
     "name": "Notification",
-    "description": "Every endpoint of the Notification service, in an order that runs start to finish. Requests capture ids into collection variables, so a full run needs no manual input beyond base_url.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.\n\nThe history is empty on a fresh service because a notification is only ever created by consuming an event from another service, and the contract exposes no route to inject one.",
+    "description": "Every endpoint of the Notification service, in an order that runs start to finish. Requests capture ids into collection variables, so a full run needs no manual input beyond the Tamagotchi Go Local environment.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.\n\nThe history is empty on a fresh service because a notification is only ever created by consuming an event from another service, and the contract exposes no route to inject one.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3008"
-    },
     {
       "key": "package_id",
       "value": "0192f3c1-8a44-7c31-9e02-6b1d4f8a2c11"
@@ -216,9 +212,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/health",
+              "raw": "{{notification_base_url}}/health",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "health"
@@ -244,9 +240,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/ready",
+              "raw": "{{notification_base_url}}/ready",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "ready"
@@ -303,9 +299,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -351,9 +347,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -403,9 +399,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -453,9 +449,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -504,9 +500,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -556,9 +552,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -594,9 +590,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices?limit=1",
+              "raw": "{{notification_base_url}}/v1/devices?limit=1",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -637,9 +633,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices?limit=1&cursor={{device_cursor}}",
+              "raw": "{{notification_base_url}}/v1/devices?limit=1&cursor={{device_cursor}}",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -681,9 +677,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices/{{web_device_id}}",
+              "raw": "{{notification_base_url}}/v1/devices/{{web_device_id}}",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -725,9 +721,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -773,9 +769,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/notifications",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/notifications",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -821,9 +817,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/notifications/read-all",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/notifications/read-all",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -872,9 +868,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/notifications/read-all",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/notifications/read-all",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -927,9 +923,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{fresh_uuid}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{fresh_uuid}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -971,9 +967,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1023,9 +1019,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1065,9 +1061,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1115,9 +1111,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1167,9 +1163,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1226,9 +1222,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/notifications",
+              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/notifications",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1264,9 +1260,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1306,9 +1302,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/notifications",
+              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/notifications",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1352,9 +1348,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{seed_other_id}}/notifications",
+              "raw": "{{notification_base_url}}/v1/users/{{seed_other_id}}/notifications",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1401,9 +1397,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/notifications/{{seed_raid_id}}",
+              "raw": "{{notification_base_url}}/v1/notifications/{{seed_raid_id}}",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1447,9 +1443,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/notifications/{{seed_raid_id}}",
+              "raw": "{{notification_base_url}}/v1/notifications/{{seed_raid_id}}",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1489,9 +1485,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/notifications?limit=2",
+              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/notifications?limit=2",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1534,9 +1530,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{seed_user_id}}/notifications?limit=2&cursor={{seed_cursor}}",
+              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/notifications?limit=2&cursor={{seed_cursor}}",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1596,9 +1592,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1642,9 +1638,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1688,9 +1684,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1732,9 +1728,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1780,9 +1776,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1818,9 +1814,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices?cursor=zzz!!",
+              "raw": "{{notification_base_url}}/v1/devices?cursor=zzz!!",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1858,9 +1854,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices?limit=101",
+              "raw": "{{notification_base_url}}/v1/devices?limit=101",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1900,9 +1896,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices/{{android_device_id}}",
+              "raw": "{{notification_base_url}}/v1/devices/{{android_device_id}}",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1935,9 +1931,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices/{{unknown_id}}",
+              "raw": "{{notification_base_url}}/v1/devices/{{unknown_id}}",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1972,9 +1968,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{other_id}}/notifications",
+              "raw": "{{notification_base_url}}/v1/users/{{other_id}}/notifications",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2014,9 +2010,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/notifications/{{unknown_id}}",
+              "raw": "{{notification_base_url}}/v1/notifications/{{unknown_id}}",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2059,9 +2055,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/notifications/{{unknown_id}}",
+              "raw": "{{notification_base_url}}/v1/notifications/{{unknown_id}}",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2108,9 +2104,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/notifications/read-all",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/notifications/read-all",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2151,9 +2147,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{other_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{other_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2193,9 +2189,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2243,9 +2239,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2293,9 +2289,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/users/{{user_id}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/preferences",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2330,9 +2326,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2374,9 +2370,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/devices",
+              "raw": "{{notification_base_url}}/v1/devices",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
@@ -2417,9 +2413,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/nothing-here",
+              "raw": "{{notification_base_url}}/v1/nothing-here",
               "host": [
-                "{{base_url}}"
+                "{{notification_base_url}}"
               ],
               "path": [
                 "v1",

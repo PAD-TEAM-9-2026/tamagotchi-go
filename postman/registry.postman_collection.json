@@ -1,14 +1,10 @@
 {
   "info": {
     "name": "Package Registry",
-    "description": "Every endpoint of the Package Registry service, in an order that runs start to finish against an empty or populated database.\n\nAdmin endpoints (creating packages, bosses, raid occurrences) need a user id configured in the service's ADMIN_USER_IDS. This collection's `admin_id` variable is fixed (not randomly generated) so you can add it once: set ADMIN_USER_IDS=00000000-0000-4000-8000-00000000a11e in the service's .env and restart it before running this collection.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.",
+    "description": "Every endpoint of the Package Registry service, in an order that runs start to finish against an empty or populated database.\n\nAdmin endpoints (creating packages, bosses, raid occurrences) need a user id configured in the service's ADMIN_USER_IDS. This collection's `admin_id` variable is fixed (not randomly generated) so you can add it once: set REGISTRY_ADMIN_USER_IDS to the collection admin_id in the untracked deployment .env and recreate Registry before running admin requests.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3005"
-    },
     {
       "key": "admin_id",
       "value": "00000000-0000-4000-8000-00000000a11e"
@@ -105,9 +101,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/health",
+              "raw": "{{registry_base_url}}/health",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "health"
@@ -132,9 +128,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/ready",
+              "raw": "{{registry_base_url}}/ready",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "ready"
@@ -177,9 +173,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages",
+              "raw": "{{registry_base_url}}/v1/packages",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -221,9 +217,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/packages?limit=10",
+              "raw": "{{registry_base_url}}/v1/packages?limit=10",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -253,9 +249,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -304,9 +300,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -360,9 +356,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}/stats",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/stats",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -407,9 +403,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}/stat-definitions",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/stat-definitions",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -445,9 +441,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}/stat-bonuses",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/stat-bonuses",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -480,9 +476,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}/currency-rules",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/currency-rules",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -515,9 +511,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}/starter-pet",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/starter-pet",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -545,9 +541,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}/assets",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/assets",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -584,9 +580,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/eligibility-check",
+              "raw": "{{registry_base_url}}/v1/packages/eligibility-check",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -645,9 +641,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/bosses",
+              "raw": "{{registry_base_url}}/v1/bosses",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -692,9 +688,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/bosses",
+              "raw": "{{registry_base_url}}/v1/bosses",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -729,9 +725,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/bosses/{{boss_id}}",
+              "raw": "{{registry_base_url}}/v1/bosses/{{boss_id}}",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -780,9 +776,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/bosses/{{boss_id}}",
+              "raw": "{{registry_base_url}}/v1/bosses/{{boss_id}}",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -842,9 +838,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/raid-occurrences",
+              "raw": "{{registry_base_url}}/v1/raid-occurrences",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -889,9 +885,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/raid-occurrences",
+              "raw": "{{registry_base_url}}/v1/raid-occurrences",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -926,9 +922,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/raid-occurrences/{{occurrence_id}}",
+              "raw": "{{registry_base_url}}/v1/raid-occurrences/{{occurrence_id}}",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -964,9 +960,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/raid-occurrences/{{occurrence_id}}/activate",
+              "raw": "{{registry_base_url}}/v1/raid-occurrences/{{occurrence_id}}/activate",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1008,9 +1004,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/raid-occurrences/{{occurrence_id}}/deactivate",
+              "raw": "{{registry_base_url}}/v1/raid-occurrences/{{occurrence_id}}/deactivate",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1047,9 +1043,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/raid-occurrences/{{occurrence_id}}/cancel",
+              "raw": "{{registry_base_url}}/v1/raid-occurrences/{{occurrence_id}}/cancel",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1082,9 +1078,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}/stat-definitions",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/stat-definitions",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1125,9 +1121,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages",
+              "raw": "{{registry_base_url}}/v1/packages",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1179,9 +1175,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1230,9 +1226,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1285,9 +1281,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1323,9 +1319,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/packages/00000000-0000-7000-8000-000000000000",
+              "raw": "{{registry_base_url}}/v1/packages/00000000-0000-7000-8000-000000000000",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1357,9 +1353,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/packages/{{package_id}}/stat-definitions",
+              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/stat-definitions",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
@@ -1400,9 +1396,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/raid-occurrences",
+              "raw": "{{registry_base_url}}/v1/raid-occurrences",
               "host": [
-                "{{base_url}}"
+                "{{registry_base_url}}"
               ],
               "path": [
                 "v1",

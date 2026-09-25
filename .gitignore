@@ -10,3 +10,6 @@ __pycache__/
 .idea/
 .vscode/
 .DS_Store
+# Postman local workspace files
+/postman/.postman/
+/postman/postman/

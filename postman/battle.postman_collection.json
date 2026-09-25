@@ -1,14 +1,10 @@
 {
   "info": {
     "name": "Battle",
-    "description": "Every endpoint currently implemented by the Battle service (Lab 1 CRUD scope), in an order that runs start to finish against an empty or populated database. Requests capture ids into collection variables, so a full run needs no manual input beyond base_url.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.\n\nNot exercised here, because the code doesn't implement them yet (see the service's README \"Current implementation\" section and PROGRESS.md):\n- POST /v1/battles/{battleId}/attack (no route mapped at all)\n- 410 challenge_expired on accept (the request is correct, but the 2-minute challenge window can't be forced to elapse inside a single automated run without an artificial delay; verified manually instead)\n- Idempotency-Key replay (the header is sent on every command for forward-compatibility with the contract, but no idempotency store exists yet, so a repeated key does not currently return the first response)\n\n'base_url' defaults to http://localhost:3003, Battle's assigned port in the team's shared port plan (same as scripts/run.sh, dotnet run, and the published image).",
+    "description": "Battle API. Run requests in order when they share state. The collection covers implemented endpoints and expected refusal responses. Attack and idempotency replay are not implemented in this image.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3003"
-    },
     {
       "key": "battle_id",
       "value": ""
@@ -104,8 +100,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/health",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/health",
+              "host": ["{{battle_base_url}}"],
               "path": ["health"]
             }
           },
@@ -127,8 +123,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/ready",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/ready",
+              "host": ["{{battle_base_url}}"],
               "path": ["ready"]
             }
           },
@@ -159,8 +155,8 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles"]
             },
             "body": {
@@ -196,8 +192,8 @@
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{challenger_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/battles?limit=10",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles?limit=10",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles"],
               "query": [{ "key": "limit", "value": "10" }]
             }
@@ -224,8 +220,8 @@
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{challenger_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{battle_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{battle_id}}"]
             }
           },
@@ -250,8 +246,8 @@
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{opponent_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{battle_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{battle_id}}"]
             }
           },
@@ -277,8 +273,8 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{battle_id}}/accept",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}/accept",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{battle_id}}", "accept"]
             },
             "body": {
@@ -314,8 +310,8 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{battle_id}}/forfeit",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}/forfeit",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{battle_id}}", "forfeit"]
             }
           },
@@ -354,8 +350,8 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles"]
             },
             "body": {
@@ -388,8 +384,8 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{reject_battle_id}}/reject",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{reject_battle_id}}/reject",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{reject_battle_id}}", "reject"]
             }
           },
@@ -419,8 +415,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/v1/battles",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles"]
             }
           },
@@ -449,8 +445,8 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles"]
             },
             "body": {
@@ -484,8 +480,8 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles"]
             },
             "body": {
@@ -515,8 +511,8 @@
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{outsider_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/battles/00000000-0000-7000-8000-000000000000",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/00000000-0000-7000-8000-000000000000",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "00000000-0000-7000-8000-000000000000"]
             }
           },
@@ -541,8 +537,8 @@
             "method": "GET",
             "header": [{ "key": "X-User-Id", "value": "{{outsider_id}}" }],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{battle_id}}",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{battle_id}}"]
             }
           },
@@ -571,8 +567,8 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{reject_battle_id}}/accept",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{reject_battle_id}}/accept",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{reject_battle_id}}", "accept"]
             },
             "body": {
@@ -606,8 +602,8 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{battle_id}}/accept",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}/accept",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{battle_id}}", "accept"]
             },
             "body": {
@@ -641,8 +637,8 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{reject_battle_id}}/reject",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{reject_battle_id}}/reject",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{reject_battle_id}}", "reject"]
             }
           },
@@ -670,8 +666,8 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/v1/battles/{{battle_id}}/forfeit",
-              "host": ["{{base_url}}"],
+              "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}/forfeit",
+              "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles", "{{battle_id}}", "forfeit"]
             }
           },
