@@ -667,9 +667,9 @@ response. See [Postman instructions](postman/README.md).
 `develop` is the integration and default branch; `main` is the release branch.
 Create work branches from `develop` using `feat/`, `fix/`, `docs/`, or `chore/`.
 Changes to either shared branch require a pull request, one approval, resolved
-conversations, and a passing `ci` check. Squash work branches into `develop` and
-merge releases into `main` with a merge commit. Contract changes also need
-review from affected service owners.
+conversations, and a passing `ci` check. New commits dismiss prior approvals.
+Squash work branches into `develop` and merge releases into `main` with a
+merge commit. Contract changes also need review from affected service owners.
 
 Track work in the [team project](https://github.com/orgs/PAD-TEAM-9-2026/projects/1).
 See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
