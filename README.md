@@ -597,8 +597,9 @@ replays it with the same event ID.
 
 ## Deployment
 
-`deploy/compose.yaml` pulls eight versioned images. Each service has its own
-credentials and database in one PostGIS-enabled PostgreSQL container.
+`deploy/compose.yaml` pulls eight versioned images under the `tamagotchi-go`
+Compose project. Each service has its own credentials and database in one
+PostGIS-enabled PostgreSQL container.
 
 | Service | Image | Host port |
 |---|---|---|
@@ -616,9 +617,11 @@ Requires Docker with Compose v2 and free host ports 3001 through 3008 and
 `postgres` as the admin user and database, with `DATABASE_ADMIN_PASSWORD` from
 `deploy/.env`.
 
+If `deploy/.env` already exists, keep it. Otherwise, create it before startup:
+
 ```bash
 cd deploy
-cp .env.example .env
+test -f .env || cp .env.example .env
 # Set every database password and any Registry admin IDs in .env.
 docker compose --env-file .env up -d --wait
 ```
@@ -628,14 +631,6 @@ database initializer creates eight databases and roles, applies the User
 Management and Battle SQL, and enables PostGIS for Map. The remaining services
 create their own schema at startup. The shared volume is separate from each
 service's standalone volume. Initialization does not rerun on an existing volume.
-
-If the shared volume predates User Management and Battle, apply their SQL once
-after starting the database:
-
-```bash
-docker compose exec database sh -c 'psql -U "$USER_MANAGEMENT_DB_USER" -d "$USER_MANAGEMENT_DB_NAME" -v ON_ERROR_STOP=1 -f /service-schema/user-management.sql'
-docker compose exec database sh -c 'psql -U "$BATTLE_DB_USER" -d "$BATTLE_DB_NAME" -v ON_ERROR_STOP=1 -f /service-schema/battle.sql'
-```
 
 ### Seed data
 
