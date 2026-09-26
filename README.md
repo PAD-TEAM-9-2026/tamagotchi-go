@@ -597,8 +597,9 @@ replays it with the same event ID.
 
 ## Deployment
 
-`deploy/compose.yaml` pulls eight versioned images. Each service has its own
-credentials and database in one PostGIS-enabled PostgreSQL container.
+`deploy/compose.yaml` pulls eight versioned images under the `tamagotchi-go`
+Compose project. Each service has its own credentials and database in one
+PostGIS-enabled PostgreSQL container.
 
 | Service | Image | Host port |
 |---|---|---|
@@ -616,9 +617,11 @@ Requires Docker with Compose v2 and free host ports 3001 through 3008 and
 `postgres` as the admin user and database, with `DATABASE_ADMIN_PASSWORD` from
 `deploy/.env`.
 
+If `deploy/.env` already exists, keep it. Otherwise, create it before startup:
+
 ```bash
 cd deploy
-cp .env.example .env
+test -f .env || cp .env.example .env
 # Set every database password and any Registry admin IDs in .env.
 docker compose --env-file .env up -d --wait
 ```
@@ -628,14 +631,6 @@ database initializer creates eight databases and roles, applies the User
 Management and Battle SQL, and enables PostGIS for Map. The remaining services
 create their own schema at startup. The shared volume is separate from each
 service's standalone volume. Initialization does not rerun on an existing volume.
-
-If the shared volume predates User Management and Battle, apply their SQL once
-after starting the database:
-
-```bash
-docker compose exec database sh -c 'psql -U "$USER_MANAGEMENT_DB_USER" -d "$USER_MANAGEMENT_DB_NAME" -v ON_ERROR_STOP=1 -f /service-schema/user-management.sql'
-docker compose exec database sh -c 'psql -U "$BATTLE_DB_USER" -d "$BATTLE_DB_NAME" -v ON_ERROR_STOP=1 -f /service-schema/battle.sql'
-```
 
 ### Seed data
 
@@ -664,33 +659,15 @@ response. See [Postman instructions](postman/README.md).
 
 ## GitHub workflow
 
-Branches: `main` is the release branch, `develop` is the integration branch.
-Work branches start from `develop` and are named `type/short-description`,
-using `feat`, `fix`, `docs` or `chore`, for example `docs/contract-readme`.
-Commits follow Conventional Commits, `type(scope): description`, for example
-`docs(contract): add endpoint tables`.
+`develop` is the integration and default branch; `main` is the release branch.
+Create work branches from `develop` using `feat/`, `fix/`, `docs/`, or `chore/`.
+Changes to either shared branch require a pull request, one approval, resolved
+conversations, and a passing `ci` check. New commits dismiss prior approvals.
+Squash work branches into `develop` and merge releases into `main` with a
+merge commit. Contract changes also need review from affected service owners.
 
-Both shared branches are protected. No direct pushes, no force pushes. A PR
-needs one approval from someone who did not write it and all conversations
-resolved. Approvals are dismissed when new commits arrive. A change to a
-contract also needs the affected consumers to review it.
-
-Merging: feature into `develop` by squash. `develop` into `main` by
-merge commit, so the shared history stays intact.
-
-A PR says what changed and why, links its issue, lists affected services, shows
-any contract diff and says how it was checked. The template is in
-`.github/pull_request_template.md`.
-
-Versioning: merge tested changes from `develop` into `main` for a release and
-tag the resulting commit. Service repositories carry their own release tags.
-
-Testing: run `python3 tools/check_contracts.py` for shared contracts. Service
-repositories test domain rules and persistence against PostgreSQL. Target at
-least 80 % line coverage in domain code and cover concurrency and failure paths.
-
-Nobody commits `.env` files, API keys, `node_modules` or build output. Each
-service ships a `.env.example` with empty values.
+Track work in the [team project](https://github.com/orgs/PAD-TEAM-9-2026/projects/1).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
 
 ## Service documents
 
