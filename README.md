@@ -597,12 +597,13 @@ replays it with the same event ID.
 
 ## Deployment
 
-`deploy/compose.yaml` pulls eight versioned images under the `tamagotchi-go`
+`deploy/compose.yaml` pulls nine versioned images under the `tamagotchi-go`
 Compose project. Each service has its own credentials and database in one
 PostGIS-enabled PostgreSQL container.
 
 | Service | Image | Host port |
 |---|---|---|
+| Gateway | `victoriamutruc/gateway:2.0.0` | 3000 |
 | User Management | `patriciamoraru/user-management:1.2.0` | 3001 |
 | Tamagotchi | `victoriamutruc/tamagotchi:1.0.0` | 3002 |
 | Battle | `patriciamoraru/battle:1.2.0` | 3003 |
@@ -612,8 +613,10 @@ PostGIS-enabled PostgreSQL container.
 | Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
 | Notification | `victoriamutruc/notification:1.0.0` | 3008 |
 
-Requires Docker with Compose v2 and free host ports 3001 through 3008 and
-5432. PostgreSQL listens on `127.0.0.1:5432` for local administration. Use
+Requires Docker with Compose v2 and free host ports 3000 through 3008 and
+5432. The Gateway starts last, after all eight services report healthy, so a
+healthy Gateway means the whole stack is up. PostgreSQL listens on
+`127.0.0.1:5432` for local administration. Use
 `postgres` as the admin user and database, with `DATABASE_ADMIN_PASSWORD` from
 `deploy/.env`.
 
