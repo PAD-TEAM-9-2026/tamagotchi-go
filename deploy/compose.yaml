@@ -239,7 +239,7 @@ services:
     restart: "no"
 
   gateway:
-    image: victoriamutruc/gateway:2.0.0
+    image: victoriamutruc/gateway:2.0.1
     pull_policy: always
     depends_on:
       user-management:
@@ -260,7 +260,6 @@ services:
         condition: service_healthy
     environment:
       PORT: 3000
-      AUTH_MODE: dev
       LOG_LEVEL: info
       GATEWAY_ASSERTION_PRIVATE_KEY_PATH: /run/secrets/gateway-assertion.pem
       GATEWAY_ASSERTION_KEY_ID: ${GATEWAY_ASSERTION_KEY_ID:?set GATEWAY_ASSERTION_KEY_ID in .env (run deploy/gateway/generate-keys.sh)}
