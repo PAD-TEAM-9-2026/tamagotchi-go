@@ -1175,6 +1175,11 @@ The latest accepted location for one user.
 
 ### Nearby
 
+Proposed next_cursor semantics: opaque HMAC-signed position after distance_m and
+user_id, bound to caller, filters, page size and the full viewer observation.
+Expires after five minutes. Results remain subject to current freshness and
+visibility; this is not a snapshot. See the README replay/pagination proposal.
+
 | Field | Type / constraint | Required |
 |---|---|---|
 | `user_id` | uuid (v7) | yes |
@@ -1187,6 +1192,10 @@ The latest accepted location for one user.
 ## Monster Raid
 
 ### Leaderboard
+
+Proposed next_cursor semantics: damage_dealt descending, joined_at ascending,
+user_id ascending, bound to caller, raid_id, page size and raid_version. A changed
+version makes the cursor stale. Cursor support is not implemented yet.
 
 | Field | Type / constraint | Required |
 |---|---|---|
@@ -1265,6 +1274,9 @@ The latest accepted location for one user.
 | `occurrence_id` | uuid (v7) | yes |
 
 ### RaidPage
+
+Proposed next_cursor semantics: started_at and raid_id descending, bound to
+caller, guild_id filter and page size. Cursor support is not implemented yet.
 
 | Field | Type / constraint | Required |
 |---|---|---|

@@ -407,6 +407,57 @@ deadline/abort/shutdown cancellation, rollback, worker recovery and slot reuse.
 HTTP failure does not prove that an external side effect did not commit; command
 replay and durable reward effects handle uncertain outcomes.
 
+### Command replay and pagination proposal
+
+Pending affected-owner review. Map/Raid currently do not implement command-key
+replay or cursors; the successful response shapes below stay unchanged.
+
+Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
+`POST /raid/v1/raids/{raidId}/attack`. Require an Idempotency-Key of 1 to 128
+printable ASCII characters after HTTP header whitespace normalization; absence
+or invalid values return `400 invalid_idempotency_key`. Keys are case-sensitive.
+Scope is the verified caller, HTTP operation and resource path. Fingerprint the
+validated request model with deterministic field order, normalized UUIDs and
+UTC timestamps; JSON property order alone must not create a conflict.
+
+Retain completed receipts for 24 hours from completion. Identical retries return
+the stored status/body and applicable response headers, with the current request's
+correlation header. Do not replay transport, authentication or correlation
+headers from the old request. Changed input returns `409 idempotency_conflict`;
+concurrent pending work returns `409 command_in_progress`.
+Authenticate/authorize before lookup, including every replay. Malformed input
+and authentication failures do not reserve a key. Persist successful and final
+domain-error receipts with their local state transition. Do not freeze transient
+dependency, capacity or timeout errors as completed receipts. Durable pending
+work must recover uncertain external effects before completing the receipt.
+Persist local effects and receipts atomically; reward/reservation effect keys
+and progress remain independent of receipt expiry. Receipt expiry does not
+permit awarding the same completed raid twice.
+
+Pagination uses versioned HMAC-signed opaque cursors with five-minute expiry,
+bound to verified caller, endpoint, filters and page size. Store signing keys
+in service-owned configuration, never in a cursor or committed file. Reject
+tampering, unsupported versions, expiry and context mismatch with
+`400 invalid_cursor`; limit defaults to 100 and must be 1 to 100. Keep limit and
+filters unchanged while following a cursor. Continue strictly after its last
+sort tuple and return next_cursor=null when no further results remain.
+
+| Endpoint | Sort tuple | Context invalidation |
+|---|---|---|
+| Map nearby | distance_m ascending, user_id ascending | changed viewer observation returns 409 cursor_stale |
+| Raid list | started_at descending, raid_id descending | caller/filter mismatch returns 400 invalid_cursor |
+| Raid leaderboard | damage_dealt descending, joined_at ascending, user_id ascending | changed raid_version returns 409 cursor_stale |
+
+Bind Map's cursor to the full viewer observation, including coordinates, since
+equal-timestamp location changes remain valid. Freshness and current visibility
+are checked on every page; a missing/expired viewer still returns
+`409 viewer_location_unavailable`. Filters include guild_id or raidId where
+applicable. These are live queries, not stored result snapshots: movement and
+relationship changes can move a nearby player across a page boundary, causing
+omissions or repeats between pages. Clients replace markers by user_id rather
+than accumulating duplicates. A stale-context response requires restarting
+pagination. Raid list creation/deletion can likewise change the live result set.
+
 ### Example shapes
 
 ```json
