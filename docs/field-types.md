@@ -93,19 +93,6 @@ from ServiceTokenRequest.audience, not a URL or Gateway path prefix.
 | `iat` | integer, NumericDate seconds | yes |
 | `exp` | integer, NumericDate seconds, greater than iat, at most iat + 30 | yes |
 | `deadline_unix_ms` | integer, inherited root deadline in Unix milliseconds | yes |
-| `actor` | DelegatedActor, only on service assertions with verified user context | no |
-
-### DelegatedActor
-
-Proposed trace context, not service authorization. A direct user assertion's
-subject/roles form this context; nested service assertions preserve it unchanged.
-
-| Field | Type / constraint | Required |
-|---|---|---|
-| `user_id` | uuid (v7) | yes |
-| `roles` | array<string [1..64]> [0..20] | yes |
-
-## User Management
 
 ### BattleSettlement
 
