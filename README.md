@@ -16,8 +16,7 @@ creatures, art and care rules, and all of them run on these eight services.
 
 ## Repository
 
-Each service has its own private repository. Only the professor is invited to
-them, not teammates. They are linked here as submodules.
+Each service has its own private repository. They are linked here as submodules.
 
 | Service | Submodule path | Owner |
 |---|---|---|
@@ -94,7 +93,7 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
-![Tamagotchi Go architecture — 8 microservices, PostgreSQL per service, RabbitMQ event bus](docs/img/architecture_diagram.png)
+![Tamagotchi Go architecture with 8 microservices, PostgreSQL per service, and RabbitMQ](docs/img/architecture_diagram.png)
 
 Every client goes through the HTTP Gateway. It routes by path prefix to the eight
 services, so a frontend package never learns where a service lives or how many
@@ -134,7 +133,7 @@ copy when it drifts.
 | Map | C#, ASP.NET Core, EF Core | PostgreSQL with PostGIS | Distance queries need a spatial index |
 | Monster Raid | C#, ASP.NET Core, EF Core | PostgreSQL | Counters under concurrent attacks |
 
-Two languages, as the lab requires. TypeScript for the four services that mostly
+The services use two languages. TypeScript for the four services that mostly
 move JSON around, C# for the four that hold money, turns, counters and
 coordinates.
 
@@ -322,7 +321,7 @@ here instead, as a global currency credit with reason `BATTLE_ACCESS_CAP`.
 | `POST /v1/tamagotchis/{id}/holders` | GrantAccessInput, Idempotency-Key | 200 AccessGrantReceipt | service |
 | `GET /v1/tamagotchis/{id}/holders` | none | 200 Holders | user or service |
 | `DELETE /v1/tamagotchis/{id}/holders/{userId}` | If-Match | 204 | user |
-| `GET /v1/users/{userId}/collection` | query limit, cursor, expand | 200 Collection | user or service |
+| `GET /v1/users/{userId}/collection` | query limit, cursor | 200 Collection | user or service |
 | `GET /v1/users/{userId}/collection/primary` | none | 200 PrimarySelection | user |
 | `PUT /v1/users/{userId}/collection/primary` | PrimaryInput, If-Match | 200 PrimarySelection | user |
 | `DELETE /v1/users/{userId}/collection/{id}` | If-Match | 204 | user |
@@ -429,6 +428,28 @@ Registry only for package eligibility. The topic text points at Registry Service
 for identity checks, which is a wording error: User Management is the authority
 on who a user is and who they are friends with.
 
+**Implementation notes.** A few decisions the code needed that the
+contract above did not spell out:
+
+- A user belongs to at most one guild at a time.
+- An invitation expires 7 days after it is created.
+- `PATCH .../role` locks on `expected_guild_version` in the body rather than an
+  `If-Match` header, since the general ETag/If-Match convention is written for a
+  single resource version, not a role change nested under a member. A stale
+  value answers `409 version_conflict`.
+- Guild calls the already-contracted `GET /v1/internal/users/{userId}/membership`
+  to read a user's `package_ids` before calling Package Registry's eligibility
+  check; no contract change was needed for this. Until User Management and
+  Package Registry exist for real, both are stood in for with a mock behind
+  the same interface the real HTTP client uses, so swapping in the real
+  services later is a configuration change, not a code change.
+- Error codes added beyond the shared `Problem` shape: `already_in_guild`,
+  `guild_name_taken`, `guild_full`, `invitation_pending`, `invitation_expired`,
+  `invitation_not_pending`, `not_invitee`, `insufficient_role`,
+  `leader_cannot_leave`, `leader_role_fixed`, `already_leader`,
+  `version_conflict`, `relationship_blocked`, `package_not_eligible`,
+  `dependency_unavailable`, `dependency_error`.
+
 ### Package Registry, `/registry`
 
 | Method and path | Request | Response | Access |
@@ -460,18 +481,43 @@ Packages are abstract to this backend. A package defines its own creatures, art
 and care rules in its own frontend, and nothing here knows what `hunger` or
 `discipline` is supposed to mean. What Registry stores is a *declaration*: a
 `StatDefinition` gives a key a type and bounds so a value can be validated, and a
-`BonusRule` is a generic comparison — stat key, operator, threshold, effect,
+`BonusRule` is a generic comparison with a stat key, operator, threshold, effect,
 value in basis points. Battle evaluates those rules mechanically against the
 creature's `package_stats` without interpreting any of them, which is how a
 package-specific bonus applies without any service sharing the package's data
 model.
+
+**Implementation notes.** Decisions the code needed beyond the contract:
+
+- Package `name` is not required to be unique; nothing in the contract asks for
+  it, unlike a guild's name which doubles as its public identity.
+- `revision` and `config_version` are two separate counters on the same
+  `Package` row: `revision` is the optimistic-lock counter shared by
+  `PATCH /packages/{id}` (`If-Match` header) and `PUT /packages/{id}/stats`
+  (`expected_package_revision` in the body); `config_version` only tracks which
+  `package_configs` snapshot is current, and is what the `?config_version=`
+  query parameter on the read endpoints selects among.
+- `POST /packages/eligibility-check` treats a submitted package as eligible if
+  it exists and its `status` is `active`; the caller is eligible overall if at
+  least one submitted package qualifies.
+- Admins are identified by a fixed, configured list (`ADMIN_USER_IDS`) rather
+  than a real claim, until User Management can issue one. A package's
+  moderators are read directly from that package's own `moderator_user_ids`,
+  which needed no mock since it is the service's own data.
+- Error codes added beyond the shared `Problem` shape: `admin_required`,
+  `moderator_required`, `if_match_required`, `precondition_failed`,
+  `revision_conflict`, `config_not_found`, `invalid_boss_version`,
+  `invalid_window`, `invalid_transition`, `package_not_found`,
+  `boss_not_found`, `occurrence_not_found`.
 
 ### Map, `/map`
 
 | Method and path | Request | Response | Access |
 |---|---|---|---|
 | `POST /v1/location` | LocationInput, Idempotency-Key | 200 LocationReceipt | user |
+| `GET /v1/location/{userId}` | none | 200 Location | user |
 | `GET /v1/location/nearby/{userId}` | query limit, cursor | 200 Nearby | user |
+| `DELETE /v1/location/{userId}` | none | 204 | user |
 
 Friends and enemies are visible while their location is fresh. Strangers appear
 within 6 metres, which is configurable.
@@ -485,11 +531,13 @@ within 6 metres, which is configurable.
 | `GET /v1/raids/{raidId}` | none | 200 Raid | user or service |
 | `POST /v1/raids/{raidId}/attack` | ActorInput, Idempotency-Key | 200 RaidAttack | user |
 | `GET /v1/raids/{raidId}/leaderboard` | query limit, cursor | 200 Leaderboard | user or service |
+| `DELETE /v1/raids/{raidId}` | none | 204 | user |
 
-A member contributes their primary, which is reserved through the same
-`POST /internal/engagements` lock Battle uses, so a creature cannot fight a boss
-and a player at once. A shared creature may be contributed by whichever holder
-fields it first; the others get `409 creature_engaged` until the raid ends.
+The current Monster Raid implementation accepts `X-User-Id` with a UUID v7 on domain requests while mock identity is enabled. This local header does not replace gateway authentication in the target contract.
+
+The shared contract requires Tamagotchi engagement reservation when a member
+contributes a primary creature. Mock integration mode does not acquire the
+cross-service lock.
 
 ### Notification, `/notification`
 
@@ -547,39 +595,83 @@ Each consumer has a work queue, two retry queues at 5 s and 30 s, and a dead
 letter queue. Three attempts, then the message parks in the DLQ and the owner
 replays it with the same event ID.
 
+## Deployment
+
+`deploy/compose.yaml` pulls eight versioned images under the `tamagotchi-go`
+Compose project. Each service has its own credentials and database in one
+PostGIS-enabled PostgreSQL container.
+
+| Service | Image | Host port |
+|---|---|---|
+| User Management | `patriciamoraru/user-management:1.2.0` | 3001 |
+| Tamagotchi | `victoriamutruc/tamagotchi:1.0.0` | 3002 |
+| Battle | `patriciamoraru/battle:1.2.0` | 3003 |
+| Guild | `mihaelacatan/guild-service:0.2.0` | 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:0.2.0` | 3005 |
+| Map | `sergedbs/map:1.0.0` | 3006 |
+| Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
+| Notification | `victoriamutruc/notification:1.0.0` | 3008 |
+
+Requires Docker with Compose v2 and free host ports 3001 through 3008 and
+5432. PostgreSQL listens on `127.0.0.1:5432` for local administration. Use
+`postgres` as the admin user and database, with `DATABASE_ADMIN_PASSWORD` from
+`deploy/.env`.
+
+If `deploy/.env` already exists, keep it. Otherwise, create it before startup:
+
+```bash
+cd deploy
+test -f .env || cp .env.example .env
+# Set every database password and any Registry admin IDs in .env.
+docker compose --env-file .env up -d --wait
+```
+
+Use distinct URL-safe passwords in the untracked `.env`. On first start, the
+database initializer creates eight databases and roles, applies the User
+Management and Battle SQL, and enables PostGIS for Map. The remaining services
+create their own schema at startup. The shared volume is separate from each
+service's standalone volume. Initialization does not rerun on an existing volume.
+
+### Seed data
+
+Run the included seed commands after the stack starts:
+
+```bash
+docker compose exec guild node dist/db/seed.js
+docker compose exec registry node dist/db/seed.js
+docker compose exec tamagotchi node dist/db/seed.js
+docker compose exec notification node dist/db/seed.js
+docker compose exec user-management dotnet UserManagement.dll seed
+docker compose exec battle dotnet Battle.dll seed
+```
+
+Map and Monster Raid seed through their APIs. From their standalone repositories,
+run `scripts/seed.sh` with `MAP_BASE_URL=http://localhost:3006` or
+`MONSTER_RAID_BASE_URL=http://localhost:3007`, respectively.
+
+### API collections
+
+Import the eight collections in `postman/` and select
+`postman/tamagotchi-go.postman_environment.json`. The environment defines one
+base URL per service. Map and Monster Raid requests create their own fixtures.
+Run the other service collections in order when a request depends on a previous
+response. See [Postman instructions](postman/README.md).
+
 ## GitHub workflow
 
-Branches: `main` is the release branch, `develop` is the integration branch.
-Work branches start from `develop` and are named `type/short-description`,
-using `feat`, `fix`, `docs` or `chore`, for example `docs/contract-readme`.
-Commits follow Conventional Commits, `type(scope): description`, for example
-`docs(contract): add endpoint tables`.
+`develop` is the integration and default branch; `main` is the release branch.
+Create work branches from `develop` using `feat/`, `fix/`, `docs/`, or `chore/`.
+Changes to either shared branch require a pull request, one approval, resolved
+conversations, and a passing `ci` check. New commits dismiss prior approvals.
+Squash work branches into `develop` and merge releases into `main` with a
+merge commit. Contract changes also need review from affected service owners.
 
-Both shared branches are protected. No direct pushes, no force pushes. A PR
-needs one approval from someone who did not write it and all conversations
-resolved. Approvals are dismissed when new commits arrive. A change to a
-contract also needs the affected consumers to review it.
+Versions use `X.Y` for milestone and revision. The shared release is tagged
+`vX.Y` on main and recorded as a GitHub Release. Service releases use the main
+merge; their published images retain explicit immutable versions.
 
-Merging: feature into `develop` by squash. `develop` into `main` by
-merge commit, so the shared history stays intact.
-
-A PR says what changed and why, links its issue, lists affected services, shows
-any contract diff and says how it was checked. The template is in
-`.github/pull_request_template.md`.
-
-Versioning: each lab is a release. Nothing merges into `main` before the lab is
-presented. After the presentation `develop` merges into `main` and `main` is
-tagged with a new version, `v0.1.0` for Lab 0, `v1.0.0` for Lab 1 and so on.
-The private service repositories follow the same rule and carry their own tags.
-
-Testing: Lab 0 checks documents, schemas and links with
-`python3 tools/check_contracts.py`. From Lab 1, unit tests for domain rules,
-transaction tests against a real PostgreSQL and consumer tests against the event
-schemas. Target 80 % line coverage in domain code, and concurrency, idempotency
-and recovery paths covered regardless of the number.
-
-Nobody commits `.env` files, API keys, `node_modules` or build output. Each
-service ships a `.env.example` with empty values.
+Track work in the [team project](https://github.com/orgs/PAD-TEAM-9-2026/projects/1).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
 
 ## Service documents
 

@@ -1,0 +1,541 @@
+{
+  "info": {
+    "name": "Monster Raid",
+    "description": "Each request is independently runnable against Monster Raid. Resource requests create a fresh raid first. X-User-Id supplies mock identity.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function uuidv7() {",
+          "  const ms = Date.now();",
+          "  const bytes = new Uint8Array(16);",
+          "  for (let i = 0; i < 6; i++) bytes[i] = Math.floor(ms / 2 ** (8 * (5 - i))) & 255;",
+          "  for (let i = 6; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);",
+          "  bytes[6] = (bytes[6] & 15) | 112;",
+          "  bytes[8] = (bytes[8] & 63) | 128;",
+          "  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');",
+          "  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');",
+          "}",
+          "pm.variables.set('raid_leader_id', '0199a2b3-c4d5-7e6f-8123-456789abcd01');",
+          "pm.variables.set('raid_guild_id', uuidv7());",
+          "pm.variables.set('raid_occurrence_id', uuidv7());",
+          "pm.variables.set('raid_id', uuidv7());"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Probes",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/health",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"service is up\", () => { pm.expect(pm.response.json().status).to.eql('UP') });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/ready",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"database is ready\", () => { pm.expect(pm.response.json().status).to.eql('READY') });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Raids",
+      "item": [
+        {
+          "name": "Create raid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{raid_leader_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/v1/raids",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raids"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"guild_id\":\"{{raid_guild_id}}\",\"occurrence_id\":\"{{raid_occurrence_id}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"raid is active\", () => { pm.expect(pm.response.json().status).to.eql('ACTIVE') });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List raids",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{raid_leader_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/v1/raids?limit=10",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raids?limit=10"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"raid page\", () => { pm.expect(pm.response.json().items).to.be.an('array') });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read raid",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{raid_leader_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/v1/raids/{{raid_id}}",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raids",
+                "{{raid_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.environment.get('monster_raid_base_url') + '/v1/raids',",
+                  "  method: 'POST',",
+                  "  header: {'Content-Type': 'application/json', 'X-User-Id': pm.variables.get('raid_leader_id')},",
+                  "  body: {mode: 'raw', raw: \"{\\\"guild_id\\\":\\\"{{raid_guild_id}}\\\",\\\"occurrence_id\\\":\\\"{{raid_occurrence_id}}\\\"}\".replace('{{raid_guild_id}}', pm.variables.get('raid_guild_id')).replace('{{raid_occurrence_id}}', pm.variables.get('raid_occurrence_id'))}",
+                  "}, (error, response) => {",
+                  "  if (error || response.code !== 201) throw new Error('Raid fixture creation failed');",
+                  "  pm.variables.set('raid_id', response.json().raid_id);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"matching raid\", () => { pm.expect(pm.response.json().raid_id).to.eql(pm.variables.get('raid_id')) });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Attack raid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{raid_leader_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/v1/raids/{{raid_id}}/attack",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raids",
+                "{{raid_id}}",
+                "attack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\":\"{{raid_leader_id}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.environment.get('monster_raid_base_url') + '/v1/raids',",
+                  "  method: 'POST',",
+                  "  header: {'Content-Type': 'application/json', 'X-User-Id': pm.variables.get('raid_leader_id')},",
+                  "  body: {mode: 'raw', raw: \"{\\\"guild_id\\\":\\\"{{raid_guild_id}}\\\",\\\"occurrence_id\\\":\\\"{{raid_occurrence_id}}\\\"}\".replace('{{raid_guild_id}}', pm.variables.get('raid_guild_id')).replace('{{raid_occurrence_id}}', pm.variables.get('raid_occurrence_id'))}",
+                  "}, (error, response) => {",
+                  "  if (error || response.code !== 201) throw new Error('Raid fixture creation failed');",
+                  "  pm.variables.set('raid_id', response.json().raid_id);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"damage accepted\", () => { pm.expect(pm.response.json().damage_dealt).to.eql(10) });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{raid_leader_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/v1/raids/{{raid_id}}/leaderboard",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raids",
+                "{{raid_id}}",
+                "leaderboard"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.environment.get('monster_raid_base_url') + '/v1/raids',",
+                  "  method: 'POST',",
+                  "  header: {'Content-Type': 'application/json', 'X-User-Id': pm.variables.get('raid_leader_id')},",
+                  "  body: {mode: 'raw', raw: \"{\\\"guild_id\\\":\\\"{{raid_guild_id}}\\\",\\\"occurrence_id\\\":\\\"{{raid_occurrence_id}}\\\"}\".replace('{{raid_guild_id}}', pm.variables.get('raid_guild_id')).replace('{{raid_occurrence_id}}', pm.variables.get('raid_occurrence_id'))}",
+                  "}, (error, response) => {",
+                  "  if (error || response.code !== 201) throw new Error('Raid fixture creation failed');",
+                  "  pm.variables.set('raid_id', response.json().raid_id);",
+                  "  pm.sendRequest({url: pm.environment.get('monster_raid_base_url') + '/v1/raids/' + response.json().raid_id + '/attack', method: 'POST', header: {'Content-Type': 'application/json', 'X-User-Id': pm.variables.get('raid_leader_id')}, body: {mode: 'raw', raw: JSON.stringify({user_id: pm.variables.get('raid_leader_id')})}}, (attackError, attackResponse) => {",
+                  "    if (attackError || attackResponse.code !== 200) throw new Error('Raid leaderboard fixture attack failed');",
+                  "  });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"leaderboard items\", () => { pm.expect(pm.response.json().items).to.be.an('array') });",
+                  "pm.test('attacker appears in leaderboard', () => pm.expect(pm.response.json().items.map(x => x.user_id)).to.include(pm.variables.get('raid_leader_id')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel raid",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{raid_leader_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/v1/raids/{{raid_id}}",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raids",
+                "{{raid_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.environment.get('monster_raid_base_url') + '/v1/raids',",
+                  "  method: 'POST',",
+                  "  header: {'Content-Type': 'application/json', 'X-User-Id': pm.variables.get('raid_leader_id')},",
+                  "  body: {mode: 'raw', raw: \"{\\\"guild_id\\\":\\\"{{raid_guild_id}}\\\",\\\"occurrence_id\\\":\\\"{{raid_occurrence_id}}\\\"}\".replace('{{raid_guild_id}}', pm.variables.get('raid_guild_id')).replace('{{raid_occurrence_id}}', pm.variables.get('raid_occurrence_id'))}",
+                  "}, (error, response) => {",
+                  "  if (error || response.code !== 201) throw new Error('Raid fixture creation failed');",
+                  "  pm.variables.set('raid_id', response.json().raid_id);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Refusals",
+      "item": [
+        {
+          "name": "Missing mock identity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/v1/raids",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raids"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"problem code\", () => { pm.expect(pm.response.json().code).to.eql('mock_identity_required') });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown raid",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{raid_leader_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/v1/raids/{{raid_id}}",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raids",
+                "{{raid_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"problem code\", () => { pm.expect(pm.response.json().code).to.eql('raid_not_found') });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Attack actor mismatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{raid_leader_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{monster_raid_base_url}}/v1/raids/{{raid_id}}/attack",
+              "host": [
+                "{{monster_raid_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "raids",
+                "{{raid_id}}",
+                "attack"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\":\"{{raid_guild_id}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.environment.get('monster_raid_base_url') + '/v1/raids',",
+                  "  method: 'POST',",
+                  "  header: {'Content-Type': 'application/json', 'X-User-Id': pm.variables.get('raid_leader_id')},",
+                  "  body: {mode: 'raw', raw: \"{\\\"guild_id\\\":\\\"{{raid_guild_id}}\\\",\\\"occurrence_id\\\":\\\"{{raid_occurrence_id}}\\\"}\".replace('{{raid_guild_id}}', pm.variables.get('raid_guild_id')).replace('{{raid_occurrence_id}}', pm.variables.get('raid_occurrence_id'))}",
+                  "}, (error, response) => {",
+                  "  if (error || response.code !== 201) throw new Error('Raid fixture creation failed');",
+                  "  pm.variables.set('raid_id', response.json().raid_id);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"problem code\", () => { pm.expect(pm.response.json().code).to.eql('actor_mismatch') });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

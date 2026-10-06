@@ -1,23 +1,25 @@
-## What
-<!-- short description of the change -->
+## Summary
 
-## Why
-<!-- reason / linked issue -->
-
-## How
-<!-- approach taken -->
+Describe the problem and the resulting behavior.
 
 ## Affected services
-<!-- which services this touches, or "none" -->
 
-## Contract diff
-<!-- endpoints/events added, removed or changed; link the field-types.md sections; "none" if no contract change -->
+List the affected services, or write `None`.
 
-## How it was checked
-<!-- tests run, manual verification, tools/check_contracts.py output, etc -->
+## Contract changes
+
+List changed endpoints, events, or fields and link their documentation. Write `None` if unchanged.
+
+## Validation
+
+List the commands run and their results.
+
+## Issue
+
+Link the issue. Use `Closes #number` when this PR completes it.
 
 ## Checklist
-- [ ] Code runs locally
-- [ ] No `.env` files or secrets committed
-- [ ] No `node_modules` or build artifacts committed
-- [ ] Self-reviewed before requesting review
+
+- [ ] Documentation matches the change
+- [ ] No secrets or generated files committed
+- [ ] Self-reviewed

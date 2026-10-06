@@ -1059,6 +1059,19 @@ database.
 
 ## Map
 
+### Location
+
+The latest accepted location for one user.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `user_id` | uuid (v7) | yes |
+| `lat` | number [-90..90] | yes |
+| `lng` | number [-180..180] | yes |
+| `timestamp` | timestamp (ISO 8601 UTC) | yes |
+| `accuracy_m` | number [0..100000] or null | yes |
+| `expires_at` | timestamp (ISO 8601 UTC) | yes |
+
 ### LocationInput
 
 | Field | Type / constraint | Required |
