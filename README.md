@@ -891,7 +891,8 @@ consumer restart and unroutable publication before claiming real delivery.
 
 `deploy/compose.yaml` pulls nine versioned images under the `tamagotchi-go`
 Compose project. Each service has its own credentials and database in one
-PostGIS-enabled PostgreSQL container.
+PostGIS-enabled PostgreSQL container. A RabbitMQ broker runs alongside it, with
+one account per publishing or consuming service (see below).
 
 | Service | Image | Host port |
 |---|---|---|
@@ -918,11 +919,29 @@ If `deploy/.env` already exists, keep it. Otherwise, create it before startup:
 ```bash
 cd deploy
 test -f .env || cp .env.example .env
-# Set every database password and any Registry admin IDs in .env.
+# Set every database password, the RabbitMQ passwords and the other values marked in .env.example.
 docker compose --env-file .env up -d --wait
 ```
 
-Use distinct URL-safe passwords in the untracked `.env`. On first start, the
+Use distinct URL-safe passwords in the untracked `.env`.
+
+### Broker and accounts
+
+`rabbitmq` runs with the management plugin, bound to `127.0.0.1` (AMQP `5672`,
+management `15672`). `rabbitmq-provision` runs once after the broker is healthy:
+it creates one account per service from `deploy/rabbitmq/provision.sh`. Each
+account can configure, write and read only its own exchanges and queues. The
+admin account (`RABBITMQ_USER`) is used only by that step. Set `RABBITMQ_USER`,
+`RABBITMQ_PASSWORD`, `GUILD_RABBITMQ_PASSWORD` and `REGISTRY_RABBITMQ_PASSWORD`
+in `.env`. Guild and Registry retry their broker connection at startup, so they
+do not wait for it in Compose. Their settings, and the account names, are in
+their own READMEs.
+
+Not yet in place: Guild and Registry require `GATEWAY_ASSERTION_JWKS_PATH` to
+start, and nothing mounts that key set into their containers. The Gateway's
+signing key is generated locally and is never committed.
+
+On first start, the
 database initializer creates eight databases and roles, applies the User
 Management and Battle SQL, and enables PostGIS for Map. The remaining services
 create their own schema at startup. The shared volume is separate from each
@@ -949,7 +968,10 @@ run `scripts/seed.sh` with `MAP_BASE_URL=http://localhost:3006` or
 
 Import the eight collections in `postman/` and select
 `postman/tamagotchi-go.postman_environment.json`. The environment defines one
-base URL per service. Map and Monster Raid requests create their own fixtures.
+base URL per service, and all of them now point at the Gateway
+(`http://localhost:3000/<prefix>`). The Gateway and the services must be running
+first. Registry's admin-only requests need a caller whose token carries the
+`admin` role; until User Management issues that role, they are refused. Map and Monster Raid requests create their own fixtures.
 Run the other service collections in order when a request depends on a previous
 response. See [Postman instructions](postman/README.md).
 
