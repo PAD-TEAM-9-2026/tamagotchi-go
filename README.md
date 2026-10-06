@@ -283,6 +283,81 @@ none are registered in the skeleton. Proposed authenticated-mode readiness
 requires usable access-token verification and assertion signing keys. Health
 alone proves neither routing nor downstream availability.
 
+### Verified identity proposal
+
+Pending Patricia and affected-owner review. The following describes proposed
+authorization, not the current mock-header or Gateway skeleton behavior.
+
+Gateway validates caller Authorization and removes it before dispatch. It strips
+external copies of `X-User-Id`, `X-User-Roles`, `X-Service-Name`,
+`X-Gateway-Assertion`, `X-Gateway-Context` and `X-Request-Deadline-Ms`.
+Downstream services use the verified claims in `X-Gateway-Assertion` for identity;
+plain headers alone grant no access. Existing endpoint Access columns remain
+authoritative. Anonymous assertions carry no user or service permissions.
+
+| Token | Issuer | Audience | Subject | Lifetime |
+|---|---|---|---|---|
+| User access | tamagotchi-go-users | tamagotchi-go | UUIDv7 user id | 900 seconds |
+| Service access | tamagotchi-go-users | canonical destination service | service:name | 300 seconds |
+| Gateway assertion | tamagotchi-go-gateway | canonical destination service | verified caller or anonymous | at most 30 seconds |
+
+Access tokens use `typ=at+jwt`; assertions use `typ=gateway-assertion+jwt`.
+Allow only RS256 with RSA keys of at least 2048 bits. Verify signature, type,
+issuer, audience, subject, issuance and expiry; never choose algorithms or key
+URLs from untrusted claims. Allow five seconds of token clock tolerance, but
+none for request deadlines. See [JWT validation guidance](https://www.rfc-editor.org/rfc/rfc8725.html).
+JWT time claims use NumericDate seconds; the signed request deadline uses Unix
+milliseconds. Application timestamps remain ISO 8601 UTC with milliseconds.
+
+Gateway alone holds its assertion private key. Services load the public JWKS
+from a mounted file. Use `GATEWAY_ASSERTION_PRIVATE_KEY_PATH`,
+`GATEWAY_ASSERTION_KEY_ID` and `GATEWAY_ASSERTION_JWKS_PATH` for configuration;
+the public path is also configured on Gateway for key-set readiness checks.
+Paths and key ids are configuration, never private key values in documentation.
+Deploy a new public key first, switch Gateway's signing kid, then remove the old
+key after its assertions and five-second tolerance expire. Keep access-token
+and assertion key sets separate.
+
+Gateway fetches User Management keys asynchronously from the configured direct
+`GET /v1/jwks` bootstrap URL, with a 300-second cache. An unknown kid triggers
+one refresh shared by concurrent requests. Valid cached keys remain usable
+within the cache lifetime; never accept unknown keys or an expired cache because
+refresh failed. Invalid tokens return `401 unauthenticated`. Refresh failure
+without a usable key returns `503 auth_keys_unavailable`.
+
+Admin service-token issuance adds `service_name` to ServiceTokenRequest and
+creates `sub=service:<service_name>`. The issuer checks a configured allowlist
+of destinations/scopes for that service. Requesting a scope does not grant it.
+Gateway checks the service token audience against the routed destination;
+downstream services enforce the required permissions from the signed assertion.
+Patricia and the affected owners must approve the exact route/scope allowlist.
+
+For nested calls, a service obtains its own access token for the destination and
+sends its incoming assertion as `X-Gateway-Context`. Gateway verifies that
+context with its assertion keys and requires its audience to equal the calling
+service identified by the service access token. Invalid supplied context is
+rejected, not treated as a new request. Preserve correlation, original actor
+and the signed deadline; create a fresh assertion for the next destination.
+The scope and principal remain those of the calling service. Delegated actor
+roles are audit context and cannot grant service permissions.
+
+Public routes are exactly those marked public in the endpoint tables, plus
+Gateway health/readiness. If Authorization is supplied even on a public route,
+validate it; an invalid token does not become an anonymous request. The direct
+User Management JWKS bootstrap and service health/readiness probes are explicit
+exceptions to downstream assertion enforcement. Other direct domain calls must
+fail without a valid Gateway assertion.
+
+| Downstream status | Code | Condition |
+|---|---|---|
+| 401 | `invalid_gateway_assertion` | missing, forged, expired, wrong-type or wrong-audience assertion |
+| 403 | `insufficient_scope` | valid assertion lacks required permissions |
+
+Gateway may regenerate `X-User-Id` and `X-User-Roles` for user callers and
+`X-Service-Name` for service callers. These must match the verified principal;
+services authorize from assertion claims, not those compatibility headers.
+Never log bearer tokens, assertions, key material or refresh credentials.
+
 ### Example shapes
 
 ```json

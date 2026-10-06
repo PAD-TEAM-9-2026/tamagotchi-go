@@ -72,6 +72,39 @@ is not implemented in the Gateway skeleton.
 | `ticket` | opaque string [1..512], single-use, lifetime 30 seconds | yes |
 | `expires_at` | timestamp (ISO 8601 UTC, milliseconds) | yes |
 
+### GatewayAssertion
+
+Proposed JWT claims carried in X-Gateway-Assertion. The JWT header requires
+alg=RS256, typ=gateway-assertion+jwt and a configured kid. This is not a JSON
+request body. Anonymous has no permissions; service roles are empty and service
+scope comes from its access token. Every destination is a canonical service name
+from ServiceTokenRequest.audience, not a URL or Gateway path prefix.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `iss` | tamagotchi-go-gateway | yes |
+| `aud` | canonical destination service name | yes |
+| `principal_kind` | anonymous / user / service | yes |
+| `sub` | anonymous, UUIDv7 user id, or service:name matching principal_kind | yes |
+| `roles` | array<string [1..64]> [0..20], empty for anonymous/service | yes |
+| `scope` | space-separated granted scopes, empty for anonymous/user | yes |
+| `jti` | uuid (v7), unique per assertion | yes |
+| `correlation_id` | uuid (v7) | yes |
+| `iat` | integer, NumericDate seconds | yes |
+| `exp` | integer, NumericDate seconds, greater than iat, at most iat + 30 | yes |
+| `deadline_unix_ms` | integer, inherited root deadline in Unix milliseconds | yes |
+| `actor` | DelegatedActor, only on service assertions with verified user context | no |
+
+### DelegatedActor
+
+Proposed trace context, not service authorization. A direct user assertion's
+subject/roles form this context; nested service assertions preserve it unchanged.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `user_id` | uuid (v7) | yes |
+| `roles` | array<string [1..64]> [0..20] | yes |
+
 ## User Management
 
 ### BattleSettlement
@@ -277,8 +310,13 @@ is not implemented in the Gateway skeleton.
 
 ### ServiceTokenRequest
 
+The service_name addition is a proposal for Patricia's review. The existing
+request has audience and scopes only; caller-identifying issuance is not yet
+implemented or verified by this documentation change.
+
 | Field | Type / constraint | Required |
 |---|---|---|
+| `service_name` | user-management / tamagotchi / battle / guild / package-registry / map / monster-raid / notification | yes |
 | `audience` | user-management / tamagotchi / battle / guild / package-registry / map / monster-raid / notification | yes |
 | `scopes` | array<string [1..64]> [0..20] | yes |
 
