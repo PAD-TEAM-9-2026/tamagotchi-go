@@ -290,7 +290,7 @@ database.
 | `occurred_at` | timestamp (ISO 8601 UTC) | yes |
 | `producer` | "user-management" | yes |
 | `correlation_id` | uuid (v7) | yes |
-| `data` | object {request_id: uuid (v7), from_user_id: uuid (v7), to_user_id: uuid (v7), expires_at: date-time} | yes |
+| `data` | object {request_id: uuid (v7), from_user_id: uuid (v7), from_username: string [3..32], to_user_id: uuid (v7), expires_at: date-time} | yes |
 
 ### UserPackageJoinedEvent
 
@@ -594,7 +594,7 @@ database.
 | `occurred_at` | timestamp (ISO 8601 UTC) | yes |
 | `producer` | "battle" | yes |
 | `correlation_id` | uuid (v7) | yes |
-| `data` | object {battle_id: uuid (v7), challenger_id: uuid (v7), opponent_id: uuid (v7), expires_at: date-time} | yes |
+| `data` | object {battle_id: uuid (v7), challenger_id: uuid (v7), challenger_username: string [3..32], opponent_id: uuid (v7), expires_at: date-time} | yes |
 
 ### BattleSide
 
