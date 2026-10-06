@@ -787,9 +787,71 @@ nothing. Each event payload is an `...Event` shape in
 | `raid.started.v1` | Monster Raid | Notification | RAID_STARTED, recipients carried in the event |
 | `raid.completed.v1` | Monster Raid | audit | Boss died or the timer ran out |
 
-Each consumer has a work queue, two retry queues at 5 s and 30 s, and a dead
-letter queue. Three attempts, then the message parks in the DLQ and the owner
-replays it with the same event ID.
+#### Broker delivery proposal
+
+Pending publisher/consumer-owner review and Mihaela's deployment compatibility.
+Sergiu coordinates topology; Mihaela owns shared broker deployment. This change
+does not add a running broker or implement publication/consumption.
+
+| Publisher | Durable topic exchange |
+|---|---|
+| User Management | `user-management.events` |
+| Tamagotchi | `tamagotchi.events` |
+| Battle | `battle.events` |
+| Guild | `guild.events` |
+| Package Registry | `package-registry.events` |
+| Map | `map.events` |
+| Monster Raid | `monster-raid.events` |
+
+Use each event's existing routing key and envelope; no event payload changes.
+Bindings follow the Events table above, with exact keys rather than wildcards.
+
+| Consumer | Work queue | Subscriptions |
+|---|---|---|
+| Tamagotchi | `tamagotchi.work` | user.package_joined.v1 |
+| Package Registry | `package-registry.work` | user.package_joined.v1 |
+| Monster Raid | `monster-raid.work` | registry.occurrence_changed.v1 |
+| Notification | `notification.work` | the six Notification events in the table above |
+| Passive audit destination | `audit.work` | all events marked audit above |
+
+Map has no consumer/inbox under this contract. Notification publishes nothing.
+The passive audit queue retains events for broker-coordinator inspection; it
+does not introduce an audit service or a processing consumer.
+
+Each active consumer has `<consumer>.work`, `<consumer>.retry.5s`,
+`<consumer>.retry.30s` and `<consumer>.dlq`. Use durable quorum queues and
+persistent messages (`delivery_mode=2`, content type application/json).
+Retry queues use queue TTLs of 5000/30000 ms and dead-letter to the default
+exchange with routing key `<consumer>.work`. Configure at-least-once
+dead-lettering and reject-publish overflow on the retry queues; verify support
+in the deployed RabbitMQ version before implementation. No work-queue TTL is
+applied.
+
+Producers set `x-attempt=1`. A failed first delivery publishes to the consumer's
+five-second retry queue with x-attempt=2; a failed second delivery publishes to
+its thirty-second queue with x-attempt=3. A failed third delivery publishes to
+its DLQ. Publish retries directly through the default exchange, addressed to
+that queue, so other subscribers do not receive the retry. Preserve event_id,
+correlation, body and `x-original-routing-key`; never reset the attempt on
+redelivery. Owner-driven DLQ replay resets x-attempt=1 and retains event_id.
+
+Commit domain state and an outbox row together. Publish after commit with
+publisher confirms and mandatory routing; an unroutable return or missing
+confirmation leaves delivery pending. Record outbox delivery only after a
+positive confirmation with no return. Consumers persist event_id deduplication
+with their effects, then acknowledge. Duplicate deliveries cause no new effect.
+For retry/DLQ transfer, confirm the new persistent message before acknowledging
+the original. If transfer fails, retain/requeue the original without a busy
+retry loop. Crash recovery may redeliver; deduplication must tolerate it.
+Publisher confirms do not establish that a consumer processed the message.
+See [acknowledgements](https://www.rabbitmq.com/docs/confirms) and
+[dead-lettering](https://www.rabbitmq.com/docs/dlx).
+
+Use `RABBITMQ_URL` with service-specific credentials and least-privilege broker
+permissions. Keep its value in untracked configuration or secrets; examples
+name the variable without credentials. Gateway and database credentials are
+separate. Validate outage/recovery, redelivery, poison-message retries/DLQ,
+consumer restart and unroutable publication before claiming real delivery.
 
 ## Deployment
 
