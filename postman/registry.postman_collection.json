@@ -160,8 +160,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -283,8 +284,9 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{moderator_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{moderator_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -343,8 +345,9 @@
             "method": "PUT",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{moderator_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{moderator_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -398,8 +401,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "battle"
+                "key": "Authorization",
+                "value": "Bearer {{battle_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -436,8 +440,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "battle"
+                "key": "Authorization",
+                "value": "Bearer {{battle_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -471,8 +476,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "battle"
+                "key": "Authorization",
+                "value": "Bearer {{battle_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -506,8 +512,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "tamagotchi"
+                "key": "Authorization",
+                "value": "Bearer {{tamagotchi_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -571,8 +578,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "guild"
+                "key": "Authorization",
+                "value": "Bearer {{guild_service_credential}}",
+                "type": "text"
               },
               {
                 "key": "Content-Type",
@@ -628,8 +636,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -683,8 +692,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -720,8 +730,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -759,8 +770,9 @@
             "method": "PUT",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -825,8 +837,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -880,8 +893,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -917,8 +931,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "monster-raid"
+                "key": "Authorization",
+                "value": "Bearer {{monster_raid_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -951,8 +966,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -995,8 +1011,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1034,8 +1051,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1108,8 +1126,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1158,8 +1177,9 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1213,8 +1233,9 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{moderator_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{moderator_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1264,8 +1285,9 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{moderator_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{moderator_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1348,8 +1370,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -1383,8 +1406,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
