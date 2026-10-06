@@ -66,10 +66,24 @@ is not implemented in the Gateway skeleton.
 
 ### WsTicket
 
+Returned by `POST /gateway/v1/ws-negotiate`. The `ticket` is the id Guild issued in
+`ChatTicket`; the claims behind it are Guild's record of user, guild, issue time and
+expiry, and are never sent to the browser.
+
 | Field | Type / constraint | Required |
 |---|---|---|
-| `url` | string [1..2048], browser-reachable ws/wss URL | yes |
-| `ticket` | opaque string [1..512], single-use, lifetime 30 seconds | yes |
+| `url` | string [1..2048], browser-reachable ws/wss URL, ends in `/v1/guilds/{guildId}/chat` | yes |
+| `ticket` | uuid (v7), single-use, valid 30 seconds | yes |
+| `expires_at` | timestamp (ISO 8601 UTC, milliseconds) | yes |
+
+### ChatTicket
+
+Returned by `POST /v1/guilds/{guildId}/chat-tickets` (user access).
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `ticket` | uuid (v7), single-use, valid 30 seconds | yes |
+| `guild_id` | uuid (v7) | yes |
 | `expires_at` | timestamp (ISO 8601 UTC, milliseconds) | yes |
 
 ### GatewayAssertion
@@ -793,10 +807,13 @@ implemented or verified by this documentation change.
 
 ### WsAuth
 
+The first frame on a chat connection. The ticket is redeemed once, and membership is
+checked again at that point.
+
 | Field | Type / constraint | Required |
 |---|---|---|
 | `type` | "auth" | yes |
-| `access_token` | string [1..8192] | yes |
+| `ticket` | uuid (v7), from `ChatTicket` | yes |
 
 ### WsError
 

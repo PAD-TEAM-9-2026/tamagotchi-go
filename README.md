@@ -648,10 +648,20 @@ because Battle owns the turn state.
 | `POST /v1/guilds/{guildId}/leadership` | LeaderInput, Idempotency-Key | 200 Guild | user |
 | `DELETE /v1/guilds/{guildId}` | none | 204 | user |
 | `GET /v1/guilds/{guildId}/messages` | query limit, cursor | 200 ChatPage | user |
-| `GET /v1/guilds/{guildId}/chat` | WebSocket upgrade | 101 | user |
+| `POST /v1/guilds/{guildId}/chat-tickets` | none | 201 ChatTicket | user |
+| `GET /v1/guilds/{guildId}/chat` | WebSocket upgrade | 101 | ticket in the first frame |
 
-Chat token goes in the handshake header, never the query string. The `Ws`
-shapes in [field-types.md](docs/field-types.md) are the frames sent over the socket.
+A chat ticket is issued to a current member for one connection. It is valid for 30
+seconds and can be used once. Membership is checked when the ticket is issued and
+again when it is used. The browser never sends a token in the URL or the handshake:
+it opens the socket without credentials and sends `{"type":"auth","ticket":"..."}`
+as its first frame within 5 seconds. A bad ticket closes with 4401 (`invalid_ticket`),
+a member who has left closes with 4403. The `Ws` shapes in
+[field-types.md](docs/field-types.md) are the frames sent over the socket.
+
+The Gateway's `ws-negotiate` (`POST /gateway/v1/ws-negotiate`) is the entry point
+for browsers: it verifies the caller, asks Guild for a ticket, and returns the
+browser URL with the ticket.
 
 Guild calls User Management for user identity and relationships, and Package
 Registry only for package eligibility. The topic text points at Registry Service
