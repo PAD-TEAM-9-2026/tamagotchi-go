@@ -358,6 +358,55 @@ Gateway may regenerate `X-User-Id` and `X-User-Roles` for user callers and
 services authorize from assertion claims, not those compatibility headers.
 Never log bearer tokens, assertions, key material or refresh credentials.
 
+### Work limits proposal
+
+Pending Victoria, Patricia and service-owner review. Gateway currently reads
+5000 ms and 128 slots as unused configuration; the pools below are proposed
+enforcement, not measured capacity or current middleware.
+
+| Component | Local timeout | Per-process admission |
+|---|---|---|
+| Gateway | 5000 ms | 64 client/public requests and 64 authenticated service requests |
+| Each domain service | 3000 ms | 64 tasks shared by domain requests, message processing and worker batches |
+
+Only a verified service access token enters Gateway's service pool. A caller
+cannot select it with headers. There is no admission waiting queue: a full pool
+returns `503 too_many_tasks` with `Retry-After: 1`. An expired deadline returns
+`504 task_timeout`. Even the reserved service pool may saturate; nested calls
+fail promptly rather than waiting while holding another slot. Gateway performs
+no automatic retries of HTTP mutations.
+
+A new Gateway root gets deadline `now + 5000 ms`. Nested calls preserve that
+signed deadline. Each service's effective deadline is the earlier of the root
+deadline and `now + 3000 ms`. Convert the remaining budget to a local monotonic
+timer; never restart a full timeout for each dependency or attempt.
+
+An authenticated service can send its earlier local deadline in
+`X-Request-Deadline-Ms` as a positive Unix-millisecond integer. With verified
+X-Gateway-Context, clamp it to the signed parent deadline; without context it
+may only shorten a new service-initiated root budget. Malformed authenticated
+values return `400 invalid_deadline`. External values are ignored. Gateway
+signs the effective deadline for the destination; an already elapsed budget
+returns 504 without dispatch. Services handling an incoming request must pass
+its context and shorter local deadline on every nested call.
+
+Request aborts, deadlines and shutdown cancel HTTP/SQL operations. Roll back
+uncommitted work and retain any committed receipt/effect progress. Release a
+slot only when its actual work and cleanup finish, not merely when the client
+has received a timeout. No detached work may escape the capacity accounting.
+
+Health/readiness probes use a separate bounded three-second check and no domain
+slot. Startup initialization remains governed by shutdown cancellation.
+Established Guild sockets do not occupy Gateway HTTP slots; negotiation and
+message handling are bounded tasks. Guild owns its separate socket lifetime and
+connection policy. A worker batch uses a service slot and local deadline; leave
+durable work pending and retry on its normal schedule if no slot is available.
+
+Required evidence: rejection under saturation, inherited nested budgets,
+deadline/abort/shutdown cancellation, rollback, worker recovery and slot reuse.
+HTTP failure does not prove that an external side effect did not commit; command
+replay and durable reward effects handle uncertain outcomes.
+
 ### Example shapes
 
 ```json
