@@ -96,6 +96,8 @@ services:
       POSTGRES_PASSWORD: ${GUILD_DB_PASSWORD:?set GUILD_DB_PASSWORD in .env}
       POSTGRES_DB: ${GUILD_DB_NAME:-guild}
       AUTH_MODE: dev
+      USER_MANAGEMENT_URL: http://gateway:3000/users
+      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
     ports:
       - "3004:3000"
     healthcheck:
