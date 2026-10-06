@@ -175,8 +175,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -232,8 +233,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -269,8 +271,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -306,8 +309,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "monster-raid"
+                "key": "Authorization",
+                "value": "Bearer {{monster_raid_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -345,8 +349,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -402,8 +407,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{officer_to_be_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{officer_to_be_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -439,8 +445,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{officer_to_be_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{officer_to_be_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -483,8 +490,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -538,8 +546,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{decliner_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{decliner_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -582,8 +591,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -637,8 +647,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -686,8 +697,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -727,8 +739,9 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -787,8 +800,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -839,8 +853,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{kicked_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{kicked_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -880,8 +895,9 @@
             "method": "DELETE",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{officer_to_be_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{officer_to_be_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -916,8 +932,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -976,8 +993,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{officer_to_be_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{officer_to_be_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -1053,8 +1071,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               },
               {
                 "key": "Content-Type",
@@ -1102,8 +1121,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -1139,8 +1159,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1191,8 +1212,9 @@
             "method": "DELETE",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{leader_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
               }
             ],
             "url": {
