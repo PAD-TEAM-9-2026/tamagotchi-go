@@ -577,11 +577,11 @@ nothing. Each event payload is an `...Event` shape in
 | Routing key | Publisher | Consumer | Purpose |
 |---|---|---|---|
 | `user.package_joined.v1` | User Management | Tamagotchi, Package Registry | Grant the package starter if the user has none for it. Update the membership projection |
-| `user.friend_request_created.v1` | User Management | Notification | FRIEND_REQUEST |
+| `user.friend_request_created.v1` | User Management | Notification | FRIEND_REQUEST, carries `from_username` |
 | `tamagotchi.created.v1` | Tamagotchi | audit | A creature was minted |
 | `tamagotchi.access_granted.v1` | Tamagotchi | Notification | TAMAGOTCHI_SHARED, sent to every holder the creature already had |
 | `tamagotchi.leveled_up.v1` | Tamagotchi | audit | Level threshold crossed |
-| `battle.request_created.v1` | Battle | Notification | BATTLE_REQUEST |
+| `battle.request_created.v1` | Battle | Notification | BATTLE_REQUEST, carries `challenger_username` |
 | `battle.completed.v1` | Battle | audit | Battle resolved |
 | `guild.invitation_created.v1` | Guild | Notification | GUILD_INVITATION |
 | `guild.member_joined.v1` | Guild | audit | Invitation accepted |
