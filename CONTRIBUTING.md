@@ -22,4 +22,10 @@ For deployment changes, also validate Compose with a local `deploy/.env` and ver
 
 ## Merge and release
 
-Squash work branches into `develop`. Merge a tested release from `develop` into `main` with a merge commit, then tag the release. Merge `main` back into `develop` through a PR when release-only commits need to be synchronized. Do not push directly to either shared branch.
+Squash work branches into `develop`. Merge a tested release into `main` with a merge commit. Use a release branch from the agreed develop cut when later work must be excluded. Do not push directly to either shared branch.
+
+Versions use `X.Y`: X identifies the integration milestone and Y the revision within it. Start a milestone at revision zero and increment for released fixes or small changes. This numbering does not imply API compatibility; document breaking changes and the tested service versions separately.
+
+The shared repository receives an annotated `vX.Y` tag and a GitHub Release on the tested main merge commit. Service releases use the tested merge into main, without a separate Git tag or GitHub Release. Service image versions remain explicit and immutable.
+
+Never overwrite existing tags or published versions. Keep shared Compose pinned to the tested image set. Merge release-only changes back into `develop` through a PR when needed.
