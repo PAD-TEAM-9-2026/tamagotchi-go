@@ -22,3 +22,6 @@
 [submodule "services/battle"]
 	path = services/battle
 	url = https://github.com/PatriciaMoraru/battle.git
+[submodule "services/gateway"]
+	path = services/gateway
+	url = git@github.com:victoriaaa111/gateway.git
