@@ -88,8 +88,6 @@ services:
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
     environment:
       PORT: 3000
       DB_HOST: database
@@ -97,10 +95,9 @@ services:
       POSTGRES_USER: ${GUILD_DB_USER:-guild}
       POSTGRES_PASSWORD: ${GUILD_DB_PASSWORD:?set GUILD_DB_PASSWORD in .env}
       POSTGRES_DB: ${GUILD_DB_NAME:-guild}
-      AUTH_MODE: dev
       USER_MANAGEMENT_URL: http://gateway:3000/users
       PACKAGE_REGISTRY_URL: http://gateway:3000/registry
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:?set RABBITMQ_USER in .env}:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      RABBITMQ_URL: amqp://guild:${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     ports:
       - "3004:3000"
     healthcheck:
@@ -115,8 +112,6 @@ services:
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
     environment:
       PORT: 3000
       DB_HOST: database
@@ -124,9 +119,7 @@ services:
       POSTGRES_USER: ${REGISTRY_DB_USER:-registry}
       POSTGRES_PASSWORD: ${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD in .env}
       POSTGRES_DB: ${REGISTRY_DB_NAME:-registry}
-      AUTH_MODE: dev
-      ADMIN_USER_IDS: ${REGISTRY_ADMIN_USER_IDS:-}
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:?set RABBITMQ_USER in .env}:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      RABBITMQ_URL: amqp://registry:${REGISTRY_RABBITMQ_PASSWORD:?set REGISTRY_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     ports:
       - "3005:3000"
     healthcheck:
@@ -223,6 +216,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+
+  rabbitmq-provision:
+    image: rabbitmq:4.1-management-alpine
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_USER: ${RABBITMQ_USER:?set RABBITMQ_USER in .env}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
+      GUILD_RABBITMQ_PASSWORD: ${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}
+      REGISTRY_RABBITMQ_PASSWORD: ${REGISTRY_RABBITMQ_PASSWORD:?set REGISTRY_RABBITMQ_PASSWORD in .env}
+    volumes:
+      - ./rabbitmq/provision.sh:/provision.sh:ro
+    entrypoint: ["sh", "/provision.sh"]
+    restart: "no"
 
   gateway:
     image: victoriamutruc/gateway:2.0.0
