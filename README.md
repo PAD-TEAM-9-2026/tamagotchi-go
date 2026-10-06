@@ -920,6 +920,7 @@ If `deploy/.env` already exists, keep it. Otherwise, create it before startup:
 cd deploy
 test -f .env || cp .env.example .env
 # Set every database password, the RabbitMQ passwords and the other values marked in .env.example.
+./gateway/generate-keys.sh   # once: creates secrets/ for the Gateway signing keys
 docker compose --env-file .env up -d --wait
 ```
 
@@ -937,9 +938,11 @@ in `.env`. Guild and Registry retry their broker connection at startup, so they
 do not wait for it in Compose. Their settings, and the account names, are in
 their own READMEs.
 
-Not yet in place: Guild and Registry require `GATEWAY_ASSERTION_JWKS_PATH` to
-start, and nothing mounts that key set into their containers. The Gateway's
-signing key is generated locally and is never committed.
+Gateway signing keys: `deploy/gateway/generate-keys.sh` creates the Gateway's
+private signing key and the public key set in `deploy/secrets/`, which Git ignores.
+The Gateway mounts both files; Guild and Registry mount the public key set, and
+refuse to start without it. Run the script once before the first start, and keep
+the private key on your machine.
 
 On first start, the
 database initializer creates eight databases and roles, applies the User

@@ -97,7 +97,10 @@ services:
       POSTGRES_DB: ${GUILD_DB_NAME:-guild}
       USER_MANAGEMENT_URL: http://gateway:3000/users
       PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       RABBITMQ_URL: amqp://guild:${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3004:3000"
     healthcheck:
@@ -119,7 +122,10 @@ services:
       POSTGRES_USER: ${REGISTRY_DB_USER:-registry}
       POSTGRES_PASSWORD: ${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD in .env}
       POSTGRES_DB: ${REGISTRY_DB_NAME:-registry}
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       RABBITMQ_URL: amqp://registry:${REGISTRY_RABBITMQ_PASSWORD:?set REGISTRY_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3005:3000"
     healthcheck:
@@ -256,6 +262,12 @@ services:
       PORT: 3000
       AUTH_MODE: dev
       LOG_LEVEL: info
+      GATEWAY_ASSERTION_PRIVATE_KEY_PATH: /run/secrets/gateway-assertion.pem
+      GATEWAY_ASSERTION_KEY_ID: ${GATEWAY_ASSERTION_KEY_ID:?set GATEWAY_ASSERTION_KEY_ID in .env (run deploy/gateway/generate-keys.sh)}
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+    volumes:
+      - ./secrets/gateway-assertion.pem:/run/secrets/gateway-assertion.pem:ro
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3000:3000"
     healthcheck:
