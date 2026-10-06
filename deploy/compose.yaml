@@ -88,6 +88,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       PORT: 3000
       DB_HOST: database
@@ -98,6 +100,7 @@ services:
       AUTH_MODE: dev
       USER_MANAGEMENT_URL: http://gateway:3000/users
       PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:?set RABBITMQ_USER in .env}:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     ports:
       - "3004:3000"
     healthcheck:
@@ -112,6 +115,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       PORT: 3000
       DB_HOST: database
@@ -121,6 +126,7 @@ services:
       POSTGRES_DB: ${REGISTRY_DB_NAME:-registry}
       AUTH_MODE: dev
       ADMIN_USER_IDS: ${REGISTRY_ADMIN_USER_IDS:-}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:?set RABBITMQ_USER in .env}:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     ports:
       - "3005:3000"
     healthcheck:
@@ -202,6 +208,22 @@ services:
       timeout: 3s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?set RABBITMQ_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - shared-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   gateway:
     image: victoriamutruc/gateway:2.0.0
     pull_policy: always
@@ -236,3 +258,4 @@ services:
 
 volumes:
   shared-postgres-data:
+  shared-rabbitmq-data:
