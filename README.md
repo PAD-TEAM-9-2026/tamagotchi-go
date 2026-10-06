@@ -669,6 +669,10 @@ conversations, and a passing `ci` check. New commits dismiss prior approvals.
 Squash work branches into `develop` and merge releases into `main` with a
 merge commit. Contract changes also need review from affected service owners.
 
+Versions use `X.Y` for milestone and revision. The shared release is tagged
+`vX.Y` on main and recorded as a GitHub Release. Service releases use the main
+merge; their published images retain explicit immutable versions.
+
 Track work in the [team project](https://github.com/orgs/PAD-TEAM-9-2026/projects/1).
 See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
 
