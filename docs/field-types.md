@@ -373,7 +373,7 @@ database.
 | Field | Type / constraint | Required |
 |---|---|---|
 | `source` | BATTLE / RAID | yes |
-| `reference_id` | uuid (v7) | yes |
+| `reference_id` | uuid (v7), unique per engagement: the battle id for BATTLE, a per-participant id for RAID | yes |
 | `lineups` | array<Lineup> [1..2] | yes |
 | `ttl_seconds` | integer [30..3600] | yes |
 
