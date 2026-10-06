@@ -302,6 +302,12 @@ authoritative. Anonymous assertions carry no user or service permissions.
 | Gateway assertion | tamagotchi-go-gateway | canonical destination service | verified caller or anonymous | at most 30 seconds |
 
 Access tokens use `typ=at+jwt`; assertions use `typ=gateway-assertion+jwt`.
+
+Roles come from User Management. It reads them from its table when it issues a
+user access token at login, as a `roles` claim: an array of 0 to 20 strings of 1 to
+64 characters, `[]` for an ordinary user. Gateway checks that shape and copies the
+verified roles into the assertion. Service access tokens carry `scope` only and no
+roles, so service assertions have empty roles. `admin` is the only role in use.
 Allow only RS256 with RSA keys of at least 2048 bits. Verify signature, type,
 issuer, audience, subject, issuance and expiry; never choose algorithms or key
 URLs from untrusted claims. Allow five seconds of token clock tolerance, but
