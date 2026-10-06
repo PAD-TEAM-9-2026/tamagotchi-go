@@ -1,7 +1,7 @@
 # Tamagotchi Go
 
 Shared backend for virtual pet apps. Different frontend packages ship their own
-creatures, art and care rules, and all of them run on these eight services.
+creatures, art and care rules, backed by eight domain services and a Python Gateway.
 
 
 ## Team
@@ -12,6 +12,7 @@ creatures, art and care rules, and all of them run on these eight services.
 | Victoria | Tamagotchi, Notification | TypeScript, Node.js |
 | Mihaela | Guild, Package Registry | TypeScript, Node.js |
 | Sergiu | Map, Monster Raid | C#, ASP.NET Core |
+| All four | Gateway | Python, FastAPI |
 
 
 ## Repository
@@ -28,6 +29,7 @@ Each service has its own private repository. They are linked here as submodules.
 | Package Registry | `services/package-registry` | Mihaela |
 | Map | `services/map` | Sergiu |
 | Monster Raid | `services/monster-raid` | Sergiu |
+| Gateway | `services/gateway` | Shared by the team |
 
 ## Service boundaries
 
@@ -44,6 +46,7 @@ service's tables.
 | Map | Latest locations, freshness, who is nearby | Friend lists, battles |
 | Monster Raid | Live raids, boss HP, attacks, damage per player, rewards | Boss definitions, guild membership |
 | Notification | Devices, push tokens, delivery, history, mute settings | Every domain decision, message text |
+| Gateway | REST routing, caller validation, correlation and negotiation | Game rules, domain data, databases, events |
 
 Two rules keep the boundaries honest. Battle decides, Tamagotchi applies.
 Package Registry holds configuration, the runtime services hold state.
@@ -93,6 +96,10 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
+This section describes the target architecture. Published services still use
+mock dependencies; Gateway routing and authorization are not implemented yet.
+The diagram update is separate from this contract proposal.
+
 ![Tamagotchi Go architecture with 8 microservices, PostgreSQL per service, and RabbitMQ](docs/img/architecture_diagram.png)
 
 Every client goes through the HTTP Gateway. It routes by path prefix to the eight
@@ -132,10 +139,10 @@ copy when it drifts.
 | Package Registry | TypeScript, Node.js, Express| PostgreSQL | Config documents differ per package |
 | Map | C#, ASP.NET Core, EF Core | PostgreSQL with PostGIS | Distance queries need a spatial index |
 | Monster Raid | C#, ASP.NET Core, EF Core | PostgreSQL | Counters under concurrent attacks |
+| Gateway | Python 3.13, FastAPI, Uvicorn, HTTPX, uv | None | Asynchronous REST dispatch without domain state |
 
-The services use two languages. TypeScript for the four services that mostly
-move JSON around, C# for the four that hold money, turns, counters and
-coordinates.
+The domain services use TypeScript and C#. Gateway uses Python with uv 0.12.23
+and a checked dependency lock. It has no database or event publisher.
 
 Trade-offs we accepted:
 
@@ -195,6 +202,11 @@ mechanisms carry it:
 
 ## Communication contract
 
+The endpoint tables are the agreed target, not runtime verification. New Gateway
+specifications below are proposals awaiting affected-owner review. Routing and
+negotiation need Mihaela's review; downstream identity and limits need their
+owners' agreement before implementation.
+
 ### Conventions
 
 | Concern | Rule |
@@ -216,6 +228,235 @@ shape is listed field by field, with types and which fields are required, in
 [field-types.md](docs/field-types.md).
 
 Every service also exposes `GET /health` and `GET /ready`, returning 200 or 503.
+
+### Gateway routing and negotiation proposal
+
+Browser/local clients use `http://localhost:3000`; containers use
+`http://gateway:3000`. These are local deployment addresses, not production URLs.
+
+| Prefix | Service | Container upstream |
+|---|---|---|
+| `/users` | User Management | `http://user-management:3001` |
+| `/tamagotchi` | Tamagotchi | `http://tamagotchi:3000` |
+| `/battle` | Battle | `http://battle:3003` |
+| `/guild` | Guild | `http://guild:3000` |
+| `/registry` | Package Registry | `http://registry:3000` |
+| `/map` | Map | `http://map:8080` |
+| `/raid` | Monster Raid | `http://monster-raid:8080` |
+| `/notification` | Notification | `http://notification:3000` |
+
+Client and service REST calls traverse Gateway. Strip the prefix exactly once;
+preserve method, path/query, body, upstream status and end-to-end headers,
+including replay, conditional-request and correlation headers. Remove hop-by-hop
+headers and the caller's Authorization before dispatch. For example,
+`GET /map/v1/location/{userId}` reaches Map as `GET /v1/location/{userId}`.
+Unknown prefixes return `404 unknown_route`; connection/protocol failures return
+`502 upstream_unavailable`. Valid upstream error responses remain unchanged.
+
+Direct health/readiness probes, Gateway's configured bootstrap JWKS lookup,
+database/broker connections, provider assets and negotiated Guild sockets are
+explicit exceptions. Gateway is not an arbitrary external proxy.
+
+| Method and path | Request | Response | Access |
+|---|---|---|---|
+| `ANY /{service}/v1/...` | downstream request | downstream response | per endpoint |
+| `POST /gateway/v1/ws-negotiate` | WsNegotiateInput | 200 WsTicket | user |
+| `GET /health` | none | 200 Health | public |
+| `GET /ready` | none | 200 Readiness or 503 Problem | public |
+
+Only `guild.chat` is supported by this proposal. Gateway forwards negotiation
+to Guild; the exact internal negotiation endpoint must be agreed with Mihaela
+before implementation. Guild issues and validates a single-use 30-second ticket.
+The browser connects directly to Guild, using a configured browser-reachable
+URL, not container DNS. Gateway does not hold the socket open.
+
+| Status | Negotiation code | Condition |
+|---|---|---|
+| 400 | `invalid_ws_resource` | resource is not guild.chat |
+| 400 | `invalid_resource_id` | resource_id is not UUIDv7 |
+| 401 | `unauthenticated` | missing or invalid caller token |
+| 403 | `guild_membership_required` | caller is not an eligible guild member |
+| 404 | `guild_not_found` | guild does not exist |
+
+Gateway health reports the process. Current readiness runs registered checks;
+none are registered in the skeleton. Proposed authenticated-mode readiness
+requires usable access-token verification and assertion signing keys. Health
+alone proves neither routing nor downstream availability.
+
+### Verified identity proposal
+
+Pending Patricia and affected-owner review. The following describes proposed
+authorization, not the current mock-header or Gateway skeleton behavior.
+
+Gateway validates caller Authorization and removes it before dispatch. It strips
+external copies of `X-User-Id`, `X-User-Roles`, `X-Service-Name`,
+`X-Gateway-Assertion`, `X-Gateway-Context` and `X-Request-Deadline-Ms`.
+Downstream services use the verified claims in `X-Gateway-Assertion` for identity;
+plain headers alone grant no access. Existing endpoint Access columns remain
+authoritative. Anonymous assertions carry no user or service permissions.
+
+| Token | Issuer | Audience | Subject | Lifetime |
+|---|---|---|---|---|
+| User access | tamagotchi-go-users | tamagotchi-go | UUIDv7 user id | 900 seconds |
+| Service access | tamagotchi-go-users | canonical destination service | service:name | 300 seconds |
+| Gateway assertion | tamagotchi-go-gateway | canonical destination service | verified caller or anonymous | at most 30 seconds |
+
+Access tokens use `typ=at+jwt`; assertions use `typ=gateway-assertion+jwt`.
+Allow only RS256 with RSA keys of at least 2048 bits. Verify signature, type,
+issuer, audience, subject, issuance and expiry; never choose algorithms or key
+URLs from untrusted claims. Allow five seconds of token clock tolerance, but
+none for request deadlines. See [JWT validation guidance](https://www.rfc-editor.org/rfc/rfc8725.html).
+JWT time claims use NumericDate seconds; the signed request deadline uses Unix
+milliseconds. Application timestamps remain ISO 8601 UTC with milliseconds.
+
+Gateway alone holds its assertion private key. Services load the public JWKS
+from a mounted file. Use `GATEWAY_ASSERTION_PRIVATE_KEY_PATH`,
+`GATEWAY_ASSERTION_KEY_ID` and `GATEWAY_ASSERTION_JWKS_PATH` for configuration;
+the public path is also configured on Gateway for key-set readiness checks.
+Paths and key ids are configuration, never private key values in documentation.
+Deploy a new public key first, switch Gateway's signing kid, then remove the old
+key after its assertions and five-second tolerance expire. Keep access-token
+and assertion key sets separate.
+
+Gateway fetches User Management keys asynchronously from the configured direct
+`GET /v1/jwks` bootstrap URL, with a 300-second cache. An unknown kid triggers
+one refresh shared by concurrent requests. Valid cached keys remain usable
+within the cache lifetime; never accept unknown keys or an expired cache because
+refresh failed. Invalid tokens return `401 unauthenticated`. Refresh failure
+without a usable key returns `503 auth_keys_unavailable`.
+
+Admin service-token issuance adds `service_name` to ServiceTokenRequest and
+creates `sub=service:<service_name>`. The issuer checks a configured allowlist
+of destinations/scopes for that service. Requesting a scope does not grant it.
+Gateway checks the service token audience against the routed destination;
+downstream services enforce the required permissions from the signed assertion.
+Patricia and the affected owners must approve the exact route/scope allowlist.
+
+For nested calls, a service obtains its own access token for the destination and
+sends its incoming assertion as `X-Gateway-Context`. Gateway verifies that
+context with its assertion keys and requires its audience to equal the calling
+service identified by the service access token. Invalid supplied context is
+rejected, not treated as a new request. Preserve correlation, original actor
+and the signed deadline; create a fresh assertion for the next destination.
+The scope and principal remain those of the calling service. Delegated actor
+roles are audit context and cannot grant service permissions.
+
+Public routes are exactly those marked public in the endpoint tables, plus
+Gateway health/readiness. If Authorization is supplied even on a public route,
+validate it; an invalid token does not become an anonymous request. The direct
+User Management JWKS bootstrap and service health/readiness probes are explicit
+exceptions to downstream assertion enforcement. Other direct domain calls must
+fail without a valid Gateway assertion.
+
+| Downstream status | Code | Condition |
+|---|---|---|
+| 401 | `invalid_gateway_assertion` | missing, forged, expired, wrong-type or wrong-audience assertion |
+| 403 | `insufficient_scope` | valid assertion lacks required permissions |
+
+Gateway may regenerate `X-User-Id` and `X-User-Roles` for user callers and
+`X-Service-Name` for service callers. These must match the verified principal;
+services authorize from assertion claims, not those compatibility headers.
+Never log bearer tokens, assertions, key material or refresh credentials.
+
+### Work limits proposal
+
+Pending Victoria, Patricia and service-owner review. Gateway currently reads
+5000 ms and 128 slots as unused configuration; the pools below are proposed
+enforcement, not measured capacity or current middleware.
+
+| Component | Local timeout | Per-process admission |
+|---|---|---|
+| Gateway | 5000 ms | 64 client/public requests and 64 authenticated service requests |
+| Each domain service | 3000 ms | 64 tasks shared by domain requests, message processing and worker batches |
+
+Only a verified service access token enters Gateway's service pool. A caller
+cannot select it with headers. There is no admission waiting queue: a full pool
+returns `503 too_many_tasks` with `Retry-After: 1`. An expired deadline returns
+`504 task_timeout`. Even the reserved service pool may saturate; nested calls
+fail promptly rather than waiting while holding another slot. Gateway performs
+no automatic retries of HTTP mutations.
+
+A new Gateway root gets deadline `now + 5000 ms`. Nested calls preserve that
+signed deadline. Each service's effective deadline is the earlier of the root
+deadline and `now + 3000 ms`. Convert the remaining budget to a local monotonic
+timer; never restart a full timeout for each dependency or attempt.
+
+An authenticated service can send its earlier local deadline in
+`X-Request-Deadline-Ms` as a positive Unix-millisecond integer. With verified
+X-Gateway-Context, clamp it to the signed parent deadline; without context it
+may only shorten a new service-initiated root budget. Malformed authenticated
+values return `400 invalid_deadline`. External values are ignored. Gateway
+signs the effective deadline for the destination; an already elapsed budget
+returns 504 without dispatch. Services handling an incoming request must pass
+its context and shorter local deadline on every nested call.
+
+Request aborts, deadlines and shutdown cancel HTTP/SQL operations. Roll back
+uncommitted work and retain any committed receipt/effect progress. Release a
+slot only when its actual work and cleanup finish, not merely when the client
+has received a timeout. No detached work may escape the capacity accounting.
+
+Health/readiness probes use a separate bounded three-second check and no domain
+slot. Startup initialization remains governed by shutdown cancellation.
+Established Guild sockets do not occupy Gateway HTTP slots; negotiation and
+message handling are bounded tasks. Guild owns its separate socket lifetime and
+connection policy. A worker batch uses a service slot and local deadline; leave
+durable work pending and retry on its normal schedule if no slot is available.
+
+Required evidence: rejection under saturation, inherited nested budgets,
+deadline/abort/shutdown cancellation, rollback, worker recovery and slot reuse.
+HTTP failure does not prove that an external side effect did not commit; command
+replay and durable reward effects handle uncertain outcomes.
+
+### Command replay and pagination proposal
+
+Pending affected-owner review. Map/Raid currently do not implement command-key
+replay or cursors; the successful response shapes below stay unchanged.
+
+Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
+`POST /raid/v1/raids/{raidId}/attack`. Require an Idempotency-Key of 1 to 128
+printable ASCII characters after HTTP header whitespace normalization; absence
+or invalid values return `400 invalid_idempotency_key`. Keys are case-sensitive.
+Scope is the verified caller, HTTP operation and resource path. Fingerprint the
+validated request model with deterministic field order, normalized UUIDs and
+UTC timestamps; JSON property order alone must not create a conflict.
+
+Retain completed receipts for 24 hours from completion. Identical retries return
+the stored status/body and applicable response headers, with the current request's
+correlation header. Do not replay transport, authentication or correlation
+headers from the old request. Changed input returns `409 idempotency_conflict`;
+concurrent pending work returns `409 command_in_progress`.
+Authenticate/authorize before lookup, including every replay. Malformed input
+and authentication failures do not reserve a key. Persist successful and final
+domain-error receipts with their local state transition. Do not freeze transient
+dependency, capacity or timeout errors as completed receipts. Durable pending
+work must recover uncertain external effects before completing the receipt.
+Persist local effects and receipts atomically; reward/reservation effect keys
+and progress remain independent of receipt expiry. Receipt expiry does not
+permit awarding the same completed raid twice.
+
+Pagination uses versioned HMAC-signed opaque cursors with five-minute expiry,
+bound to verified caller, endpoint, filters and page size. Store signing keys
+in service-owned configuration, never in a cursor or committed file. Reject
+tampering, unsupported versions, expiry and context mismatch with
+`400 invalid_cursor`; limit defaults to 100 and must be 1 to 100. Keep limit and
+filters unchanged while following a cursor. Continue strictly after its last
+sort tuple and return next_cursor=null when no further results remain.
+
+| Endpoint | Sort tuple | Context invalidation |
+|---|---|---|
+| Map nearby | distance_m ascending, user_id ascending | changed viewer observation returns 409 cursor_stale |
+| Raid list | started_at descending, raid_id descending | caller/filter mismatch returns 400 invalid_cursor |
+| Raid leaderboard | damage_dealt descending, joined_at ascending, user_id ascending | changed raid_version returns 409 cursor_stale |
+
+Bind Map's cursor to the full viewer observation, including coordinates, since
+equal-timestamp location changes remain valid. Freshness and current visibility
+are checked on every page; a missing/expired viewer still returns
+`409 viewer_location_unavailable`. Filters include guild_id or raidId where
+applicable. These are live queries, not stored result snapshots: movement and
+relationship changes can move a nearby player across a page boundary, causing
+omissions or repeats between pages. Clients replace markers by user_id rather
+than accumulating duplicates. A stale-context response requires restarting
+pagination. Raid list creation/deletion can likewise change the live result set.
 
 ### Example shapes
 
@@ -597,9 +838,71 @@ nothing. Each event payload is an `...Event` shape in
 | `raid.started.v1` | Monster Raid | Notification | RAID_STARTED, recipients carried in the event |
 | `raid.completed.v1` | Monster Raid | audit | Boss died or the timer ran out |
 
-Each consumer has a work queue, two retry queues at 5 s and 30 s, and a dead
-letter queue. Three attempts, then the message parks in the DLQ and the owner
-replays it with the same event ID.
+#### Broker delivery proposal
+
+Pending publisher/consumer-owner review and Mihaela's deployment compatibility.
+Sergiu coordinates topology; Mihaela owns shared broker deployment. This change
+does not add a running broker or implement publication/consumption.
+
+| Publisher | Durable topic exchange |
+|---|---|
+| User Management | `user-management.events` |
+| Tamagotchi | `tamagotchi.events` |
+| Battle | `battle.events` |
+| Guild | `guild.events` |
+| Package Registry | `package-registry.events` |
+| Map | `map.events` |
+| Monster Raid | `monster-raid.events` |
+
+Use each event's existing routing key and envelope; no event payload changes.
+Bindings follow the Events table above, with exact keys rather than wildcards.
+
+| Consumer | Work queue | Subscriptions |
+|---|---|---|
+| Tamagotchi | `tamagotchi.work` | user.package_joined.v1 |
+| Package Registry | `package-registry.work` | user.package_joined.v1 |
+| Monster Raid | `monster-raid.work` | registry.occurrence_changed.v1 |
+| Notification | `notification.work` | the six Notification events in the table above |
+| Passive audit destination | `audit.work` | all events marked audit above |
+
+Map has no consumer/inbox under this contract. Notification publishes nothing.
+The passive audit queue retains events for broker-coordinator inspection; it
+does not introduce an audit service or a processing consumer.
+
+Each active consumer has `<consumer>.work`, `<consumer>.retry.5s`,
+`<consumer>.retry.30s` and `<consumer>.dlq`. Use durable quorum queues and
+persistent messages (`delivery_mode=2`, content type application/json).
+Retry queues use queue TTLs of 5000/30000 ms and dead-letter to the default
+exchange with routing key `<consumer>.work`. Configure at-least-once
+dead-lettering and reject-publish overflow on the retry queues; verify support
+in the deployed RabbitMQ version before implementation. No work-queue TTL is
+applied.
+
+Producers set `x-attempt=1`. A failed first delivery publishes to the consumer's
+five-second retry queue with x-attempt=2; a failed second delivery publishes to
+its thirty-second queue with x-attempt=3. A failed third delivery publishes to
+its DLQ. Publish retries directly through the default exchange, addressed to
+that queue, so other subscribers do not receive the retry. Preserve event_id,
+correlation, body and `x-original-routing-key`; never reset the attempt on
+redelivery. Owner-driven DLQ replay resets x-attempt=1 and retains event_id.
+
+Commit domain state and an outbox row together. Publish after commit with
+publisher confirms and mandatory routing; an unroutable return or missing
+confirmation leaves delivery pending. Record outbox delivery only after a
+positive confirmation with no return. Consumers persist event_id deduplication
+with their effects, then acknowledge. Duplicate deliveries cause no new effect.
+For retry/DLQ transfer, confirm the new persistent message before acknowledging
+the original. If transfer fails, retain/requeue the original without a busy
+retry loop. Crash recovery may redeliver; deduplication must tolerate it.
+Publisher confirms do not establish that a consumer processed the message.
+See [acknowledgements](https://www.rabbitmq.com/docs/confirms) and
+[dead-lettering](https://www.rabbitmq.com/docs/dlx).
+
+Use `RABBITMQ_URL` with service-specific credentials and least-privilege broker
+permissions. Keep its value in untracked configuration or secrets; examples
+name the variable without credentials. Gateway and database credentials are
+separate. Validate outage/recovery, redelivery, poison-message retries/DLQ,
+consumer restart and unroutable publication before claiming real delivery.
 
 ## Deployment
 
@@ -621,7 +924,8 @@ PostGIS-enabled PostgreSQL container.
 
 Requires Docker with Compose v2 and free host ports 3000 through 3008 and
 5432. The Gateway starts last, after all eight services report healthy, so a
-healthy Gateway means the whole stack is up. PostgreSQL listens on
+healthy Gateway only proves its registered checks passed; it does not establish
+routing, authentication or continuing downstream availability. PostgreSQL listens on
 `127.0.0.1:5432` for local administration. Use
 `postgres` as the admin user and database, with `DATABASE_ADMIN_PASSWORD` from
 `deploy/.env`.
