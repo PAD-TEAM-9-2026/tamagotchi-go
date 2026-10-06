@@ -1,6 +1,6 @@
 # Field types
 
-Every request and response shape used by the eight services, grouped by the
+Every request and response shape used by the eight domain services and Gateway, grouped by the
 service that uses it, then alphabetically. Referenced from the contract section
 of the [README](../README.md).
 
@@ -51,6 +51,26 @@ database.
 | Field | Type / constraint | Required |
 |---|---|---|
 | `version` | integer [1..2147483647] | yes |
+
+## Gateway
+
+The following negotiation shapes are proposals for owner review; negotiation
+is not implemented in the Gateway skeleton.
+
+### WsNegotiateInput
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `resource` | guild.chat | yes |
+| `resource_id` | uuid (v7), guild id | yes |
+
+### WsTicket
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `url` | string [1..2048], browser-reachable ws/wss URL | yes |
+| `ticket` | opaque string [1..512], single-use, lifetime 30 seconds | yes |
+| `expires_at` | timestamp (ISO 8601 UTC, milliseconds) | yes |
 
 ## User Management
 

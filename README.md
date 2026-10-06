@@ -1,7 +1,7 @@
 # Tamagotchi Go
 
 Shared backend for virtual pet apps. Different frontend packages ship their own
-creatures, art and care rules, and all of them run on these eight services.
+creatures, art and care rules, backed by eight domain services and a Python Gateway.
 
 
 ## Team
@@ -12,6 +12,7 @@ creatures, art and care rules, and all of them run on these eight services.
 | Victoria | Tamagotchi, Notification | TypeScript, Node.js |
 | Mihaela | Guild, Package Registry | TypeScript, Node.js |
 | Sergiu | Map, Monster Raid | C#, ASP.NET Core |
+| All four | Gateway | Python, FastAPI |
 
 
 ## Repository
@@ -28,6 +29,7 @@ Each service has its own private repository. They are linked here as submodules.
 | Package Registry | `services/package-registry` | Mihaela |
 | Map | `services/map` | Sergiu |
 | Monster Raid | `services/monster-raid` | Sergiu |
+| Gateway | `services/gateway` | Shared by the team |
 
 ## Service boundaries
 
@@ -44,6 +46,7 @@ service's tables.
 | Map | Latest locations, freshness, who is nearby | Friend lists, battles |
 | Monster Raid | Live raids, boss HP, attacks, damage per player, rewards | Boss definitions, guild membership |
 | Notification | Devices, push tokens, delivery, history, mute settings | Every domain decision, message text |
+| Gateway | REST routing, caller validation, correlation and negotiation | Game rules, domain data, databases, events |
 
 Two rules keep the boundaries honest. Battle decides, Tamagotchi applies.
 Package Registry holds configuration, the runtime services hold state.
@@ -93,6 +96,10 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
+This section describes the target architecture. Published services still use
+mock dependencies; Gateway routing and authorization are not implemented yet.
+The diagram update is separate from this contract proposal.
+
 ![Tamagotchi Go architecture with 8 microservices, PostgreSQL per service, and RabbitMQ](docs/img/architecture_diagram.png)
 
 Every client goes through the HTTP Gateway. It routes by path prefix to the eight
@@ -132,10 +139,10 @@ copy when it drifts.
 | Package Registry | TypeScript, Node.js, Express| PostgreSQL | Config documents differ per package |
 | Map | C#, ASP.NET Core, EF Core | PostgreSQL with PostGIS | Distance queries need a spatial index |
 | Monster Raid | C#, ASP.NET Core, EF Core | PostgreSQL | Counters under concurrent attacks |
+| Gateway | Python 3.13, FastAPI, Uvicorn, HTTPX, uv | None | Asynchronous REST dispatch without domain state |
 
-The services use two languages. TypeScript for the four services that mostly
-move JSON around, C# for the four that hold money, turns, counters and
-coordinates.
+The domain services use TypeScript and C#. Gateway uses Python with uv 0.12.23
+and a checked dependency lock. It has no database or event publisher.
 
 Trade-offs we accepted:
 
@@ -195,6 +202,11 @@ mechanisms carry it:
 
 ## Communication contract
 
+The endpoint tables are the agreed target, not runtime verification. New Gateway
+specifications below are proposals awaiting affected-owner review. Routing and
+negotiation need Mihaela's review; downstream identity and limits need their
+owners' agreement before implementation.
+
 ### Conventions
 
 | Concern | Rule |
@@ -216,6 +228,60 @@ shape is listed field by field, with types and which fields are required, in
 [field-types.md](docs/field-types.md).
 
 Every service also exposes `GET /health` and `GET /ready`, returning 200 or 503.
+
+### Gateway routing and negotiation proposal
+
+Browser/local clients use `http://localhost:3000`; containers use
+`http://gateway:3000`. These are local deployment addresses, not production URLs.
+
+| Prefix | Service | Container upstream |
+|---|---|---|
+| `/users` | User Management | `http://user-management:3001` |
+| `/tamagotchi` | Tamagotchi | `http://tamagotchi:3000` |
+| `/battle` | Battle | `http://battle:3003` |
+| `/guild` | Guild | `http://guild:3000` |
+| `/registry` | Package Registry | `http://registry:3000` |
+| `/map` | Map | `http://map:8080` |
+| `/raid` | Monster Raid | `http://monster-raid:8080` |
+| `/notification` | Notification | `http://notification:3000` |
+
+Client and service REST calls traverse Gateway. Strip the prefix exactly once;
+preserve method, path/query, body, upstream status and end-to-end headers,
+including replay, conditional-request and correlation headers. Remove hop-by-hop
+headers and the caller's Authorization before dispatch. For example,
+`GET /map/v1/location/{userId}` reaches Map as `GET /v1/location/{userId}`.
+Unknown prefixes return `404 unknown_route`; connection/protocol failures return
+`502 upstream_unavailable`. Valid upstream error responses remain unchanged.
+
+Direct health/readiness probes, Gateway's configured bootstrap JWKS lookup,
+database/broker connections, provider assets and negotiated Guild sockets are
+explicit exceptions. Gateway is not an arbitrary external proxy.
+
+| Method and path | Request | Response | Access |
+|---|---|---|---|
+| `ANY /{service}/v1/...` | downstream request | downstream response | per endpoint |
+| `POST /gateway/v1/ws-negotiate` | WsNegotiateInput | 200 WsTicket | user |
+| `GET /health` | none | 200 Health | public |
+| `GET /ready` | none | 200 Readiness or 503 Problem | public |
+
+Only `guild.chat` is supported by this proposal. Gateway forwards negotiation
+to Guild; the exact internal negotiation endpoint must be agreed with Mihaela
+before implementation. Guild issues and validates a single-use 30-second ticket.
+The browser connects directly to Guild, using a configured browser-reachable
+URL, not container DNS. Gateway does not hold the socket open.
+
+| Status | Negotiation code | Condition |
+|---|---|---|
+| 400 | `invalid_ws_resource` | resource is not guild.chat |
+| 400 | `invalid_resource_id` | resource_id is not UUIDv7 |
+| 401 | `unauthenticated` | missing or invalid caller token |
+| 403 | `guild_membership_required` | caller is not an eligible guild member |
+| 404 | `guild_not_found` | guild does not exist |
+
+Gateway health reports the process. Current readiness runs registered checks;
+none are registered in the skeleton. Proposed authenticated-mode readiness
+requires usable access-token verification and assertion signing keys. Health
+alone proves neither routing nor downstream availability.
 
 ### Example shapes
 
@@ -621,7 +687,8 @@ PostGIS-enabled PostgreSQL container.
 
 Requires Docker with Compose v2 and free host ports 3000 through 3008 and
 5432. The Gateway starts last, after all eight services report healthy, so a
-healthy Gateway means the whole stack is up. PostgreSQL listens on
+healthy Gateway only proves its registered checks passed; it does not establish
+routing, authentication or continuing downstream availability. PostgreSQL listens on
 `127.0.0.1:5432` for local administration. Use
 `postgres` as the admin user and database, with `DATABASE_ADMIN_PASSWORD` from
 `deploy/.env`.
