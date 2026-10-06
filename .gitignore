@@ -13,3 +13,6 @@ __pycache__/
 # Postman local workspace files
 /postman/.postman/
 /postman/postman/
+
+# Gateway signing keys (local only, never committed)
+deploy/secrets/
