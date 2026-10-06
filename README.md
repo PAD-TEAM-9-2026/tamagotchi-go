@@ -328,8 +328,8 @@ here instead, as a global currency credit with reason `BATTLE_ACCESS_CAP`.
 | `GET /v1/types` | none | 200 TypeList | public |
 | `GET /v1/types/matrix` | none | 200 TypeMatrix | public |
 | `POST /v1/internal/engagements` | EngagementInput, Idempotency-Key | 201 Engagement | service |
-| `GET /v1/internal/engagements/{battleId}` | none | 200 Engagement | service |
-| `POST /v1/internal/engagements/{battleId}/release` | Idempotency-Key | 200 Engagement | service |
+| `GET /v1/internal/engagements/{referenceId}` | none | 200 Engagement | service |
+| `POST /v1/internal/engagements/{referenceId}/release` | Idempotency-Key | 200 Engagement | service |
 
 `package_stats` is stored as it arrives and returned as stored. This service
 never reads inside it. Package Registry owns what the fields mean.
@@ -366,7 +366,13 @@ released by the owner even if Battle never called `/release`, so a crashed battl
 cannot strand a shared creature.
 
 Monster Raid takes the same lock for a primary contributed to a raid, which is
-why a creature cannot be in a raid and a battle at the same time.
+why a creature cannot be in a raid and a battle at the same time. A raid sends
+one engagement per admitted participant, each with its own `reference_id`
+(a fresh UUIDv7 that Raid stores against the raid and the user), so that
+`reference_id` stays unique and reserve and release can be retried independently.
+Lookup and release use that `reference_id`, which is the `{referenceId}` path
+parameter. A raid-wide `reference_id` is not allowed, since a second participant
+would collide with the first.
 
 ### Battle, `/battle`
 
