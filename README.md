@@ -278,19 +278,15 @@ URL, not container DNS. Gateway does not hold the socket open.
 | 403 | `guild_membership_required` | caller is not an eligible guild member |
 | 404 | `guild_not_found` | guild does not exist |
 
-Gateway health reports the process. Current readiness runs registered checks;
-none are registered in the skeleton. Proposed authenticated-mode readiness
-requires usable access-token verification and assertion signing keys. Health
-alone proves neither routing nor downstream availability.
 
 ### Verified identity proposal
 
-Pending Patricia and affected-owner review. The following describes proposed
-authorization, not the current mock-header or Gateway skeleton behavior.
+The Gateway implements this behaviour. User Management must issue the tokens and
+services must verify the assertion before the identity is relied on.
 
-Gateway validates caller Authorization and removes it before dispatch. It strips
-external copies of `X-User-Id`, `X-User-Roles`, `X-Service-Name`,
-`X-Gateway-Assertion`, `X-Gateway-Context` and `X-Request-Deadline-Ms`.
+Gateway verifies each bearer token in Authorization, then removes the header before
+dispatch. It removes `X-User-Id`, `X-User-Roles`, `X-Service-Name` and any client copy
+of `X-Gateway-Assertion`, then sends its own `X-Gateway-Assertion`.
 Downstream services use the verified claims in `X-Gateway-Assertion` for identity;
 plain headers alone grant no access. Existing endpoint Access columns remain
 authoritative. Anonymous assertions carry no user or service permissions.
@@ -302,6 +298,12 @@ authoritative. Anonymous assertions carry no user or service permissions.
 | Gateway assertion | tamagotchi-go-gateway | canonical destination service | verified caller or anonymous | at most 30 seconds |
 
 Access tokens use `typ=at+jwt`; assertions use `typ=gateway-assertion+jwt`.
+
+Roles come from User Management. It reads them from its table when it issues a
+user access token at login, as a `roles` claim: an array of 0 to 20 strings of 1 to
+64 characters, `[]` for an ordinary user. Gateway checks that shape and copies the
+verified roles into the assertion. Service access tokens carry `scope` only and no
+roles, so service assertions have empty roles. `admin` is the only role in use.
 Allow only RS256 with RSA keys of at least 2048 bits. Verify signature, type,
 issuer, audience, subject, issuance and expiry; never choose algorithms or key
 URLs from untrusted claims. Allow five seconds of token clock tolerance, but
@@ -312,7 +314,7 @@ milliseconds. Application timestamps remain ISO 8601 UTC with milliseconds.
 Gateway alone holds its assertion private key. Services load the public JWKS
 from a mounted file. Use `GATEWAY_ASSERTION_PRIVATE_KEY_PATH`,
 `GATEWAY_ASSERTION_KEY_ID` and `GATEWAY_ASSERTION_JWKS_PATH` for configuration;
-the public path is also configured on Gateway for key-set readiness checks.
+the public path is configured for services to mount; Gateway does not read it.
 Paths and key ids are configuration, never private key values in documentation.
 Deploy a new public key first, switch Gateway's signing kid, then remove the old
 key after its assertions and five-second tolerance expire. Keep access-token
@@ -332,15 +334,6 @@ Gateway checks the service token audience against the routed destination;
 downstream services enforce the required permissions from the signed assertion.
 Patricia and the affected owners must approve the exact route/scope allowlist.
 
-For nested calls, a service obtains its own access token for the destination and
-sends its incoming assertion as `X-Gateway-Context`. Gateway verifies that
-context with its assertion keys and requires its audience to equal the calling
-service identified by the service access token. Invalid supplied context is
-rejected, not treated as a new request. Preserve correlation, original actor
-and the signed deadline; create a fresh assertion for the next destination.
-The scope and principal remain those of the calling service. Delegated actor
-roles are audit context and cannot grant service permissions.
-
 Public routes are exactly those marked public in the endpoint tables, plus
 Gateway health/readiness. If Authorization is supplied even on a public route,
 validate it; an invalid token does not become an anonymous request. The direct
@@ -353,9 +346,8 @@ fail without a valid Gateway assertion.
 | 401 | `invalid_gateway_assertion` | missing, forged, expired, wrong-type or wrong-audience assertion |
 | 403 | `insufficient_scope` | valid assertion lacks required permissions |
 
-Gateway may regenerate `X-User-Id` and `X-User-Roles` for user callers and
-`X-Service-Name` for service callers. These must match the verified principal;
-services authorize from assertion claims, not those compatibility headers.
+Gateway removes `X-User-Id`, `X-User-Roles` and `X-Service-Name` from every request.
+Services take identity only from the verified assertion.
 Never log bearer tokens, assertions, key material or refresh credentials.
 
 ### Work limits proposal
@@ -372,23 +364,14 @@ enforcement, not measured capacity or current middleware.
 Only a verified service access token enters Gateway's service pool. A caller
 cannot select it with headers. There is no admission waiting queue: a full pool
 returns `503 too_many_tasks` with `Retry-After: 1`. An expired deadline returns
-`504 task_timeout`. Even the reserved service pool may saturate; nested calls
-fail promptly rather than waiting while holding another slot. Gateway performs
+`504 task_timeout`. Even the reserved service pool may saturate; calls fail promptly rather than
+waiting while holding another slot. Gateway performs
 no automatic retries of HTTP mutations.
 
-A new Gateway root gets deadline `now + 5000 ms`. Nested calls preserve that
-signed deadline. Each service's effective deadline is the earlier of the root
+A new Gateway root gets deadline `now + 5000 ms`, carried in the assertion as
+`deadline_unix_ms`. Each service's effective deadline is the earlier of the root
 deadline and `now + 3000 ms`. Convert the remaining budget to a local monotonic
 timer; never restart a full timeout for each dependency or attempt.
-
-An authenticated service can send its earlier local deadline in
-`X-Request-Deadline-Ms` as a positive Unix-millisecond integer. With verified
-X-Gateway-Context, clamp it to the signed parent deadline; without context it
-may only shorten a new service-initiated root budget. Malformed authenticated
-values return `400 invalid_deadline`. External values are ignored. Gateway
-signs the effective deadline for the destination; an already elapsed budget
-returns 504 without dispatch. Services handling an incoming request must pass
-its context and shorter local deadline on every nested call.
 
 Request aborts, deadlines and shutdown cancel HTTP/SQL operations. Roll back
 uncommitted work and retain any committed receipt/effect progress. Release a
@@ -402,7 +385,7 @@ message handling are bounded tasks. Guild owns its separate socket lifetime and
 connection policy. A worker batch uses a service slot and local deadline; leave
 durable work pending and retry on its normal schedule if no slot is available.
 
-Required evidence: rejection under saturation, inherited nested budgets,
+Required evidence: rejection under saturation, inherited deadline budgets,
 deadline/abort/shutdown cancellation, rollback, worker recovery and slot reuse.
 HTTP failure does not prove that an external side effect did not commit; command
 replay and durable reward effects handle uncertain outcomes.
