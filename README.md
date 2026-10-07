@@ -96,9 +96,12 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
-This section describes the target architecture. Published services still use
-mock dependencies; Gateway routing and authorization are not implemented yet.
-The diagram update is separate from this contract proposal.
+This section describes the target architecture. Gateway source implements
+routing and authorization; Map and Monster Raid integration source uses real
+HTTP adapters and durable broker delivery. Published image versions may predate
+these changes. Validate the selected image set against real dependencies before
+claiming deployment compatibility. The existing diagram still needs its routing
+and obsolete dependency paths reconciled with this contract.
 
 ![Tamagotchi Go architecture with 8 microservices, PostgreSQL per service, and RabbitMQ](docs/img/architecture_diagram.png)
 
@@ -314,7 +317,8 @@ milliseconds. Application timestamps remain ISO 8601 UTC with milliseconds.
 Gateway alone holds its assertion private key. Services load the public JWKS
 from a mounted file. Use `GATEWAY_ASSERTION_PRIVATE_KEY_PATH`,
 `GATEWAY_ASSERTION_KEY_ID` and `GATEWAY_ASSERTION_JWKS_PATH` for configuration;
-the public path is configured for services to mount; Gateway does not read it.
+services and Gateway load the public set. Gateway uses it to verify nested
+service context and to check key readiness.
 Paths and key ids are configuration, never private key values in documentation.
 Deploy a new public key first, switch Gateway's signing kid, then remove the old
 key after its assertions and five-second tolerance expire. Keep access-token
@@ -464,9 +468,11 @@ Never log bearer tokens, assertions, key material or refresh credentials.
 
 ### Work limits proposal
 
-Pending Victoria, Patricia and service-owner review. Gateway currently reads
-5000 ms and 128 slots as unused configuration; the pools below are proposed
-enforcement, not measured capacity or current middleware.
+This remains the specification for affected-owner review. Gateway, Map and
+Monster Raid integration source enforces admission, deadlines and cancellation.
+The values below are initial policy defaults, not measured throughput. Other
+service implementations and the selected deployed images need their own
+acceptance evidence.
 
 | Component | Local timeout | Per-process admission |
 |---|---|---|
