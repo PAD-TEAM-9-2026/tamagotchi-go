@@ -484,10 +484,13 @@ deadline/abort/shutdown cancellation, rollback, worker recovery and slot reuse.
 HTTP failure does not prove that an external side effect did not commit; command
 replay and durable reward effects handle uncertain outcomes.
 
-### Command replay and pagination proposal
+<a id="command-replay-and-pagination-proposal"></a>
 
-Pending affected-owner review. Map/Raid currently do not implement command-key
-replay or cursors; the successful response shapes below stay unchanged.
+### Command replay and pagination
+
+Map/Raid integration branches implement command replay and cursors. The pinned
+published images predate this work. Affected-owner compatibility review and real
+deployment validation remain required; successful response shapes stay unchanged.
 
 Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
 `POST /raid/v1/raids/{raidId}/attack`. Require an Idempotency-Key of 1 to 128
@@ -878,6 +881,21 @@ model.
 Friends and enemies are visible while their location is fresh. Strangers appear
 within 6 metres, which is configurable.
 
+Every location write, deletion, raw read and nearby query requires a verified
+user matching `user_id` or the path's `userId`. Nearby is the interface for
+viewing other players. Plain identity headers grant no access.
+
+Map fetches the complete relationships list through Gateway. If any page fails,
+it discards classification and returns only fresh six-metre strangers, with
+`partial=true` and `partial_reason=RELATIONSHIPS_UNAVAILABLE`. Reads publish no
+events. Accepted observations persist encounter transitions and outbox facts;
+an encounter emits once per episode and ends on deletion, expiry or separation.
+Unavailable relationship classification produces no proximity event.
+
+The public `GET`/`HEAD /map/demo/` assets display nearby markers with MapLibre
+and OpenFreeMap. Their application API calls remain authenticated through
+Gateway; provider assets and tiles are the documented external exception.
+
 ### Monster Raid, `/raid`
 
 | Method and path | Request | Response | Access |
@@ -889,11 +907,35 @@ within 6 metres, which is configurable.
 | `GET /v1/raids/{raidId}/leaderboard` | query limit, cursor | 200 Leaderboard | user or service |
 | `DELETE /v1/raids/{raidId}` | none | 204 | user |
 
-The current Monster Raid implementation accepts `X-User-Id` with a UUID v7 on domain requests while mock identity is enabled. This local header does not replace gateway authentication in the target contract.
+Creation and cancellation require the Guild leader. Attacks require membership
+and a verified user matching `user_id`. Global listing requires a user; a guild
+filter requires membership. User detail/leaderboard reads require membership;
+verified service reads require `raid:read`. Plain identity headers grant no access.
 
-The shared contract requires Tamagotchi engagement reservation when a member
-contributes a primary creature. Mock integration mode does not acquire the
-cross-service lock.
+Creation requires an active occurrence inside its availability window. Raid
+expiry is the earlier of configured duration and `available_until`. Boss
+configuration and participant creature/bonus snapshots remain immutable.
+Admission persists its engagement reference before reserving through Tamagotchi;
+pending admissions count toward capacity. External calls run outside mutation
+locks, followed by transactional invariant and one-second cooldown checks.
+
+Damage starts at `10 * level`, applies matching `ATTACK_BPS` bonuses, then
+weakness `*1.5` or resistance `*0.75`, and subtracts boss defense. Weakness takes
+precedence. Floor the result with minimum one; credit at most remaining boss HP.
+No boost consumption is included.
+
+Configured global currency and XP are total reward pools, allocated in proportion
+to credited damage. Rounding remainders use fractional remainder descending,
+then user UUID ascending. XP targets the contributed creature. Terminal state,
+entitlements, engagement cleanup and lifecycle outbox facts commit together;
+HTTP effects use stable keys and durable progress outside mutation locks.
+Permanent delivery failures become `NEEDS_ATTENTION`.
+
+Expiry fails active raids once without rewards. Registry deactivation or
+cancellation cancels matching active raids and releases engagements without
+rewards. Older occurrence versions are ignored. Existing legacy mocked snapshots
+remain readable/cancellable but production attacks return
+`409 legacy_snapshot_unavailable`.
 
 ### Notification, `/notification`
 
