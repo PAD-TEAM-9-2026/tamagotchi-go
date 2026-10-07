@@ -1032,6 +1032,15 @@ one account per publishing or consuming service (see below).
 | Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
 | Notification | `victoriamutruc/notification:1.0.0` | 3008 |
 
+Code and image versions use `X.Y.Z`. Only this repository receives `X.Y`
+Git tags and GitHub Releases. Never overwrite a released numeric version.
+
+The pinned Map/Raid images predate their current integration branches. To test
+unpublished source, use a local Compose override that builds Map, Monster Raid
+and Gateway from their standalone checkouts, with distinct local image names
+and `pull_policy: never`. Keep the override outside Git. Replace canonical pins
+only after the corresponding numeric images are published and validated.
+
 Requires Docker with Compose v2 and free host ports 3000 through 3008 and
 5432. The Gateway starts last, after all eight services report healthy, so a
 healthy Gateway only proves its registered checks passed; it does not establish
@@ -1066,14 +1075,14 @@ The provisioning step uses the admin account. Publishers can write only their
 exchange; consumers can read their subscribed exchanges/queues and transfer
 retries through the default exchange. Set every broker password named in
 `deploy/.env.example`; no credentials are committed. Provisioning does not
-configure service connections or prove consumer delivery. Runtime validation
+prove consumer delivery. Runtime validation
 against RabbitMQ 4.1 remains required before deployment acceptance.
 
 Gateway signing keys: `deploy/gateway/generate-keys.sh` creates the Gateway's
 private signing key and the public key set in `deploy/secrets/`, which Git ignores.
-The Gateway mounts both files; Guild and Registry mount the public key set, and
-refuse to start without it. Run the script once before the first start, and keep
-the private key on your machine.
+The Gateway mounts both files; Guild, Registry, Map and Monster Raid mount the
+public key set. Usable keys are required for authenticated requests. Run the
+script once before the first start, and keep the private key on your machine.
 
 ### Service tokens
 
@@ -1083,6 +1092,16 @@ A service that calls another service fetches its own token from
 `BATTLE_SERVICE_CLIENT_SECRET`, `GUILD_SERVICE_CLIENT_SECRET`,
 `MAP_SERVICE_CLIENT_SECRET` and `MONSTER_RAID_SERVICE_CLIENT_SECRET` in `.env`.
 Registry and Notification call no other service, so they have no secret.
+
+Caller secrets must match User Management's registered client credentials and
+scope policy. Setting a caller variable does not configure the issuer or grant
+permission. Preserve existing keys and credentials when updating local settings.
+
+Map and Monster Raid call `http://gateway:3000`. Configure their distinct
+base64 cursor keys and broker credentials from `.env.example`; Raid's broker
+account is `monster-raid`. Both wait for broker provisioning before startup.
+Scope overrides must match the issuer policy; their defaults are requested
+grants, not evidence of permission. Existing database volumes are preserved.
 
 On first start, the
 database initializer creates eight databases and roles, applies the User

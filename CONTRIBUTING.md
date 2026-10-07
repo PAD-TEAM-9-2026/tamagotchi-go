@@ -26,6 +26,10 @@ Squash work branches into `develop`. Merge a tested release into `main` with a m
 
 Versions use `X.Y`: X identifies the integration milestone and Y the revision within it. Start a milestone at revision zero and increment for released fixes or small changes. This numbering does not imply API compatibility; document breaking changes and the tested service versions separately.
 
-The shared repository receives an annotated `vX.Y` tag and a GitHub Release on the tested main merge commit. Service releases use the tested merge into main, without a separate Git tag or GitHub Release. Service image versions remain explicit and immutable.
+The shared repository receives an annotated `vX.Y` tag and a GitHub Release on
+the tested main merge commit. Service releases use the tested merge into main,
+without a separate Git tag or GitHub Release. Code, package and image versions
+use `X.Y.Z`. Image versions remain immutable; deployment pins use all three
+components.
 
 Never overwrite existing tags or published versions. Keep shared Compose pinned to the tested image set. Merge release-only changes back into `develop` through a PR when needed.

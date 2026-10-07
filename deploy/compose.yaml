@@ -168,12 +168,21 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 8080
       LOCATION_FRESHNESS_SECONDS: 60
       PROXIMITY_THRESHOLD_METRES: 6
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MAP_DB_NAME:-map};Username=${MAP_DB_USER:-map};Password=${MAP_DB_PASSWORD}
       SERVICE_CLIENT_SECRET: ${MAP_SERVICE_CLIENT_SECRET:?set MAP_SERVICE_CLIENT_SECRET in .env}
+      GATEWAY_BASE_URL: http://gateway:3000
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      CURSOR_SIGNING_KEY: ${MAP_CURSOR_SIGNING_KEY:?set MAP_CURSOR_SIGNING_KEY in .env}
+      RABBITMQ_URL: amqp://map:${MAP_RABBITMQ_PASSWORD:?set MAP_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      USERS_RELATIONSHIP_SCOPES: ${MAP_USERS_RELATIONSHIP_SCOPES:-users:read-relationships}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3006:8080"
     healthcheck:
@@ -188,10 +197,26 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 8080
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD}
       SERVICE_CLIENT_SECRET: ${MONSTER_RAID_SERVICE_CLIENT_SECRET:?set MONSTER_RAID_SERVICE_CLIENT_SECRET in .env}
+      GATEWAY_BASE_URL: http://gateway:3000
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      CURSOR_SIGNING_KEY: ${MONSTER_RAID_CURSOR_SIGNING_KEY:?set MONSTER_RAID_CURSOR_SIGNING_KEY in .env}
+      RABBITMQ_URL: amqp://monster-raid:${MONSTER_RAID_RABBITMQ_PASSWORD:?set MONSTER_RAID_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      GUILD_READ_SCOPES: ${MONSTER_RAID_GUILD_READ_SCOPES:-guild:read}
+      REGISTRY_OCCURRENCE_SCOPES: ${MONSTER_RAID_REGISTRY_OCCURRENCE_SCOPES:-registry:read-occurrences}
+      REGISTRY_BOSS_SCOPES: ${MONSTER_RAID_REGISTRY_BOSS_SCOPES:-registry:read-bosses}
+      REGISTRY_CONFIG_SCOPES: ${MONSTER_RAID_REGISTRY_CONFIG_SCOPES:-registry:read-config}
+      TAMAGOTCHI_COLLECTION_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_COLLECTION_SCOPES:-tamagotchi:read-collection}
+      TAMAGOTCHI_ENGAGEMENT_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_ENGAGEMENT_SCOPES:-tamagotchi:engage}
+      TAMAGOTCHI_XP_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_XP_SCOPES:-tamagotchi:grant-xp}
+      USERS_CREDIT_SCOPES: ${MONSTER_RAID_USERS_CREDIT_SCOPES:-users:credit-global}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3007:8080"
     healthcheck:
