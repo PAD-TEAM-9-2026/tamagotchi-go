@@ -343,8 +343,14 @@ fail without a valid Gateway assertion.
 
 | Downstream status | Code | Condition |
 |---|---|---|
-| 401 | `invalid_gateway_assertion` | missing, forged, expired, wrong-type or wrong-audience assertion |
-| 403 | `insufficient_scope` | valid assertion lacks required permissions |
+| 401 | `invalid_gateway_assertion` | missing, repeated, forged, expired, wrong-type or wrong-audience assertion, or invalid claims |
+| 401 | `unauthorized` | valid assertion, but anonymous on a route that needs a caller |
+| 403 | `insufficient_scope` | valid assertion lacks required permissions, including the wrong kind of caller (a service on a user route, a user on a service route) |
+| 403 | `not_self` | a user asked for another user's resource on a route limited to its owner |
+| 503 | `gateway_keys_unavailable` | the service cannot read the Gateway's public keys, so it cannot verify any assertion |
+
+Every route except `GET /health`, `GET /ready` and the User Management `GET /v1/jwks`
+needs an assertion, public routes included, which carry an anonymous one.
 
 Gateway removes `X-User-Id`, `X-User-Roles` and `X-Service-Name` from every request.
 Services take identity only from the verified assertion.
@@ -520,6 +526,29 @@ pagination. Raid list creation/deletion can likewise change the live result set.
 | `POST /v1/internal/battle-settlements` | BattleSettlementInput, Idempotency-Key | 200 BattleSettlement | service |
 | `GET /v1/users/me/boosts` | query limit, cursor | 200 BoostPage | user |
 | `POST /v1/internal/boost-consumptions` | ConsumeBoost, Idempotency-Key | 200 BoostReceipt | service |
+
+**Implementation notes.** Decisions the authentication routes needed that the tables
+above did not spell out, as implemented by User Management:
+
+- Error codes added beyond the shared `Problem` shape: `invalid_credentials` (login, 401,
+  the same answer for an unknown email and a wrong password), `package_membership_required`
+  (login, 403, the password is right but the user has not joined `package_id`),
+  `invalid_refresh_token` (refresh, 401, unknown, revoked, expired or reused),
+  `signing_key_unavailable` (login, refresh and `GET /v1/jwks`, 503, no usable
+  access-token key).
+- Nothing about the package goes into the access token. Membership of `package_id` is
+  checked at login only.
+- Refresh tokens are opaque, stored hashed, rotate on every use and last 30 days. A token
+  that was already used is refused, except for a 10 second grace window from its first use,
+  so a client that lost the response can retry once. The window does not slide.
+- `POST /v1/auth/logout` revokes the refresh token it is given. It answers 204 for any
+  well-formed body, known token or not, so it reveals nothing and is safe to repeat.
+- `GET /v1/jwks` sends `Cache-Control: public, max-age=300`, matching the Gateway's cache.
+  Token responses send `Cache-Control: no-store`.
+- Key rotation: publish the new public key in the JWKS first, then switch the signing
+  `kid`, then remove the old key once its tokens have expired.
+- Callers are identified only by the verified Gateway assertion. The answers for a missing
+  or wrong caller are in the downstream failure table of the verified identity proposal.
 
 Joining a package grants that package's starter once per user per package, and
 that is the only path by which a creature is minted for a player. There is no
