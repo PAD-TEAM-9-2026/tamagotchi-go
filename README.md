@@ -490,7 +490,8 @@ Pending affected-owner review. Map/Raid currently do not implement command-key
 replay or cursors; the successful response shapes below stay unchanged.
 
 Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
-`POST /raid/v1/raids/{raidId}/attack`. Require an Idempotency-Key of 1 to 128
+`POST /raid/v1/raids/{raidId}/attack`, and the nine User Management commands
+named under its implementation notes. Require an Idempotency-Key of 1 to 128
 printable ASCII characters after HTTP header whitespace normalization; absence
 or invalid values return `400 invalid_idempotency_key`. Keys are case-sensitive.
 Scope is the verified caller, HTTP operation and resource path. Fingerprint the
@@ -636,6 +637,25 @@ above did not spell out, as implemented by User Management:
   `kid`, then remove the old key once its tokens have expired.
 - Callers are identified only by the verified Gateway assertion. The answers for a missing
   or wrong caller are in the downstream failure table of the verified identity proposal.
+
+**Command replay.** The nine commands above marked `Idempotency-Key` (register, join a package,
+create, accept and reject a friend request, both currency credits, battle settlement and boost
+consumption) follow the replay rules of the proposal under "Command replay and pagination
+proposal": a key of 1 to 128 printable ASCII characters, scope of verified caller, HTTP operation
+and resource path, and receipts kept 24 hours. The anonymous caller of register is scoped by the
+route alone. Beyond those rules, as implemented by User Management:
+
+- A request without a valid key is `400 invalid_idempotency_key`, before anything else is done.
+  Authentication and scope are checked first, on every replay.
+- The same key with a changed request is `409 idempotency_conflict`.
+- A retry that arrives while the first request is still running waits for it and then gets the
+  same answer. If the first has not finished after 5 seconds the retry is
+  `409 command_in_progress`.
+- A successful result and a final domain error (for example `409 already_joined` or
+  `422 unknown_package`) are stored and replayed. A failure that may pass, such as
+  `502 upstream_unavailable`, `503` or `504`, is not stored, so the retry runs again.
+- The effect and its receipt are saved together or not at all. A stored response never
+  contains a password or a token.
 
 Joining a package grants that package's starter once per user per package, and
 that is the only path by which a creature is minted for a player. There is no
