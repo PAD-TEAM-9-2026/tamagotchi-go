@@ -55,6 +55,7 @@ services:
     environment:
       PORT: 3001
       ConnectionStrings__UserManagementDb: Host=database;Port=5432;Database=${USER_MANAGEMENT_DB_NAME:-user_management};Username=${USER_MANAGEMENT_DB_USER:-user_management};Password=${USER_MANAGEMENT_DB_PASSWORD}
+      SERVICE_CLIENT_SECRET: ${USER_MANAGEMENT_SERVICE_CLIENT_SECRET:?set USER_MANAGEMENT_SERVICE_CLIENT_SECRET in .env}
     ports:
       - "3001:3001"
     healthcheck:
@@ -74,6 +75,7 @@ services:
       STORAGE: postgres
       DATABASE_URL: postgres://${TAMAGOTCHI_DB_USER:-tamagotchi}:${TAMAGOTCHI_DB_PASSWORD}@database:5432/${TAMAGOTCHI_DB_NAME:-tamagotchi}
       AUTH_MODE: dev
+      SERVICE_CLIENT_SECRET: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET:?set TAMAGOTCHI_SERVICE_CLIENT_SECRET in .env}
     ports:
       - "3002:3000"
     healthcheck:
@@ -99,6 +101,7 @@ services:
       PACKAGE_REGISTRY_URL: http://gateway:3000/registry
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       RABBITMQ_URL: amqp://guild:${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      SERVICE_CLIENT_SECRET: ${GUILD_SERVICE_CLIENT_SECRET:?set GUILD_SERVICE_CLIENT_SECRET in .env}
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
@@ -144,6 +147,7 @@ services:
     environment:
       PORT: 3003
       ConnectionStrings__BattleDb: Host=database;Port=5432;Database=${BATTLE_DB_NAME:-battle};Username=${BATTLE_DB_USER:-battle};Password=${BATTLE_DB_PASSWORD}
+      SERVICE_CLIENT_SECRET: ${BATTLE_SERVICE_CLIENT_SECRET:?set BATTLE_SERVICE_CLIENT_SECRET in .env}
     ports:
       - "3003:3003"
     healthcheck:
@@ -163,6 +167,7 @@ services:
       LOCATION_FRESHNESS_SECONDS: 60
       PROXIMITY_THRESHOLD_METRES: 6
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MAP_DB_NAME:-map};Username=${MAP_DB_USER:-map};Password=${MAP_DB_PASSWORD}
+      SERVICE_CLIENT_SECRET: ${MAP_SERVICE_CLIENT_SECRET:?set MAP_SERVICE_CLIENT_SECRET in .env}
     ports:
       - "3006:8080"
     healthcheck:
@@ -180,6 +185,7 @@ services:
     environment:
       PORT: 8080
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD}
+      SERVICE_CLIENT_SECRET: ${MONSTER_RAID_SERVICE_CLIENT_SECRET:?set MONSTER_RAID_SERVICE_CLIENT_SECRET in .env}
     ports:
       - "3007:8080"
     healthcheck:

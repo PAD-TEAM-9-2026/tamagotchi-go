@@ -983,6 +983,15 @@ The Gateway mounts both files; Guild and Registry mount the public key set, and
 refuse to start without it. Run the script once before the first start, and keep
 the private key on your machine.
 
+### Service tokens
+
+A service that calls another service fetches its own token from
+`POST /users/v1/service-tokens`, with `X-Service-Secret: <its secret>`. Set
+`USER_MANAGEMENT_SERVICE_CLIENT_SECRET`, `TAMAGOTCHI_SERVICE_CLIENT_SECRET`,
+`BATTLE_SERVICE_CLIENT_SECRET`, `GUILD_SERVICE_CLIENT_SECRET`,
+`MAP_SERVICE_CLIENT_SECRET` and `MONSTER_RAID_SERVICE_CLIENT_SECRET` in `.env`.
+Registry and Notification call no other service, so they have no secret.
+
 On first start, the
 database initializer creates eight databases and roles, applies the User
 Management and Battle SQL, and enables PostGIS for Map. The remaining services
