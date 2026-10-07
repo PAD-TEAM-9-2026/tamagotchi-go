@@ -376,6 +376,28 @@ or `notification`. Each owner names the scopes on their own service. User Manage
 | `users:consume-boost` | `POST /v1/internal/boost-consumptions` |
 | `users:read-membership` | `GET /v1/internal/users/{userId}/membership` |
 
+Tamagotchi's are:
+
+| Scope | Route | Caller |
+|---|---|---|
+| `tamagotchi:read-creature` | `GET /v1/tamagotchis/{id}`, user or service | |
+| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle, at settlement |
+| `tamagotchi:grant-access` | `POST /v1/tamagotchis/{id}/holders` | Battle, at settlement |
+| `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | |
+| `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | |
+| `tamagotchi:reserve-engagement` | `POST /v1/internal/engagements` | Battle, Monster Raid |
+| `tamagotchi:read-engagement` | `GET /v1/internal/engagements/{referenceId}` | Battle, Monster Raid |
+| `tamagotchi:release-engagement` | `POST /v1/internal/engagements/{referenceId}/release` | Battle, Monster Raid |
+| `tamagotchi:mint` | `POST /v1/tamagotchis` | none yet |
+
+`tamagotchi:mint` is named for completeness. A creature is minted from
+`user.package_joined.v1`, which Tamagotchi consumes itself, so no service calls
+that route today and nothing should be allowlisted for it until one does.
+
+Notification has no scopes. All eight of its routes are user access, it publishes
+nothing and no service calls it, which is also why it holds no
+`SERVICE_CLIENT_SECRET`.
+
 A user needs no scope on the routes marked user or service. A service without the scope
 gets `403 insufficient_scope`. Which service may have which scope is the User Management
 allowlist, `service-token-policy.json`, and each owner adds their own lines to it by pull request.
