@@ -241,13 +241,6 @@ from ServiceTokenRequest.audience, not a URL or Gateway path prefix.
 | `password` | string [1..128] | yes |
 | `package_id` | uuid (v7) | yes |
 
-### MembershipPage
-
-| Field | Type / constraint | Required |
-|---|---|---|
-| `items` | array<MembershipSnapshot> [0..100] | yes |
-| `next_cursor` | string [1..2048] or null | yes |
-
 ### MembershipSnapshot
 
 | Field | Type / constraint | Required |
@@ -311,9 +304,9 @@ from ServiceTokenRequest.audience, not a URL or Gateway path prefix.
 
 ### ServiceTokenRequest
 
-The service_name addition is a proposal for Patricia's review. The existing
-request has audience and scopes only; caller-identifying issuance is not yet
-implemented or verified by this documentation change.
+The caller proves who it is with the `X-Service-Secret` header, or as an admin user. The
+header is not part of the body. A scope has no whitespace, because the token carries the
+scopes as one space-separated string.
 
 | Field | Type / constraint | Required |
 |---|---|---|
