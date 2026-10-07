@@ -123,9 +123,9 @@ delivery fan-out and pushes to phones through Firebase Cloud Messaging, without
 any publisher knowing it exists. Registry also keeps a membership projection
 from User Management events, so package eligibility checks stay local.
 
-The one edge drawn in red is the exception to the usual flow: the membership
-projection rebuild between User Management and Registry, used to repair that
-copy when it drifts.
+Registry builds that projection from the events alone and never reads from User
+Management, so no route lists every user's memberships. User Management only
+answers `GET /v1/internal/users/{userId}/membership` for one user at a time.
 
 ## Technologies
 
@@ -327,12 +327,58 @@ within the cache lifetime; never accept unknown keys or an expired cache because
 refresh failed. Invalid tokens return `401 unauthenticated`. Refresh failure
 without a usable key returns `503 auth_keys_unavailable`.
 
-Admin service-token issuance adds `service_name` to ServiceTokenRequest and
-creates `sub=service:<service_name>`. The issuer checks a configured allowlist
-of destinations/scopes for that service. Requesting a scope does not grant it.
-Gateway checks the service token audience against the routed destination;
-downstream services enforce the required permissions from the signed assertion.
-Patricia and the affected owners must approve the exact route/scope allowlist.
+**Service tokens.** A service that calls another service asks User Management for a
+token with `POST /v1/service-tokens`, body `{service_name, audience, scopes}`. The token
+has `sub=service:<service_name>`, `aud` the one destination service, a `scope` claim
+that is a single space-separated string, and lasts 300 seconds. It carries no roles.
+Clients keep one token per destination and scope set, and renew it about 30 seconds
+before it expires.
+
+The route is public at the Gateway, because a service has no token before its first one.
+The caller proves who it is in one of two ways, and a wrong credential never falls back
+to the other:
+
+- Its own client secret, in the header `X-Service-Secret`. The Gateway forwards that
+  header unchanged and does not treat it as a bearer token. Each service that calls another
+  service holds its own secret as `SERVICE_CLIENT_SECRET` and never sends it anywhere else.
+  User Management verifies it against the secret configured for `service_name`. Registry
+  and Notification call no other service and have none.
+- An admin user, with no secret.
+
+The issuer checks a configured allowlist of destinations and scopes for that service.
+Requesting a scope does not grant it: if any scope asked for is not on the allowlist,
+nothing is issued. The caller is authenticated before the allowlist is consulted. Gateway
+checks the service token audience against the routed destination; downstream services
+enforce the required permissions from the signed assertion.
+
+| Status | Code | Condition |
+|---|---|---|
+| 400 | `validation_error` | unknown `service_name` or `audience`, more than 20 scopes, or a scope that is empty, over 64 characters or contains whitespace |
+| 401 | `invalid_client` | wrong, missing or repeated secret, or a service with no secret. One answer for all of them, so none can be told apart from outside |
+| 403 | `admin_required` | no secret, and the caller is a user who is not an admin or is another service |
+| 403 | `audience_not_allowed` | the service may not call that destination |
+| 403 | `scope_not_allowed` | at least one scope asked for is not allowed, and the detail names only those |
+| 503 | `signing_key_unavailable` | User Management has no usable signing key |
+
+A scope is `<prefix>:<action>` in lower case, where the prefix is the Gateway prefix of the
+service being called: `users`, `tamagotchi`, `battle`, `guild`, `registry`, `map`, `raid`
+or `notification`. Each owner names the scopes on their own service. User Management's are:
+
+| Scope | Route |
+|---|---|
+| `users:read-profile` | `GET /v1/users/{userId}`, user or service |
+| `users:read-relationships` | `GET /v1/users/{userId}/relationships`, user or service |
+| `users:check-relationship` | `GET /v1/users/{userId}/relationship/{otherId}` |
+| `users:read-wallet` | `GET /v1/users/{userId}/currency/global`, user or service |
+| `users:credit-global` | `POST /v1/users/{userId}/currency/global/add` |
+| `users:credit-local` | `POST /v1/users/{userId}/currency/local/add` |
+| `users:settle-battle` | `POST /v1/internal/battle-settlements` |
+| `users:consume-boost` | `POST /v1/internal/boost-consumptions` |
+| `users:read-membership` | `GET /v1/internal/users/{userId}/membership` |
+
+A user needs no scope on the routes marked user or service. A service without the scope
+gets `403 insufficient_scope`. Which service may have which scope is the User Management
+allowlist, `service-token-policy.json`, and each owner adds their own lines to it by pull request.
 
 Public routes are exactly those marked public in the endpoint tables, plus
 Gateway health/readiness. If Authorization is supplied even on a public route,
@@ -503,12 +549,11 @@ pagination. Raid list creation/deletion can likewise change the live result set.
 | `POST /v1/users/login` | Login | 200 Tokens | public |
 | `POST /v1/auth/refresh` | Refresh | 200 Tokens | public |
 | `POST /v1/auth/logout` | Refresh | 204 | public |
-| `POST /v1/service-tokens` | ServiceTokenRequest | 200 ServiceToken | admin |
+| `POST /v1/service-tokens` | ServiceTokenRequest, X-Service-Secret | 200 ServiceToken | service client secret or admin |
 | `GET /v1/jwks` | none | 200 Jwks | public |
 | `GET /v1/users/me` | none | 200 User | user |
 | `GET /v1/users/{userId}` | none | 200 UserProfile | user or service |
 | `POST /v1/users/me/packages` | JoinPackage, Idempotency-Key | 200 User | user |
-| `GET /v1/internal/memberships` | query limit, cursor | 200 MembershipPage | service |
 | `GET /v1/internal/users/{userId}/membership` | none | 200 MembershipSnapshot | service |
 | `GET /v1/users/{userId}/relationships` | query limit, cursor | 200 RelationshipPage | user or service |
 | `GET /v1/users/{userId}/relationship/{otherId}` | none | 200 Relationship | service |
