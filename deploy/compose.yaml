@@ -212,8 +212,10 @@ services:
       REGISTRY_BOSS_SCOPES: ${MONSTER_RAID_REGISTRY_BOSS_SCOPES:-registry:read-bosses}
       REGISTRY_CONFIG_SCOPES: ${MONSTER_RAID_REGISTRY_CONFIG_SCOPES:-registry:read-config}
       TAMAGOTCHI_COLLECTION_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_COLLECTION_SCOPES:-tamagotchi:read-collection}
-      TAMAGOTCHI_ENGAGEMENT_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_ENGAGEMENT_SCOPES:-tamagotchi:engage}
-      TAMAGOTCHI_XP_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_XP_SCOPES:-tamagotchi:grant-xp}
+      TAMAGOTCHI_RESERVE_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_RESERVE_SCOPES:-tamagotchi:reserve-engagement}
+      TAMAGOTCHI_READ_ENGAGEMENT_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_READ_ENGAGEMENT_SCOPES:-tamagotchi:read-engagement}
+      TAMAGOTCHI_RELEASE_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_RELEASE_SCOPES:-tamagotchi:release-engagement}
+      TAMAGOTCHI_XP_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_XP_SCOPES:-tamagotchi:award-xp}
       USERS_CREDIT_SCOPES: ${MONSTER_RAID_USERS_CREDIT_SCOPES:-users:credit-global}
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
