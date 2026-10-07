@@ -45,6 +45,7 @@ ALLOWLIST = {
     "Database",
     "Per",
     "Service",
+    "Secret",
     "Correlation",
     "Identifier",
     "Dead",

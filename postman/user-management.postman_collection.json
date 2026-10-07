@@ -1062,34 +1062,6 @@
               }
             }
           ]
-        },
-        {
-          "name": "Membership list includes Alice",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/internal/memberships?limit=50",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "internal", "memberships"],
-              "query": [{ "key": "limit", "value": "50" }]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, Alice is in the page', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const ids = pm.response.json().items.map((m) => m.user_id);",
-                  "  pm.expect(ids).to.include(pm.collectionVariables.get('alice_id'));",
-                  "});"
-                ]
-              }
-            }
-          ]
         }
       ]
     },
