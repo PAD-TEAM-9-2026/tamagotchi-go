@@ -398,6 +398,26 @@ Notification has no scopes. All eight of its routes are user access, it publishe
 nothing and no service calls it, which is also why it holds no
 `SERVICE_CLIENT_SECRET`.
 
+Guild's is:
+
+| Scope | Route | Caller |
+|---|---|---|
+| `guild:read` | `GET /v1/guilds/{guildId}` and `GET /v1/guilds/{guildId}/members`, both user or service | none yet |
+
+`guild:read` is named for completeness; no service calls it today, so nothing
+should be allowlisted for it until one does.
+
+Registry's are:
+
+| Scope | Route | Caller |
+|---|---|---|
+| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | |
+| `registry:check-eligibility` | `POST /v1/packages/eligibility-check` | Guild |
+| `registry:read-bosses` | `GET /v1/bosses/{bossId}`, user or service | Monster Raid |
+| `registry:read-occurrences` | `GET /v1/raid-occurrences/{id}`, user or service | Monster Raid |
+
+Registry calls no other service, so it holds no `SERVICE_CLIENT_SECRET` either.
+
 A user needs no scope on the routes marked user or service. A service without the scope
 gets `403 insufficient_scope`. Which service may have which scope is the User Management
 allowlist, `service-token-policy.json`, and each owner adds their own lines to it by pull request.
