@@ -1182,9 +1182,19 @@ docker compose exec user-management dotnet UserManagement.dll seed
 docker compose exec battle dotnet Battle.dll seed
 ```
 
-Map and Monster Raid seed through their APIs. From their standalone repositories,
-run `scripts/seed.sh` with `MAP_BASE_URL=http://localhost:3006` or
-`MONSTER_RAID_BASE_URL=http://localhost:3007`, respectively.
+Map and Monster Raid seed through Gateway using Python 3. From each standalone
+repository, run `scripts/seed.sh` after configuring real fixtures in your
+untracked environment:
+
+| Service | Required inputs | Default Gateway URL |
+|---|---|---|
+| Map | `MAP_USER_ID`, `MAP_USER_TOKEN` | `http://localhost:3000/map` |
+| Monster Raid | `RAID_GUILD_ID`, `RAID_OCCURRENCE_ID`, `RAID_LEADER_TOKEN` | `http://localhost:3000/raid` |
+
+Tokens must match the location owner or Guild leader. The occurrence must be
+active. Override `MAP_BASE_URL` or `MONSTER_RAID_BASE_URL` for another Gateway
+address. Existing matching records are preserved; auth/dependency failures stop
+seeding. Mutations carry command keys and are not automatically retried.
 
 ### API collections
 
@@ -1193,7 +1203,10 @@ Import the eight collections in `postman/` and select
 base URL per service, and all of them now point at the Gateway
 (`http://localhost:3000/<prefix>`). The Gateway and the services must be running
 first. Registry's admin-only requests need a caller whose token carries the
-`admin` role; until User Management issues that role, they are refused. Map and Monster Raid requests create their own fixtures.
+`admin` role; otherwise they are refused. Map requests prepare locations for two
+supplied real accounts. Raid requests require a supplied real Guild, leader,
+active occurrence and eligible primary creature; they do not create those
+external prerequisites.
 Run the other service collections in order when a request depends on a previous
 response. See [Postman instructions](postman/README.md).
 
