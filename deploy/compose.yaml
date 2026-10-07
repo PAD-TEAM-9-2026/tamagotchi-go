@@ -236,7 +236,7 @@ services:
       retries: 12
 
   rabbitmq-provision:
-    image: rabbitmq:4.1-management-alpine
+    image: python:3.13-alpine
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -245,8 +245,15 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
       GUILD_RABBITMQ_PASSWORD: ${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}
       REGISTRY_RABBITMQ_PASSWORD: ${REGISTRY_RABBITMQ_PASSWORD:?set REGISTRY_RABBITMQ_PASSWORD in .env}
+      USER_MANAGEMENT_RABBITMQ_PASSWORD: ${USER_MANAGEMENT_RABBITMQ_PASSWORD:?set USER_MANAGEMENT_RABBITMQ_PASSWORD in .env}
+      TAMAGOTCHI_RABBITMQ_PASSWORD: ${TAMAGOTCHI_RABBITMQ_PASSWORD:?set TAMAGOTCHI_RABBITMQ_PASSWORD in .env}
+      BATTLE_RABBITMQ_PASSWORD: ${BATTLE_RABBITMQ_PASSWORD:?set BATTLE_RABBITMQ_PASSWORD in .env}
+      MAP_RABBITMQ_PASSWORD: ${MAP_RABBITMQ_PASSWORD:?set MAP_RABBITMQ_PASSWORD in .env}
+      MONSTER_RAID_RABBITMQ_PASSWORD: ${MONSTER_RAID_RABBITMQ_PASSWORD:?set MONSTER_RAID_RABBITMQ_PASSWORD in .env}
+      NOTIFICATION_RABBITMQ_PASSWORD: ${NOTIFICATION_RABBITMQ_PASSWORD:?set NOTIFICATION_RABBITMQ_PASSWORD in .env}
     volumes:
       - ./rabbitmq/provision.sh:/provision.sh:ro
+      - ./rabbitmq/provision.py:/provision.py:ro
     entrypoint: ["sh", "/provision.sh"]
     restart: "no"
 

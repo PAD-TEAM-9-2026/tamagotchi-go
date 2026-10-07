@@ -22,3 +22,5 @@ jobs:
           python-version: "3.12"
       - name: Check contracts
         run: python3 tools/check_contracts.py
+      - name: Check broker topology
+        run: python3 -m unittest discover -s tools -p "test_*.py"

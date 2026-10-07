@@ -1056,13 +1056,18 @@ Use distinct URL-safe passwords in the untracked `.env`.
 
 `rabbitmq` runs with the management plugin, bound to `127.0.0.1` (AMQP `5672`,
 management `15672`). `rabbitmq-provision` runs once after the broker is healthy:
-it creates one account per service from `deploy/rabbitmq/provision.sh`. Each
-account can configure, write and read only its own exchanges and queues. The
-admin account (`RABBITMQ_USER`) is used only by that step. Set `RABBITMQ_USER`,
-`RABBITMQ_PASSWORD`, `GUILD_RABBITMQ_PASSWORD` and `REGISTRY_RABBITMQ_PASSWORD`
-in `.env`. Guild and Registry retry their broker connection at startup, so they
-do not wait for it in Compose. Their settings, and the account names, are in
-their own READMEs.
+it merges service accounts, all seven exchanges, exact subscription bindings
+and quorum work/retry/DLQ queues through `deploy/rabbitmq/provision.py`.
+It preserves existing broker data and Guild/Registry account names. Retry queues
+use five-/thirty-second message TTLs and an at-least-once dead-letter policy.
+The passive audit queue has no processing service.
+
+The provisioning step uses the admin account. Publishers can write only their
+exchange; consumers can read their subscribed exchanges/queues and transfer
+retries through the default exchange. Set every broker password named in
+`deploy/.env.example`; no credentials are committed. Provisioning does not
+configure service connections or prove consumer delivery. Runtime validation
+against RabbitMQ 4.1 remains required before deployment acceptance.
 
 Gateway signing keys: `deploy/gateway/generate-keys.sh` creates the Gateway's
 private signing key and the public key set in `deploy/secrets/`, which Git ignores.
