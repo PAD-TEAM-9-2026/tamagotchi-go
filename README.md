@@ -381,10 +381,10 @@ Tamagotchi's are:
 | Scope | Route | Caller |
 |---|---|---|
 | `tamagotchi:read-creature` | `GET /v1/tamagotchis/{id}`, user or service | |
-| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle, at settlement |
+| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle at settlement, Monster Raid at victory |
 | `tamagotchi:grant-access` | `POST /v1/tamagotchis/{id}/holders` | Battle, at settlement |
 | `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | |
-| `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | |
+| `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | Monster Raid |
 | `tamagotchi:reserve-engagement` | `POST /v1/internal/engagements` | Battle, Monster Raid |
 | `tamagotchi:read-engagement` | `GET /v1/internal/engagements/{referenceId}` | Battle, Monster Raid |
 | `tamagotchi:release-engagement` | `POST /v1/internal/engagements/{referenceId}/release` | Battle, Monster Raid |
@@ -402,21 +402,39 @@ Guild's is:
 
 | Scope | Route | Caller |
 |---|---|---|
-| `guild:read` | `GET /v1/guilds/{guildId}` and `GET /v1/guilds/{guildId}/members`, both user or service | none yet |
+| `guild:read` | `GET /v1/guilds/{guildId}` and `GET /v1/guilds/{guildId}/members`, both user or service | Monster Raid |
 
-`guild:read` is named for completeness; no service calls it today, so nothing
-should be allowlisted for it until one does.
+Monster Raid calls both Guild routes through Gateway for leader and membership
+checks. Its `guild:read` grant belongs to caller `monster-raid`.
 
 Registry's are:
 
 | Scope | Route | Caller |
 |---|---|---|
-| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | |
+| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | User Management for currency rules; Monster Raid for stat bonuses |
 | `registry:check-eligibility` | `POST /v1/packages/eligibility-check` | Guild |
 | `registry:read-bosses` | `GET /v1/bosses/{bossId}`, user or service | Monster Raid |
 | `registry:read-occurrences` | `GET /v1/raid-occurrences/{id}`, user or service | Monster Raid |
 
 Registry calls no other service, so it holds no `SERVICE_CLIENT_SECRET` either.
+
+Map and Monster Raid request these issuer allowlist entries. Each row is a
+caller service, a single destination audience and its permitted scope set:
+
+| `service_name` | `audience` | Scopes |
+|---|---|---|
+| `map` | `user-management` | `users:read-relationships` |
+| `monster-raid` | `user-management` | `users:credit-global` |
+| `monster-raid` | `guild` | `guild:read` |
+| `monster-raid` | `package-registry` | `registry:read-config`, `registry:read-bosses`, `registry:read-occurrences` |
+| `monster-raid` | `tamagotchi` | `tamagotchi:read-collection`, `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp` |
+
+Raid requests one operation scope per token; the table describes the allowed
+set, not a combined token for all destinations. The older proposal names
+`tamagotchi:engage` and `tamagotchi:grant-xp` are superseded. `raid:read` protects
+service reads of a raid and its leaderboard, but has no current service caller;
+do not add a speculative issuer grant. These caller requirements do not establish
+that the User Management policy or deployed images already implement them.
 
 A user needs no scope on the routes marked user or service. A service without the scope
 gets `403 insufficient_scope`. Which service may have which scope is the User Management
