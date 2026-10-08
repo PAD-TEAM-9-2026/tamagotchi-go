@@ -1070,7 +1070,7 @@ one account per publishing or consuming service (see below).
 | Service | Image | Host port |
 |---|---|---|
 | Gateway | `victoriamutruc/gateway:2.0.1` | 3000 |
-| User Management | `patriciamoraru/user-management:1.2.0` | 3001 |
+| User Management | `patriciamoraru/user-management:2.0.0` | 3001 |
 | Tamagotchi | `victoriamutruc/tamagotchi:1.0.0` | 3002 |
 | Battle | `patriciamoraru/battle:1.2.0` | 3003 |
 | Guild | `mihaelacatan/guild-service:0.2.0` | 3004 |
@@ -1094,6 +1094,7 @@ cd deploy
 test -f .env || cp .env.example .env
 # Set every database password, the RabbitMQ passwords and the other values marked in .env.example.
 ./gateway/generate-keys.sh   # once: creates secrets/ for the Gateway signing keys
+./user-management/generate-keys.sh   # once: creates the key User Management signs access tokens with
 docker compose --env-file .env up -d --wait
 ```
 
@@ -1106,7 +1107,7 @@ management `15672`). `rabbitmq-provision` runs once after the broker is healthy:
 it creates one account per service from `deploy/rabbitmq/provision.sh`. Each
 account can configure, write and read only its own exchanges and queues. The
 admin account (`RABBITMQ_USER`) is used only by that step. Set `RABBITMQ_USER`,
-`RABBITMQ_PASSWORD`, `GUILD_RABBITMQ_PASSWORD` and `REGISTRY_RABBITMQ_PASSWORD`
+`RABBITMQ_PASSWORD`, `USER_MANAGEMENT_RABBITMQ_PASSWORD`, `GUILD_RABBITMQ_PASSWORD` and `REGISTRY_RABBITMQ_PASSWORD`
 in `.env`. Guild and Registry retry their broker connection at startup, so they
 do not wait for it in Compose. Their settings, and the account names, are in
 their own READMEs.
@@ -1116,6 +1117,16 @@ private signing key and the public key set in `deploy/secrets/`, which Git ignor
 The Gateway mounts both files; Guild and Registry mount the public key set, and
 refuse to start without it. Run the script once before the first start, and keep
 the private key on your machine.
+
+User Management keys: `deploy/user-management/generate-keys.sh` creates the
+private key it signs access tokens with, `deploy/secrets/access-token.pem`,
+which Git ignores and which is never overwritten. Its public key is published at
+`GET /users/v1/jwks`. The service also mounts the Gateway's public key set to
+verify `X-Gateway-Assertion`. Set `USER_MANAGEMENT_CURSOR_SIGNING_KEY`
+(`openssl rand -base64 32`) in `.env`: it signs the page cursors, so every
+instance must share it. User Management writes its events to an outbox and
+publishes them when the broker is reachable, so it does not wait for the broker
+in Compose either.
 
 ### Service tokens
 
