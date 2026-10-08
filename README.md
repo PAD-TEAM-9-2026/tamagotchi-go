@@ -205,10 +205,10 @@ mechanisms carry it:
 
 ## Communication contract
 
-The endpoint tables are the agreed target, not runtime verification. New Gateway
-specifications below are proposals awaiting affected-owner review. Routing and
-negotiation need Mihaela's review; downstream identity and limits need their
-owners' agreement before implementation.
+The endpoint tables and specifications below define the integration target.
+They do not establish runtime completion: each owner must validate their source
+and deployed image against this contract. Record incompatible behavior before
+changing a shared definition.
 
 ### Conventions
 
@@ -218,7 +218,7 @@ owners' agreement before implementation.
 | Payload | JSON, UTF-8, snake_case |
 | IDs | UUID v7, string encoded |
 | Timestamps | ISO 8601, UTC, milliseconds |
-| Errors | RFC 9457, `application/problem+json` |
+| Errors | RFC 9457, `application/problem+json`; `type` is `about:blank` or an absolute problem-type URI, `code` identifies the application error |
 | Pagination | Opaque cursor, never an offset |
 | Concurrency | `ETag` on reads, `If-Match` on writes, 412 on mismatch |
 | Idempotency | `Idempotency-Key` header on non-repeatable commands |
@@ -232,7 +232,9 @@ shape is listed field by field, with types and which fields are required, in
 
 Every service also exposes `GET /health` and `GET /ready`, returning 200 or 503.
 
-### Gateway routing and negotiation proposal
+<a id="gateway-routing-and-negotiation-proposal"></a>
+
+### Gateway routing and negotiation
 
 Browser/local clients use `http://localhost:3000`; containers use
 `http://gateway:3000`. These are local deployment addresses, not production URLs.
@@ -267,7 +269,7 @@ explicit exceptions. Gateway is not an arbitrary external proxy.
 | `GET /health` | none | 200 Health | public |
 | `GET /ready` | none | 200 Readiness or 503 Problem | public |
 
-Only `guild.chat` is supported by this proposal. Gateway forwards negotiation
+Only `guild.chat` is supported. Gateway forwards negotiation
 to Guild; the exact internal negotiation endpoint must be agreed with Mihaela
 before implementation. Guild issues and validates a single-use 30-second ticket.
 The browser connects directly to Guild, using a configured browser-reachable
@@ -282,7 +284,9 @@ URL, not container DNS. Gateway does not hold the socket open.
 | 404 | `guild_not_found` | guild does not exist |
 
 
-### Verified identity proposal
+<a id="verified-identity-proposal"></a>
+
+### Verified identity
 
 The Gateway implements this behaviour. User Management must issue the tokens and
 services must verify the assertion before the identity is relied on.
@@ -478,9 +482,11 @@ Gateway removes `X-User-Id`, `X-User-Roles` and `X-Service-Name` from every requ
 Services take identity only from the verified assertion.
 Never log bearer tokens, assertions, key material or refresh credentials.
 
-### Work limits proposal
+<a id="work-limits-proposal"></a>
 
-This remains the specification for affected-owner review. Gateway, Map and
+### Work limits
+
+Gateway, Map and
 Monster Raid integration source enforces admission, deadlines and cancellation.
 The values below are initial policy defaults, not measured throughput. Other
 service implementations and the selected deployed images need their own
@@ -678,12 +684,11 @@ above did not spell out, as implemented by User Management:
 - Key rotation: publish the new public key in the JWKS first, then switch the signing
   `kid`, then remove the old key once its tokens have expired.
 - Callers are identified only by the verified Gateway assertion. The answers for a missing
-  or wrong caller are in the downstream failure table of the verified identity proposal.
+  or wrong caller are in the downstream failure table of the verified identity contract.
 
 **Command replay.** The nine commands above marked `Idempotency-Key` (register, join a package,
 create, accept and reject a friend request, both currency credits, battle settlement and boost
-consumption) follow the replay rules of the proposal under "Command replay and pagination
-proposal": a key of 1 to 128 printable ASCII characters, scope of verified caller, HTTP operation
+consumption) follow the replay rules under "Command replay and pagination": a key of 1 to 128 printable ASCII characters, scope of verified caller, HTTP operation
 and resource path, and receipts kept 24 hours. The anonymous caller of register is scoped by the
 route alone. Beyond those rules, as implemented by User Management:
 
@@ -700,7 +705,7 @@ route alone. Beyond those rules, as implemented by User Management:
   contains a password or a token.
 
 **Pagination.** The three lists above that take `limit` and `cursor` (friend requests, relationships and
-boosts) follow the cursor rules of the proposal under "Command replay and pagination proposal", with the
+boosts) follow the cursor rules under "Command replay and pagination", with the
 sort tuples in its table. There is no membership list any more, so there is no fourth. As implemented by
 User Management:
 
@@ -1073,11 +1078,16 @@ nothing. Each event payload is an `...Event` shape in
 | `raid.started.v1` | Monster Raid | Notification | RAID_STARTED, recipients carried in the event |
 | `raid.completed.v1` | Monster Raid | audit | Boss died or the timer ran out |
 
-#### Broker delivery proposal
+<a id="broker-delivery-proposal"></a>
 
-Pending publisher/consumer-owner review and Mihaela's deployment compatibility.
-Sergiu coordinates topology; Mihaela owns shared broker deployment. This change
-does not add a running broker or implement publication/consumption.
+#### Broker delivery
+
+Shared provisioning owns queue, exchange and binding declarations. Services
+check existing topology before consuming instead of redeclaring it with their
+own arguments; they wait for `rabbitmq-provision` where startup requires queues.
+Missing topology fails startup/readiness clearly. Preserve existing broker data.
+Sergiu coordinates topology; Mihaela owns broker deployment. Provisioning does
+not prove consumer effects or all services' runtime compatibility.
 
 | Publisher | Durable topic exchange |
 |---|---|
@@ -1247,9 +1257,11 @@ A service that calls another service fetches its own token from
 `MAP_SERVICE_CLIENT_SECRET` and `MONSTER_RAID_SERVICE_CLIENT_SECRET` in `.env`.
 Registry and Notification call no other service, so they have no secret.
 
-Caller secrets must match User Management's registered client credentials and
-scope policy. Setting a caller variable does not configure the issuer or grant
-permission. Preserve existing keys and credentials when updating local settings.
+Compose registers each caller secret with User Management using the same local
+variable. For a fresh local setup, choose distinct values; preserve existing
+credentials when updating it. Matching secrets authenticate the client but do
+not grant scopes: the issuer allowlist must permit each requested destination
+and scope.
 
 Map and Monster Raid call `http://gateway:3000`. Configure their distinct
 base64 cursor keys and broker credentials from `.env.example`; Raid's broker

@@ -32,13 +32,17 @@ database.
 
 | Field | Type / constraint | Required |
 |---|---|---|
-| `type` | "about:blank" | yes |
+| `type` | `about:blank` or an absolute problem-type URI | yes |
 | `title` | string [1..128] | yes |
 | `status` | integer [400..599] | yes |
 | `detail` | string [1..1024] | yes |
 | `instance` | string [1..2048] | yes |
 | `code` | string [1..64] | yes |
 | `correlation_id` | uuid (v7) | yes |
+
+The `code` is the stable application error identifier. Clients must not require
+`type` to equal `about:blank`; a service may identify its problem type with an
+absolute URI. Existing status codes and other Problem fields are unchanged.
 
 ### Readiness
 
@@ -54,8 +58,9 @@ database.
 
 ## Gateway
 
-The following negotiation shapes are proposals for owner review; negotiation
-is not implemented in the Gateway skeleton.
+These shapes define Guild chat negotiation. Gateway forwards ticket issuance to
+Guild and returns a direct browser URL; Guild owns ticket validation and sockets.
+Source and image compatibility require runtime validation.
 
 ### WsNegotiateInput
 
