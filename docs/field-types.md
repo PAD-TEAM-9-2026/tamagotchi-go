@@ -40,15 +40,15 @@ database.
 | `code` | string [1..64] | yes |
 | `correlation_id` | uuid (v7) | yes |
 
+The `code` is the stable application error identifier. Clients must not require
+`type` to equal `about:blank`; a service may identify its problem type with an
+absolute URI. Existing status codes and other Problem fields are unchanged.
+
 ### Readiness
 
 | Field | Type / constraint | Required |
 |---|---|---|
 | `status` | READY / NOT_READY | yes |
-
-The `code` is the stable application error identifier. Clients must not require
-`type` to equal `about:blank`; a service may identify its problem type with an
-absolute URI. Existing status codes and other Problem fields are unchanged.
 
 ### VersionReceipt
 
