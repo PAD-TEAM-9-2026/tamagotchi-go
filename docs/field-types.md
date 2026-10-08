@@ -166,7 +166,7 @@ from ServiceTokenRequest.audience, not a URL or Gateway path prefix.
 | Field | Type / constraint | Required |
 |---|---|---|
 | `amount` | integer [0..1000000] | yes |
-| `reason` | RAID_WIN / BATTLE_ACCESS_CAP | yes |
+| `reason` | RAID_WIN / RAID_DEFEAT / BATTLE_ACCESS_CAP | yes |
 | `reference_id` | uuid (v7) | yes |
 
 ### CreditReceipt
