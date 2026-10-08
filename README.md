@@ -396,7 +396,7 @@ Tamagotchi's are:
 | `tamagotchi:read-creature` | `GET /v1/tamagotchis/{id}`, user or service | |
 | `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle and Monster Raid, at settlement |
 | `tamagotchi:grant-access` | `POST /v1/tamagotchis/{id}/holders` | Battle, at settlement |
-| `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | |
+| `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | Battle, to check who may field a creature |
 | `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | Monster Raid |
 | `tamagotchi:reserve-engagement` | `POST /v1/internal/engagements` | Battle, Monster Raid |
 | `tamagotchi:read-engagement` | `GET /v1/internal/engagements/{referenceId}` | Battle, Monster Raid |
@@ -442,7 +442,7 @@ caller service, a single destination audience and its permitted scope set:
 |---|---|---|
 | `battle` | `user-management` | `users:read-profile`, `users:settle-battle`, `users:consume-boost`, `users:credit-global` |
 | `battle` | `package-registry` | `registry:read-config` |
-| `battle` | `tamagotchi` | `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp`, `tamagotchi:grant-access` |
+| `battle` | `tamagotchi` | `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp`, `tamagotchi:grant-access`, `tamagotchi:read-holders` |
 | `map` | `user-management` | `users:read-relationships` |
 | `monster-raid` | `user-management` | `users:credit-global` |
 | `monster-raid` | `guild` | `guild:read` |
@@ -821,6 +821,26 @@ they hold, including one they won from someone else. A creature is not refused
 for being shared with the opponent already, but a grant to a user who is already
 a holder is a no-op, so nothing is gained by fighting for one twice.
 
+**Who may field a creature, as implemented by Battle.** Battle does not trust the request: it reads the
+holder set of the primary and of the secondary from Tamagotchi (`GET /v1/tamagotchis/{id}/holders`, scope
+`tamagotchi:read-holders`) and refuses the call unless the caller is in it. The check is made when a
+challenge is created, and again for both lineups when it is accepted, because a holder can drop a creature
+in between. Nothing is reserved or stored by a call that fails it.
+
+- `422 duplicate_creature`: `primary_id` and `secondary_id` name the same creature. One creature cannot fill
+  both places.
+- `404 unknown_creature`: Tamagotchi has no creature with that id.
+- `422 not_a_holder`: the caller does not hold the creature. The detail names the creature.
+- `409 creature_engaged`: at creation, the caller already has a pending challenge that fields this creature, as
+  primary or as secondary. This is the rule that stops one holder from queuing challenges to occupy a
+  shared creature. A challenge that has passed its 2 minutes no longer counts. The same code is used when
+  Tamagotchi refuses a reservation at accept because a creature is in another battle or a raid.
+- `502 upstream_unavailable`: Tamagotchi could not be asked. An unreadable answer is the same, never a
+  guess that the caller may or may not hold the creature.
+
+A race between two creations of the same player can still let a second pending challenge through; the
+lock at accept is what keeps a creature in at most one battle.
+
 **Command replay.** The five commands above marked `Idempotency-Key` (create, accept, reject, attack
 and forfeit) follow the replay rules under "Command replay and pagination": a key of 1 to 128 printable
 ASCII characters, scope of verified caller, HTTP operation and resource path, and receipts kept 24 hours.
@@ -837,8 +857,10 @@ ASCII characters, scope of verified caller, HTTP operation and resource path, an
 - A success and a final domain error about Battle's own data (`404 battle_not_found`, `409 not_pending`,
   `409 not_ongoing`, `410 challenge_expired`, `422 self_challenge`) are stored and replayed. A failure that may
   pass is not stored, so the retry runs again: `502 upstream_unavailable`, `503`, `504`, and an answer that
-  depends on the state of another service at that moment, such as `409 creature_engaged` or
-  `404 unknown_opponent`. A creature that was engaged a minute ago may be free now.
+  depends on the state of another service at that moment, such as `409 creature_engaged`,
+  `404 unknown_opponent`, `404 unknown_creature` or `422 not_a_holder`. A creature that was engaged a minute
+  ago may be free now, and a player who has since won a creature now holds it. `422 duplicate_creature`
+  depends only on the request, so it is stored and replayed.
 - The effect and its receipt are saved together or not at all.
 - **A forfeit whose settlement could not be completed is stored with `settlement_status` or
   `access_grant_status` as `NEEDS_ATTENTION`.** The battle is over, so a retry never pays again. Retrying the
