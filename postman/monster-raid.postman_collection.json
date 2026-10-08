@@ -206,7 +206,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "pm.test('identical creation receipt', () => pm.expect(pm.response.text()).to.eql(pm.environment.get('raid_create_receipt')));"
+                  "pm.test('identical creation receipt', () => pm.expect(pm.response.json()).to.deep.equal(JSON.parse(pm.environment.get('raid_create_receipt'))));"
                 ]
               }
             }
@@ -377,7 +377,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "pm.test('identical attack receipt', () => pm.expect(pm.response.text()).to.eql(pm.environment.get('raid_attack_receipt')));"
+                  "pm.test('identical attack receipt', () => pm.expect(pm.response.json()).to.deep.equal(JSON.parse(pm.environment.get('raid_attack_receipt'))));"
                 ]
               }
             }
