@@ -21,10 +21,44 @@ CREATE TABLE "FriendRequests" (
     "ExpiresAt" timestamptz NOT NULL
 );
 
+CREATE TABLE "IdempotencyReceipts" (
+    "Id" uuid PRIMARY KEY,
+    "Scope" character varying(300) NOT NULL,
+    "Key" character varying(128) NOT NULL,
+    "Fingerprint" character varying(64) NOT NULL,
+    "Response" text NOT NULL,
+    "IsError" boolean NOT NULL,
+    "CreatedAt" timestamptz NOT NULL,
+    "ExpiresAt" timestamptz NOT NULL
+);
+
+CREATE TABLE "OutboxMessages" (
+    "Id" uuid PRIMARY KEY,
+    "RoutingKey" character varying(128) NOT NULL,
+    "Payload" text NOT NULL,
+    "CorrelationId" uuid NOT NULL,
+    "CreatedAt" timestamptz NOT NULL,
+    "PublishedAt" timestamptz,
+    "Attempts" integer NOT NULL,
+    "LastError" character varying(256),
+    "NextAttemptAt" timestamptz NOT NULL
+);
+
 CREATE TABLE "PackageMemberships" (
     "UserId" uuid NOT NULL REFERENCES "Users" ("Id") ON DELETE CASCADE,
     "PackageId" uuid NOT NULL,
     PRIMARY KEY ("UserId", "PackageId")
+);
+
+CREATE TABLE "RefreshTokens" (
+    "Id" uuid PRIMARY KEY,
+    "UserId" uuid NOT NULL REFERENCES "Users" ("Id") ON DELETE CASCADE,
+    "FamilyId" uuid NOT NULL,
+    "TokenHash" character varying(64) NOT NULL,
+    "CreatedAt" timestamptz NOT NULL,
+    "ExpiresAt" timestamptz NOT NULL,
+    "UsedAt" timestamptz,
+    "RevokedAt" timestamptz
 );
 
 CREATE TABLE "Relationships" (
@@ -33,6 +67,12 @@ CREATE TABLE "Relationships" (
     "Type" integer NOT NULL,
     "Version" integer NOT NULL,
     PRIMARY KEY ("UserId", "OtherUserId")
+);
+
+CREATE TABLE "UserRoles" (
+    "UserId" uuid NOT NULL REFERENCES "Users" ("Id") ON DELETE CASCADE,
+    "Role" character varying(64) NOT NULL,
+    PRIMARY KEY ("UserId", "Role")
 );
 
 CREATE TABLE "Wallets" (
@@ -53,6 +93,16 @@ CREATE INDEX "IX_FriendRequests_FromUserId" ON "FriendRequests" ("FromUserId");
 
 CREATE INDEX "IX_FriendRequests_ToUserId" ON "FriendRequests" ("ToUserId");
 
+CREATE UNIQUE INDEX "IX_IdempotencyReceipts_Scope_Key" ON "IdempotencyReceipts" ("Scope", "Key");
+
+CREATE INDEX "IX_OutboxMessages_NextAttemptAt_Id" ON "OutboxMessages" ("NextAttemptAt", "Id") WHERE "PublishedAt" IS NULL;
+
+CREATE INDEX "IX_RefreshTokens_FamilyId" ON "RefreshTokens" ("FamilyId");
+
+CREATE UNIQUE INDEX "IX_RefreshTokens_TokenHash" ON "RefreshTokens" ("TokenHash");
+
+CREATE INDEX "IX_RefreshTokens_UserId" ON "RefreshTokens" ("UserId");
+
 CREATE UNIQUE INDEX "IX_Users_Email" ON "Users" ("Email");
 
 CREATE UNIQUE INDEX "IX_Users_Username" ON "Users" ("Username");
@@ -72,5 +122,25 @@ VALUES (
     ),
     (
         '20260923202809_AddWalletDailyCreditTracking',
+        '10.0.12'
+    ),
+    (
+        '20261006181859_AddUserRoles',
+        '10.0.12'
+    ),
+    (
+        '20261006185410_AddRefreshTokens',
+        '10.0.12'
+    ),
+    (
+        '20261006190022_MarkRefreshTokenUsedAtAsConcurrencyToken',
+        '10.0.12'
+    ),
+    (
+        '20261007211808_AddIdempotencyReceipts',
+        '10.0.12'
+    ),
+    (
+        '20261007214819_AddOutboxMessages',
         '10.0.12'
     );

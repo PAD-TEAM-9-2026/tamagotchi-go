@@ -16,6 +16,12 @@ account() {
   $ADMIN declare permission vhost=/ user="$1" configure="$3" write="$4" read="$5"
 }
 
+# User Management only publishes (its outbox), so it reads nothing.
+account user-management "${USER_MANAGEMENT_RABBITMQ_PASSWORD}" \
+  '^user-management\.events$' \
+  '^user-management\.events$' \
+  '^$'
+
 account guild "${GUILD_RABBITMQ_PASSWORD}" \
   '^guild\.events$' \
   '^guild\.events$' \
