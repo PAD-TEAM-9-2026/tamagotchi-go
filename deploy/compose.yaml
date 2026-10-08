@@ -267,7 +267,7 @@ services:
     restart: "no"
 
   gateway:
-    image: victoriamutruc/gateway:2.0.1
+    image: victoriamutruc/gateway:2.0.2
     pull_policy: always
     depends_on:
       user-management:
