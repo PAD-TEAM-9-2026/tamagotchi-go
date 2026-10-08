@@ -166,7 +166,7 @@ from ServiceTokenRequest.audience, not a URL or Gateway path prefix.
 | Field | Type / constraint | Required |
 |---|---|---|
 | `amount` | integer [0..1000000] | yes |
-| `reason` | RAID_WIN / BATTLE_ACCESS_CAP | yes |
+| `reason` | RAID_WIN / RAID_DEFEAT / BATTLE_ACCESS_CAP | yes |
 | `reference_id` | uuid (v7) | yes |
 
 ### CreditReceipt
@@ -900,6 +900,14 @@ checked again at that point.
 | `duration_seconds` | integer [1..3600] | yes |
 | `max_participants` | integer [1..100] | yes |
 | `rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} | yes |
+| `defeat_rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | yes |
+
+`defeat_rewards` is what a participant gets when the raid ends without the boss
+being defeated (timeout or wipe). `null` means nothing is paid out on defeat.
+Both reward objects are restricted to the two currencies every Tamagotchi has
+regardless of package — global currency and XP — never a package-defined stat
+key, so a reward never references an attribute a participant's package does
+not define.
 
 ### BossPage
 
@@ -959,6 +967,9 @@ checked again at that point.
 | `available_until` | timestamp (ISO 8601 UTC) | yes |
 | `status` | scheduled / active / inactive / cancelled | yes |
 | `version` | integer [1..2147483647] | yes |
+
+Reward amounts are not repeated on the occurrence: `boss_version` already
+pins which boss config, `rewards`/`defeat_rewards` included, a raid uses.
 
 ### OccurrenceInput
 
