@@ -82,9 +82,15 @@
           "",
           "pm.collectionVariables.set('idempotency_key', uuidv7());",
           "",
-          "seed('developer_id', uuidv7());",
-          "seed('moderator_id', uuidv7());",
-          "seed('outsider_id', uuidv7());",
+          "function fixture(key) {",
+          "  const value = pm.environment.get(key) || pm.collectionVariables.get(key);",
+          "  if (!value) throw new Error('Supply a real fixture ID and matching credential for ' + key);",
+          "  pm.collectionVariables.set(key, value);",
+          "}",
+          "",
+          "fixture('developer_id');",
+          "fixture('moderator_id');",
+          "fixture('outsider_id');",
           "seed('run_suffix', Date.now().toString());",
           "",
           "",
@@ -104,9 +110,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{registry_base_url}}/health",
+              "raw": "{{registry_probe_url}}/health",
               "host": [
-                "{{registry_base_url}}"
+                "{{registry_probe_url}}"
               ],
               "path": [
                 "health"
@@ -131,9 +137,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{registry_base_url}}/ready",
+              "raw": "{{registry_probe_url}}/ready",
               "host": [
-                "{{registry_base_url}}"
+                "{{registry_probe_url}}"
               ],
               "path": [
                 "ready"
@@ -405,7 +411,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{battle_service_credential}}",
+                "value": "Bearer {{monster_raid_service_credential}}",
                 "type": "text"
               }
             ],
@@ -444,7 +450,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{battle_service_credential}}",
+                "value": "Bearer {{monster_raid_service_credential}}",
                 "type": "text"
               }
             ],
@@ -480,7 +486,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{battle_service_credential}}",
+                "value": "Bearer {{monster_raid_service_credential}}",
                 "type": "text"
               }
             ],
