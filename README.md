@@ -1159,7 +1159,7 @@ one account per publishing or consuming service (see below).
 
 | Service | Image | Host port |
 |---|---|---|
-| Gateway | `victoriamutruc/gateway:2.0.1` | 3000 |
+| Gateway | `victoriamutruc/gateway:2.0.2` | 3000 |
 | User Management | `patriciamoraru/user-management:2.0.0` | 3001 |
 | Tamagotchi | `victoriamutruc/tamagotchi:2.0.1` | 3002 |
 | Battle | `patriciamoraru/battle:1.2.0` | 3003 |
