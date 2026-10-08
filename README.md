@@ -574,6 +574,7 @@ sort tuple and return next_cursor=null when no further results remain.
 | User Management friend requests | expires_at descending, request_id descending | caller or page size mismatch returns 400 invalid_cursor |
 | User Management relationships | other_user_id ascending | caller, listed user or page size mismatch returns 400 invalid_cursor |
 | User Management boosts | boost_id ascending | caller or page size mismatch returns 400 invalid_cursor |
+| Battle list | battle_id descending | caller or page size mismatch returns 400 invalid_cursor |
 
 Bind Map's cursor to the full viewer observation, including coordinates, since
 equal-timestamp location changes remain valid. Freshness and current visibility
@@ -737,6 +738,22 @@ never told which creature was staked.
 A win against a creature that has already reached the holder cap is compensated
 here instead, as a global currency credit with reason `BATTLE_ACCESS_CAP`.
 
+**Effects that happen once.** A command receipt covers a retry for 24 hours, and a caller may retry much later (a lost reply, a
+restart) or under a new `Idempotency-Key`. So the effects that must not repeat are also recorded for good, in the same transaction as the
+change, and a repeat is answered from that record whatever its key and however old the first request is. As implemented by User
+Management:
+
+| Effect | One per | A repeat | A conflicting repeat |
+|---|---|---|---|
+| Global credit (`RAID_WIN`, `RAID_DEFEAT`, `BATTLE_ACCESS_CAP`) | user, reason and `reference_id` | the first receipt, with the balance it showed then | the same reference with another amount: `409 reference_conflict` |
+| Battle settlement | `battle_id` | the first settlement, with its balances | another winner or loser: `409 battle_already_settled` |
+| Boost consumption | battle, user and boost | the first receipt, with the charges it left | none |
+
+Callers therefore send a `reference_id` that is the same for the same reward every time (Battle uses the battle id, Monster Raid its
+own stable id per reward). Concurrent requests for one wallet, one reward, one battle or one user's boosts are served one at a time, so
+they cannot both pass the check and two credits to one wallet cannot lose each other's update. These records are never deleted by
+retention.
+
 ### Tamagotchi, `/tamagotchi`
 
 | Method and path | Request | Response | Access |
@@ -883,6 +900,21 @@ two halves separately, since either can be retried alone.
 and an accepted battle whose turn timer runs out is auto-forfeited. Both exist to
 release the engagement lock, and both are enforced here rather than in Tamagotchi
 because Battle owns the turn state.
+
+As implemented by Battle, a background pass of a few seconds takes up to 5 battles of each kind at a time:
+
+- A `PENDING_ACCEPT` challenge past its 2 minutes becomes `EXPIRED`. Nothing was reserved at that point, so there is no lock to release,
+  and no event is published. Accepting it, before or after the pass reaches it, is `410 challenge_expired`.
+- An `ONGOING` battle whose `turn_expires_at` has passed is forfeited by the player whose turn it was, and is paid out exactly as for a
+  forfeit: the creatures are released, the currency settled, the XP awarded, the access granted, and `battle.completed.v1` published.
+- A `COMPLETED` battle with a settlement half in `NEEDS_ATTENTION` has only that half tried again, with the keys of the first try, after
+  a wait that starts at 10 seconds and doubles to at most 10 minutes. The two halves stay independent: a currency settlement that
+  fails never undoes a granted creature.
+- When the creature already has the most holders, the winner is credited 50 global currency with reason `BATTLE_ACCESS_CAP` and
+  `reference_id` the battle's id, and `access_grant_status` becomes `CAP_COMPENSATED` only once the credit is made. The contract names the
+  reason and not the amount, so 50 is Battle's choice, the same as a win itself.
+- Commands on one battle (`accept`, `reject`, `attack`, `forfeit`) and the pass take the battle's lock and read it again once they hold
+  it, so a battle is finished once and a request that lost the race is `409 not_ongoing` without having told any other service anything.
 
 **Combat.** The creatures and rules a battle is fought with are read once, when it starts, and an attack calls no
 other service. As implemented by Battle:
