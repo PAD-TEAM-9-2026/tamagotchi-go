@@ -130,4 +130,3 @@ INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20261008200213_AddOutboxAndLifecycle', '10.0.12');
 
 COMMIT;
-
