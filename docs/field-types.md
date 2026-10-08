@@ -58,8 +58,9 @@ absolute URI. Existing status codes and other Problem fields are unchanged.
 
 ## Gateway
 
-The following negotiation shapes are proposals for owner review; negotiation
-is not implemented in the Gateway skeleton.
+These shapes define Guild chat negotiation. Gateway forwards ticket issuance to
+Guild and returns a direct browser URL; Guild owns ticket validation and sockets.
+Source and image compatibility require runtime validation.
 
 ### WsNegotiateInput
 
