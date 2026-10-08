@@ -902,8 +902,11 @@ checked again at that point.
 | `rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} | yes |
 | `defeat_rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | yes |
 
-`defeat_rewards` is what a participant gets when the raid ends without the boss
-being defeated (timeout or wipe). `null` means nothing is paid out on defeat.
+`defeat_rewards` gives the currency and XP amounts per admitted participant when
+the raid ends without the boss being defeated (timeout or wipe). `null` means no
+defeat payout. Monster Raid currently implements timeout, not a wipe mechanism.
+Pending admissions and cancelled raids receive no rewards. XP goes to the
+participant's contributed creature; existing raids retain their pinned amounts.
 Both reward objects are restricted to the two currencies every Tamagotchi has
 regardless of package — global currency and XP — never a package-defined stat
 key, so a reward never references an attribute a participant's package does
@@ -1140,6 +1143,9 @@ The latest accepted location for one user.
 
 ### LocationInput
 
+The verified user must match `user_id`. Raw location and nearby paths likewise
+require the caller's own user ID.
+
 | Field | Type / constraint | Required |
 |---|---|---|
 | `user_id` | uuid (v7) | yes |
@@ -1183,10 +1189,10 @@ The latest accepted location for one user.
 
 ### Nearby
 
-Proposed next_cursor semantics: opaque HMAC-signed position after distance_m and
+next_cursor semantics: opaque HMAC-signed position after distance_m and
 user_id, bound to caller, filters, page size and the full viewer observation.
 Expires after five minutes. Results remain subject to current freshness and
-visibility; this is not a snapshot. See the README replay/pagination proposal.
+visibility; this is not a snapshot. See the README replay/pagination rules.
 
 | Field | Type / constraint | Required |
 |---|---|---|
@@ -1201,9 +1207,10 @@ visibility; this is not a snapshot. See the README replay/pagination proposal.
 
 ### Leaderboard
 
-Proposed next_cursor semantics: damage_dealt descending, joined_at ascending,
+next_cursor semantics: damage_dealt descending, joined_at ascending,
 user_id ascending, bound to caller, raid_id, page size and raid_version. A changed
-version makes the cursor stale. Cursor support is not implemented yet.
+version returns `409 cursor_stale`. Integration branches implement these rules;
+the published image set still requires an update and runtime validation.
 
 | Field | Type / constraint | Required |
 |---|---|---|
@@ -1283,8 +1290,9 @@ version makes the cursor stale. Cursor support is not implemented yet.
 
 ### RaidPage
 
-Proposed next_cursor semantics: started_at and raid_id descending, bound to
-caller, guild_id filter and page size. Cursor support is not implemented yet.
+next_cursor semantics: started_at and raid_id descending, bound to caller,
+guild_id filter and page size. Integration branches implement these rules;
+the published image set still requires an update and runtime validation.
 
 | Field | Type / constraint | Required |
 |---|---|---|
