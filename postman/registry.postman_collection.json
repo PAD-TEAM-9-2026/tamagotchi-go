@@ -661,7 +661,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"spooky\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 100000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  }\n}",
+              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"spooky\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 100000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  },\n  \"defeat_rewards\": {\n    \"global_currency\": 50,\n    \"xp\": 20\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -800,7 +800,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"even spookier\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 200000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  }\n}",
+              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"even spookier\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 200000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  },\n  \"defeat_rewards\": {\n    \"global_currency\": 50,\n    \"xp\": 20\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"

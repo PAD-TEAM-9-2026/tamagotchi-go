@@ -988,6 +988,49 @@
       "name": "Chat history",
       "item": [
         {
+          "name": "Issue a chat ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{leader_credential}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/chat-tickets",
+              "host": [
+                "{{guild_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "guilds",
+                "{{guild_id}}",
+                "chat-tickets"
+              ]
+            },
+            "description": "Single-use, short-lived ticket to open the chat WebSocket with: connect to GET /v1/guilds/{guildId}/chat (upgraded), then send {\"type\": \"auth\", \"ticket\": \"<ticket>\"} as the first frame within the auth timeout. The socket itself cannot be exercised by a plain HTTP collection; see the service README for a wscat example."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201, a single-use ticket', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('ticket');",
+                  "  pm.expect(body.guild_id).to.eql(pm.collectionVariables.get('guild_id'));",
+                  "  pm.expect(body).to.have.property('expires_at');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Read the chat history",
           "request": {
             "method": "GET",
