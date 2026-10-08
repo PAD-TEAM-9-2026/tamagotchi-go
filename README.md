@@ -269,6 +269,13 @@ explicit exceptions. Gateway is not an arbitrary external proxy.
 | `GET /health` | none | 200 Health | public |
 | `GET /ready` | none | 200 Readiness or 503 Problem | public |
 
+Gateway also serves Prometheus metrics at `GET /metrics` on a separate monitoring
+port, `METRICS_PORT` (default 9090), from the first image after `2.0.2`. It is not part
+of the public route table above: it carries request counts, latencies and work-pool
+usage, no domain data, and needs no assertion. Deployments publish it only to the
+monitoring network, never to clients. The shared Compose file does not publish or
+scrape it yet. The Gateway README lists the metric names.
+
 Only `guild.chat` is supported. Gateway forwards negotiation
 to Guild; the exact internal negotiation endpoint must be agreed with Mihaela
 before implementation. Guild issues and validates a single-use 30-second ticket.
@@ -396,7 +403,7 @@ Tamagotchi's are:
 | `tamagotchi:read-creature` | `GET /v1/tamagotchis/{id}`, user or service | |
 | `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle and Monster Raid, at settlement |
 | `tamagotchi:grant-access` | `POST /v1/tamagotchis/{id}/holders` | Battle, at settlement |
-| `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | |
+| `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | Battle, to check who may field a creature |
 | `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | Monster Raid |
 | `tamagotchi:reserve-engagement` | `POST /v1/internal/engagements` | Battle, Monster Raid |
 | `tamagotchi:read-engagement` | `GET /v1/internal/engagements/{referenceId}` | Battle, Monster Raid |
@@ -442,7 +449,7 @@ caller service, a single destination audience and its permitted scope set:
 |---|---|---|
 | `battle` | `user-management` | `users:read-profile`, `users:settle-battle`, `users:consume-boost`, `users:credit-global` |
 | `battle` | `package-registry` | `registry:read-config` |
-| `battle` | `tamagotchi` | `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp`, `tamagotchi:grant-access` |
+| `battle` | `tamagotchi` | `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp`, `tamagotchi:grant-access`, `tamagotchi:read-holders` |
 | `map` | `user-management` | `users:read-relationships` |
 | `monster-raid` | `user-management` | `users:credit-global` |
 | `monster-raid` | `guild` | `guild:read` |
@@ -535,8 +542,9 @@ published images predate this work. Affected-owner compatibility review and real
 deployment validation remain required; successful response shapes stay unchanged.
 
 Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
-`POST /raid/v1/raids/{raidId}/attack`, and the nine User Management commands
-named under its implementation notes. Require an Idempotency-Key of 1 to 128
+`POST /raid/v1/raids/{raidId}/attack`, the nine User Management commands
+named under its implementation notes, and the five Battle commands (create,
+accept, reject, attack and forfeit) named under its implementation notes. Require an Idempotency-Key of 1 to 128
 printable ASCII characters after HTTP header whitespace normalization; absence
 or invalid values return `400 invalid_idempotency_key`. Keys are case-sensitive.
 Scope is the verified caller, HTTP operation and resource path. Fingerprint the
@@ -573,6 +581,7 @@ sort tuple and return next_cursor=null when no further results remain.
 | User Management friend requests | expires_at descending, request_id descending | caller or page size mismatch returns 400 invalid_cursor |
 | User Management relationships | other_user_id ascending | caller, listed user or page size mismatch returns 400 invalid_cursor |
 | User Management boosts | boost_id ascending | caller or page size mismatch returns 400 invalid_cursor |
+| Battle list | battle_id descending | caller or page size mismatch returns 400 invalid_cursor |
 
 Bind Map's cursor to the full viewer observation, including coordinates, since
 equal-timestamp location changes remain valid. Freshness and current visibility
@@ -736,6 +745,22 @@ never told which creature was staked.
 A win against a creature that has already reached the holder cap is compensated
 here instead, as a global currency credit with reason `BATTLE_ACCESS_CAP`.
 
+**Effects that happen once.** A command receipt covers a retry for 24 hours, and a caller may retry much later (a lost reply, a
+restart) or under a new `Idempotency-Key`. So the effects that must not repeat are also recorded for good, in the same transaction as the
+change, and a repeat is answered from that record whatever its key and however old the first request is. As implemented by User
+Management:
+
+| Effect | One per | A repeat | A conflicting repeat |
+|---|---|---|---|
+| Global credit (`RAID_WIN`, `RAID_DEFEAT`, `BATTLE_ACCESS_CAP`) | user, reason and `reference_id` | the first receipt, with the balance it showed then | the same reference with another amount: `409 reference_conflict` |
+| Battle settlement | `battle_id` | the first settlement, with its balances | another winner or loser: `409 battle_already_settled` |
+| Boost consumption | battle, user and boost | the first receipt, with the charges it left | none |
+
+Callers therefore send a `reference_id` that is the same for the same reward every time (Battle uses the battle id, Monster Raid its
+own stable id per reward). Concurrent requests for one wallet, one reward, one battle or one user's boosts are served one at a time, so
+they cannot both pass the check and two credits to one wallet cannot lose each other's update. These records are never deleted by
+retention.
+
 ### Tamagotchi, `/tamagotchi`
 
 | Method and path | Request | Response | Access |
@@ -820,6 +845,56 @@ they hold, including one they won from someone else. A creature is not refused
 for being shared with the opponent already, but a grant to a user who is already
 a holder is a no-op, so nothing is gained by fighting for one twice.
 
+**Who may field a creature, as implemented by Battle.** Battle does not trust the request: it reads the
+holder set of the primary and of the secondary from Tamagotchi (`GET /v1/tamagotchis/{id}/holders`, scope
+`tamagotchi:read-holders`) and refuses the call unless the caller is in it. The check is made when a
+challenge is created, and again for both lineups when it is accepted, because a holder can drop a creature
+in between. Nothing is reserved or stored by a call that fails it.
+
+- `422 duplicate_creature`: `primary_id` and `secondary_id` name the same creature. One creature cannot fill
+  both places.
+- `404 unknown_creature`: Tamagotchi has no creature with that id.
+- `422 not_a_holder`: the caller does not hold the creature. The detail names the creature.
+- `409 creature_engaged`: at creation, the caller already has a pending challenge that fields this creature, as
+  primary or as secondary. This is the rule that stops one holder from queuing challenges to occupy a
+  shared creature. A challenge that has passed its 2 minutes no longer counts. The same code is used when
+  Tamagotchi refuses a reservation at accept because a creature is in another battle or a raid.
+- `502 upstream_unavailable`: Tamagotchi could not be asked. An unreadable answer is the same, never a
+  guess that the caller may or may not hold the creature.
+
+A race between two creations of the same player can still let a second pending challenge through; the
+lock at accept is what keeps a creature in at most one battle.
+
+**Command replay.** The five commands above marked `Idempotency-Key` (create, accept, reject, attack
+and forfeit) follow the replay rules under "Command replay and pagination": a key of 1 to 128 printable
+ASCII characters, scope of verified caller, HTTP operation and resource path, and receipts kept 24 hours.
+`GET` routes carry no key. Beyond those rules, as implemented by Battle:
+
+- A request without a valid key is `400 invalid_idempotency_key`, before anything else is done. Authentication
+  is checked first, on every replay. A request the use case rejects as malformed (`400 validation_error`)
+  reserves no key, so the corrected request can reuse it.
+- The same key with a changed request is `409 idempotency_conflict`. A changed boost list or another creature is a
+  changed request. A retry that arrives while the first is still running waits for it and gets the same answer,
+  or is `409 command_in_progress` after 5 seconds.
+- A replay returns the stored answer with the status the route defines: `201` for a create, `202` for an
+  accept.
+- A success and a final domain error about Battle's own data (`404 battle_not_found`, `409 not_pending`,
+  `409 not_ongoing`, `410 challenge_expired`, `422 self_challenge`) are stored and replayed. A failure that may
+  pass is not stored, so the retry runs again: `502 upstream_unavailable`, `503`, `504`, and an answer that
+  depends on the state of another service at that moment, such as `409 creature_engaged`,
+  `404 unknown_opponent`, `404 unknown_creature` or `422 not_a_holder`. A creature that was engaged a minute
+  ago may be free now, and a player who has since won a creature now holds it. `422 duplicate_creature`
+  depends only on the request, so it is stored and replayed.
+- The effect and its receipt are saved together or not at all.
+- **A forfeit whose settlement could not be completed is stored with `settlement_status` or
+  `access_grant_status` as `NEEDS_ATTENTION`.** The battle is over, so a retry never pays again. Retrying the
+  failed half is a separate step that does not depend on the caller's key.
+- **Keys for the calls Battle makes.** Each outbound command carries its own `Idempotency-Key`, so a retry is
+  replayed by the other service. One that happens once per battle (a boost consumption, the settlement, an XP
+  award, the access grant) is keyed by the battle. A reservation is keyed by the attempt, that is the caller's own
+  key, and a release by the engagement it lets go of: a creature lock that was reserved, released and reserved
+  again must not be answered with the stored first reservation, which is no longer held.
+
 **Settlement is three calls and one event.** Battle credits the winner and debits
 the loser through User Management, writes the XP split through Tamagotchi at
 60/40 between primary and secondary, and calls `POST /tamagotchis/{id}/holders`
@@ -832,6 +907,52 @@ two halves separately, since either can be retried alone.
 and an accepted battle whose turn timer runs out is auto-forfeited. Both exist to
 release the engagement lock, and both are enforced here rather than in Tamagotchi
 because Battle owns the turn state.
+
+As implemented by Battle, a background pass of a few seconds takes up to 5 battles of each kind at a time:
+
+- A `PENDING_ACCEPT` challenge past its 2 minutes becomes `EXPIRED`. Nothing was reserved at that point, so there is no lock to release,
+  and no event is published. Accepting it, before or after the pass reaches it, is `410 challenge_expired`.
+- An `ONGOING` battle whose `turn_expires_at` has passed is forfeited by the player whose turn it was, and is paid out exactly as for a
+  forfeit: the creatures are released, the currency settled, the XP awarded, the access granted, and `battle.completed.v1` published.
+- A `COMPLETED` battle with a settlement half in `NEEDS_ATTENTION` has only that half tried again, with the keys of the first try, after
+  a wait that starts at 10 seconds and doubles to at most 10 minutes. The two halves stay independent: a currency settlement that
+  fails never undoes a granted creature.
+- When the creature already has the most holders, the winner is credited 50 global currency with reason `BATTLE_ACCESS_CAP` and
+  `reference_id` the battle's id, and `access_grant_status` becomes `CAP_COMPENSATED` only once the credit is made. The contract names the
+  reason and not the amount, so 50 is Battle's choice, the same as a win itself.
+- Commands on one battle (`accept`, `reject`, `attack`, `forfeit`) and the pass take the battle's lock and read it again once they hold
+  it, so a battle is finished once and a request that lost the race is `409 not_ongoing` without having told any other service anything.
+
+**Combat.** The creatures and rules a battle is fought with are read once, when it starts, and an attack calls no
+other service. As implemented by Battle:
+
+- At `accept` the reservation answer's `pets` give the four creatures as they are at that moment (level, combat type,
+  package, config version and stats). Battle also reads the type matrix from Tamagotchi and, for each package and config
+  version those creatures are pinned to, the bonus rules from Registry. Registry's `registry:read-config` is the scope
+  for the rules; Tamagotchi's `tamagotchi:read-creature` is not needed, because the snapshot comes with the reservation.
+- Each side gets its HP and its base damage from the levels of its two creatures. The contract fixes the ranges
+  (HP 1 to 1500, one hit 1 to 1500) and the modifiers, but no base number, so Battle chooses them:
+  HP is `100 + 10 * primary level + 4 * secondary level`, and base damage is
+  `(12 + 2 * primary level + secondary level) / 2`, rounded down.
+- A bonus rule is evaluated as written: the creature's stat named by `stat_key` is compared with `threshold` using
+  `operator`. A creature without that stat, or whose stat is not a number, does not match. The `value_bps` of every
+  matching `ATTACK_BPS` rule of either creature of a side, plus the boost, is added to the side's attack. The
+  `DEFENSE_BPS` rules are added up the same way and lower the hits the side takes.
+- The type multiplier is the matrix value of the side's primary creature's type against the other side's primary's.
+- A hit is `base damage * (1 + attack) * type multiplier * (1 - the other side's defense)`, in basis points, in whole
+  numbers, rounded down, never below 1 or above 1500. The order follows the damage rules of Monster Raid, further down. There is no
+  randomness. A boost adds the `attack_bps` User Management reports (1000 for `ATTACK_10`) to every hit of the
+  side that paid for it. Both players' boosts are paid at `accept`, the accepting player's first.
+- The challenger attacks first and each attack passes the turn. A turn lasts 30 seconds (`turn_expires_at`). A hit that
+  leaves no HP ends the battle, the attacker wins, and the winner is paid out exactly as for a forfeit.
+- `attack` answers `400 validation_error` (no `user_id`), `403 not_self` (`user_id` is not the caller),
+  `403 not_participant`, `404 battle_not_found`, `409 not_ongoing`, `409 not_your_turn`, `409 battle_changed` (another
+  request changed the battle at the same moment), `409 legacy_snapshot_unavailable` (the battle started before attacks
+  existed) and `410 turn_expired`. `not_your_turn` and `battle_changed` depend on the moment and are not stored under an
+  `Idempotency-Key`.
+- Whatever Registry or Tamagotchi answers while a battle is being prepared, the player asked for neither, so it is
+  `502 upstream_unavailable`. If anything fails after the creatures were reserved, they are released and the battle
+  stays pending. User Management has no way to give a boost back, so one spent before a later failure is not refunded.
 
 ### Guild, `/guild`
 
@@ -1178,14 +1299,14 @@ one account per publishing or consuming service (see below).
 | Service | Image | Digest | Host port |
 |---|---|---|---|
 | Gateway | `victoriamutruc/gateway:2.0.2` | `sha256:7724cff304f693193833a6d2db702f35587a95e4d5a200c571e28391e42f1333` | 3000 |
-| User Management | `patriciamoraru/user-management:2.0.0` | `sha256:eec4326267303a0dda4482715ffa2026cfe5bbe30ff7cc2e21fdbc799177b167` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:2.0.3` | `sha256:b2948185ca675fc813409b1a85626aa6fcc958d2b2fafa678374f9246d2f38e8` | 3002 |
-| Battle | `patriciamoraru/battle:1.2.0` | `sha256:64133eadda6c8f330743f37471f257fd5f9d847d714db7228d20e6ddccdd2746` | 3003 |
+| User Management | `patriciamoraru/user-management:2.0.1` | `sha256:ecb7e8db5a07e647a9e1ae4d7a0b086e700ac067185ddc1004219f775cc0312a` | 3001 |
+| Tamagotchi | `victoriamutruc/tamagotchi:2.0.4` | `sha256:cc5a3b8cd9cbd61927090c60ca2775ff0b8f54cb989bef0c17cacfc3240c99dd` | 3002 |
+| Battle | `patriciamoraru/battle:2.0.1` | `sha256:4cc5ee7d1206e459832ce2d48f421729f7bb2d546bc24490c4a1d7849a3d1aec` | 3003 |
 | Guild | `mihaelacatan/guild-service:0.2.0` | `sha256:34535171aed7f5752fab51960c393584228f6d3415e562bbd317bb0cc0940140` | 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:2.0.1` | `sha256:77a83a6bb6feb7d3cd13b270162b7e9d84bc54f0af8a0103feb6d7db70d68bdd` | 3005 |
 | Map | `sergedbs/map:1.0.0` | `sha256:b70681bcdac1958d9ed00d7be913f57cf12dfa4750d556ac3dc1435367de87dc` | 3006 |
 | Monster Raid | `sergedbs/monster-raid:1.0.0` | `sha256:5828d016053f30903d123aaaa41876f7d80d6c426ef5a92bb2ffc1ca2fb2ebcd` | 3007 |
-| Notification | `victoriamutruc/notification:2.0.2` | `sha256:8acea69b01b5a2b36e8a8ef454cdd7957a776853e0426910156b8b090c7db654` | 3008 |
+| Notification | `victoriamutruc/notification:2.0.3` | `sha256:b3c03037195717ef7be38fb2141b8c0634f436d7c00da8a78d8b769d403b2dd5` | 3008 |
 
 The pinned Map/Raid images predate their current integration branches. To test
 unpublished source, use a local Compose override that builds Map, Monster Raid
@@ -1289,9 +1410,24 @@ docker compose exec guild node dist/db/seed.js
 docker compose exec registry node dist/db/seed.js
 docker compose exec tamagotchi node dist/db/seed.js
 docker compose exec notification node dist/db/seed.js
-docker compose exec user-management dotnet UserManagement.dll seed
+docker compose exec user-management dotnet UserManagement.Api.dll seed
 docker compose exec battle dotnet Battle.dll seed
 ```
+
+**Database schema.** User Management and Battle do not migrate their own databases at start. A fresh volume gets the schema from
+`deploy/db/user-management/001_init.sql` and `deploy/db/battle/001_init.sql`, which are generated from each service's migrations (every
+migration in order, with the `__EFMigrationsHistory` rows, so a later `dotnet ef database update` runs cleanly). A volume that already
+exists is brought up to the same schema with the `upgrade.sql` next to each of them, which applies only the migrations whose row is not
+in the history yet and so is safe to run again:
+
+```bash
+docker compose exec -T database sh -c 'psql -U "$USER_MANAGEMENT_DB_USER" -d "$USER_MANAGEMENT_DB_NAME" -v ON_ERROR_STOP=1' < db/user-management/upgrade.sql
+docker compose exec -T database sh -c 'psql -U "$BATTLE_DB_USER" -d "$BATTLE_DB_NAME" -v ON_ERROR_STOP=1' < db/battle/upgrade.sql
+```
+
+User Management 2.0.1 needs the three tables of its once-only ledgers (`CurrencyCredits`, `SettledBattles`, `ConsumedBoosts`), and Battle 2.0.1
+needs the outbox, the idempotency receipts, the combat snapshot columns and the settlement retry columns, so an old volume must be upgraded
+before the new images start. If a migration was applied by hand earlier, add its row to `__EFMigrationsHistory` first.
 
 Map and Monster Raid seed through Gateway using Python 3. From each standalone
 repository, run `scripts/seed.sh` after configuring real fixtures in your
