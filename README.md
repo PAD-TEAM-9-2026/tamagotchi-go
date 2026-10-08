@@ -381,10 +381,10 @@ Tamagotchi's are:
 | Scope | Route | Caller |
 |---|---|---|
 | `tamagotchi:read-creature` | `GET /v1/tamagotchis/{id}`, user or service | |
-| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle, at settlement |
+| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle and Monster Raid, at settlement |
 | `tamagotchi:grant-access` | `POST /v1/tamagotchis/{id}/holders` | Battle, at settlement |
 | `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | |
-| `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | |
+| `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | Monster Raid |
 | `tamagotchi:reserve-engagement` | `POST /v1/internal/engagements` | Battle, Monster Raid |
 | `tamagotchi:read-engagement` | `GET /v1/internal/engagements/{referenceId}` | Battle, Monster Raid |
 | `tamagotchi:release-engagement` | `POST /v1/internal/engagements/{referenceId}/release` | Battle, Monster Raid |
