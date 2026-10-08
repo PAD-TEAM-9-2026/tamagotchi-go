@@ -46,13 +46,14 @@ services:
       retries: 20
 
   user-management:
-    image: patriciamoraru/user-management:2.0.0
+    image: patriciamoraru/user-management:2.0.1
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
     environment:
       PORT: 3001
+      LOG_LEVEL: ${USER_MANAGEMENT_LOG_LEVEL:-info}
       ConnectionStrings__UserManagementDb: Host=database;Port=5432;Database=${USER_MANAGEMENT_DB_NAME:-user_management};Username=${USER_MANAGEMENT_DB_USER:-user_management};Password=${USER_MANAGEMENT_DB_PASSWORD}
       ACCESS_TOKEN_PRIVATE_KEY_PATH: /run/secrets/access-token.pem
       ACCESS_TOKEN_KEY_ID: ${USER_MANAGEMENT_ACCESS_TOKEN_KEY_ID:-user-management-access-1}
@@ -162,16 +163,26 @@ services:
       retries: 10
 
   battle:
-    image: patriciamoraru/battle:1.2.0
-    platform: linux/amd64
+    image: patriciamoraru/battle:2.0.1
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 3003
+      LOG_LEVEL: ${BATTLE_LOG_LEVEL:-info}
       ConnectionStrings__BattleDb: Host=database;Port=5432;Database=${BATTLE_DB_NAME:-battle};Username=${BATTLE_DB_USER:-battle};Password=${BATTLE_DB_PASSWORD}
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      CURSOR_SIGNING_KEY: ${BATTLE_CURSOR_SIGNING_KEY:?set BATTLE_CURSOR_SIGNING_KEY in .env (openssl rand -base64 32)}
+      USER_MANAGEMENT_URL: http://gateway:3000/users
+      TAMAGOTCHI_URL: http://gateway:3000/tamagotchi
+      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      RABBITMQ_URL: amqp://battle:${BATTLE_RABBITMQ_PASSWORD:?set BATTLE_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
       SERVICE_CLIENT_SECRET: ${BATTLE_SERVICE_CLIENT_SECRET:?set BATTLE_SERVICE_CLIENT_SECRET in .env}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3003:3003"
     healthcheck:
