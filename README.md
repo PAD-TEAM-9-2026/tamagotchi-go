@@ -380,6 +380,11 @@ or `notification`. Each owner names the scopes on their own service. User Manage
 | `users:consume-boost` | `POST /v1/internal/boost-consumptions` |
 | `users:read-membership` | `GET /v1/internal/users/{userId}/membership` |
 
+Battle is the caller of `users:read-profile` (opponent check and `challenger_username`),
+`users:settle-battle` and `users:consume-boost`, and also of `users:credit-global` for the
+`BATTLE_ACCESS_CAP` credit it pays when a holder grant returns `CAP_REACHED`. Monster Raid is
+the other caller of `users:credit-global`.
+
 Tamagotchi's are:
 
 | Scope | Route | Caller |
@@ -415,7 +420,7 @@ Registry's are:
 
 | Scope | Route | Caller |
 |---|---|---|
-| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | Tamagotchi for package configuration; User Management for currency rules; Monster Raid for stat bonuses |
+| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | Tamagotchi for package configuration; User Management for currency rules; Monster Raid and Battle for stat bonuses and stat definitions |
 | `registry:check-eligibility` | `POST /v1/packages/eligibility-check` | Guild |
 | `registry:read-bosses` | `GET /v1/bosses/{bossId}`, user or service | Monster Raid |
 | `registry:read-occurrences` | `GET /v1/raid-occurrences/{id}`, user or service | Monster Raid |
@@ -426,18 +431,21 @@ so nothing should be allowlisted for it until one does.
 
 Registry calls no other service, so it holds no `SERVICE_CLIENT_SECRET` either.
 
-Map and Monster Raid request these issuer allowlist entries. Each row is a
+Map, Monster Raid and Battle request these issuer allowlist entries. Each row is a
 caller service, a single destination audience and its permitted scope set:
 
 | `service_name` | `audience` | Scopes |
 |---|---|---|
+| `battle` | `user-management` | `users:read-profile`, `users:settle-battle`, `users:consume-boost`, `users:credit-global` |
+| `battle` | `package-registry` | `registry:read-config` |
+| `battle` | `tamagotchi` | `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp`, `tamagotchi:grant-access` |
 | `map` | `user-management` | `users:read-relationships` |
 | `monster-raid` | `user-management` | `users:credit-global` |
 | `monster-raid` | `guild` | `guild:read` |
 | `monster-raid` | `package-registry` | `registry:read-config`, `registry:read-bosses`, `registry:read-occurrences` |
 | `monster-raid` | `tamagotchi` | `tamagotchi:read-collection`, `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp` |
 
-Raid requests one operation scope per token; the table describes the allowed
+Raid and Battle request one operation scope per token; the table describes the allowed
 set, not a combined token for all destinations. The older proposal names
 `tamagotchi:engage` and `tamagotchi:grant-xp` are superseded. `raid:read` protects
 service reads of a raid and its leaderboard, but has no current service caller;
