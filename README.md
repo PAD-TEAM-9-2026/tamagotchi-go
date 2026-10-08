@@ -1169,13 +1169,13 @@ one account per publishing or consuming service (see below).
 |---|---|---|
 | Gateway | `victoriamutruc/gateway:2.0.2` | 3000 |
 | User Management | `patriciamoraru/user-management:2.0.0` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:2.0.1` | 3002 |
+| Tamagotchi | `victoriamutruc/tamagotchi:2.0.3` | 3002 |
 | Battle | `patriciamoraru/battle:1.2.0` | 3003 |
 | Guild | `mihaelacatan/guild-service:0.2.0` | 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:0.2.0` | 3005 |
 | Map | `sergedbs/map:1.0.0` | 3006 |
 | Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
-| Notification | `victoriamutruc/notification:2.0.1` | 3008 |
+| Notification | `victoriamutruc/notification:2.0.2` | 3008 |
 
 The pinned Map/Raid images predate their current integration branches. To test
 unpublished source, use a local Compose override that builds Map, Monster Raid
@@ -1256,6 +1256,11 @@ base64 cursor keys and broker credentials from `.env.example`; Raid's broker
 account is `monster-raid`. Both wait for broker provisioning before startup.
 Scope overrides must match the issuer policy; their defaults are requested
 grants, not evidence of permission. Existing database volumes are preserved.
+
+Tamagotchi calls User Management and Package Registry through
+`http://gateway:3000` with its own service tokens. Tamagotchi and Notification
+use the broker accounts `tamagotchi` and `notification` and wait for broker
+provisioning before startup.
 
 On first start, the
 database initializer creates eight databases and roles, applies the User
