@@ -26,4 +26,11 @@ account registry "${REGISTRY_RABBITMQ_PASSWORD}" \
   '^(package-registry\.events|package-registry\.(work|retry\.5s|retry\.30s|dlq))$' \
   '^(package-registry\.work|user-management\.events)$'
 
+# Notification publishes nothing: configure/write cover only its own consumer queues.
+# It subscribes to all six publisher exchanges, so read lists those plus its own work queue.
+account notification "${NOTIFICATION_RABBITMQ_PASSWORD}" \
+  '^notification\.(work|retry\.5s|retry\.30s|dlq)$' \
+  '^notification\.(work|retry\.5s|retry\.30s|dlq)$' \
+  '^(notification\.work|user-management\.events|tamagotchi\.events|battle\.events|guild\.events|map\.events|monster-raid\.events)$'
+
 echo "rabbitmq accounts ready"
