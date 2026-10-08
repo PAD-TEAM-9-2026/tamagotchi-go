@@ -24,9 +24,12 @@ For deployment changes, also validate Compose with a local `deploy/.env` and ver
 
 Squash work branches into `develop`. Merge a tested release into `main` with a merge commit. Use a release branch from the agreed develop cut when later work must be excluded. Do not push directly to either shared branch.
 
-Versions use `X.Y`: X identifies the integration milestone and Y the revision within it. Start a milestone at revision zero and increment for released fixes or small changes. This numbering does not imply API compatibility; document breaking changes and the tested service versions separately.
+Versions use `X.Y.Z`: X identifies the integration milestone, Y the release
+revision and Z the patch revision. Start each release line at Z=0. This numbering
+does not imply API compatibility; document breaking changes and the tested
+service versions separately. Historical tags and releases remain unchanged.
 
-The shared repository receives an annotated `vX.Y` tag and a GitHub Release on
+The shared repository receives an annotated `vX.Y.Z` tag and a GitHub Release on
 the tested main merge commit. Service releases use the tested merge into main,
 without a separate Git tag or GitHub Release. Code, package and image versions
 use `X.Y.Z`. Image versions remain immutable; deployment pins use all three

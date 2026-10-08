@@ -1145,7 +1145,7 @@ one account per publishing or consuming service (see below).
 | Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
 | Notification | `victoriamutruc/notification:1.0.0` | 3008 |
 
-Code and image versions use `X.Y.Z`. Only this repository receives `X.Y`
+Code and image versions use `X.Y.Z`. Only this repository receives `X.Y.Z`
 Git tags and GitHub Releases. Never overwrite a released numeric version.
 
 The pinned Map/Raid images predate their current integration branches. To test
@@ -1272,9 +1272,11 @@ conversations, and a passing `ci` check. New commits dismiss prior approvals.
 Squash work branches into `develop` and merge releases into `main` with a
 merge commit. Contract changes also need review from affected service owners.
 
-Versions use `X.Y` for milestone and revision. The shared release is tagged
-`vX.Y` on main and recorded as a GitHub Release. Service releases use the main
-merge; their published images retain explicit immutable versions.
+Versions use `X.Y.Z`: milestone, release revision and patch revision. Start each
+release line at Z=0. The shared release receives an annotated `vX.Y.Z` tag on the
+tested main merge and a GitHub Release. Service releases use the main merge;
+images remain explicitly pinned and immutable. Historical tags and releases
+remain unchanged.
 
 Track work in the [team project](https://github.com/orgs/PAD-TEAM-9-2026/projects/1).
 See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
