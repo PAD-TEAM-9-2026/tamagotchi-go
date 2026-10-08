@@ -88,6 +88,7 @@ services:
         condition: service_completed_successfully
     environment:
       PORT: 3000
+      LOG_LEVEL: ${TAMAGOTCHI_LOG_LEVEL:-info}
       STORAGE: postgres
       DATABASE_URL: postgres://${TAMAGOTCHI_DB_USER:-tamagotchi}:${TAMAGOTCHI_DB_PASSWORD}@database:5432/${TAMAGOTCHI_DB_NAME:-tamagotchi}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
@@ -254,6 +255,7 @@ services:
         condition: service_completed_successfully
     environment:
       PORT: 3000
+      LOG_LEVEL: ${NOTIFICATION_LOG_LEVEL:-info}
       STORAGE: postgres
       DATABASE_URL: postgres://${NOTIFICATION_DB_USER:-notification}:${NOTIFICATION_DB_PASSWORD}@database:5432/${NOTIFICATION_DB_NAME:-notification}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
