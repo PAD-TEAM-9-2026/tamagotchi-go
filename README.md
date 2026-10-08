@@ -1137,13 +1137,13 @@ one account per publishing or consuming service (see below).
 |---|---|---|
 | Gateway | `victoriamutruc/gateway:2.0.1` | 3000 |
 | User Management | `patriciamoraru/user-management:1.2.0` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:1.0.0` | 3002 |
+| Tamagotchi | `victoriamutruc/tamagotchi:2.0.1` | 3002 |
 | Battle | `patriciamoraru/battle:1.2.0` | 3003 |
 | Guild | `mihaelacatan/guild-service:0.2.0` | 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:0.2.0` | 3005 |
 | Map | `sergedbs/map:1.0.0` | 3006 |
 | Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
-| Notification | `victoriamutruc/notification:1.0.0` | 3008 |
+| Notification | `victoriamutruc/notification:2.0.1` | 3008 |
 
 Code and image versions use `X.Y.Z`. Only this repository receives `X.Y.Z`
 Git tags and GitHub Releases. Never overwrite a released numeric version.
