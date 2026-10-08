@@ -96,9 +96,12 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
-This section describes the target architecture. Published services still use
-mock dependencies; Gateway routing and authorization are not implemented yet.
-The diagram update is separate from this contract proposal.
+This section describes the target architecture. Gateway source implements
+routing and authorization; Map and Monster Raid integration source uses real
+HTTP adapters and durable broker delivery. Published image versions may predate
+these changes. Validate the selected image set against real dependencies before
+claiming deployment compatibility. The existing diagram still needs its routing
+and obsolete dependency paths reconciled with this contract.
 
 ![Tamagotchi Go architecture with 8 microservices, PostgreSQL per service, and RabbitMQ](docs/img/architecture_diagram.png)
 
@@ -314,7 +317,8 @@ milliseconds. Application timestamps remain ISO 8601 UTC with milliseconds.
 Gateway alone holds its assertion private key. Services load the public JWKS
 from a mounted file. Use `GATEWAY_ASSERTION_PRIVATE_KEY_PATH`,
 `GATEWAY_ASSERTION_KEY_ID` and `GATEWAY_ASSERTION_JWKS_PATH` for configuration;
-the public path is configured for services to mount; Gateway does not read it.
+services and Gateway load the public set. Gateway uses it to verify nested
+service context and to check key readiness.
 Paths and key ids are configuration, never private key values in documentation.
 Deploy a new public key first, switch Gateway's signing kid, then remove the old
 key after its assertions and five-second tolerance expire. Keep access-token
@@ -402,16 +406,16 @@ Guild's is:
 
 | Scope | Route | Caller |
 |---|---|---|
-| `guild:read` | `GET /v1/guilds/{guildId}` and `GET /v1/guilds/{guildId}/members`, both user or service | none yet |
+| `guild:read` | `GET /v1/guilds/{guildId}` and `GET /v1/guilds/{guildId}/members`, both user or service | Monster Raid |
 
-`guild:read` is named for completeness; no service calls it today, so nothing
-should be allowlisted for it until one does.
+Monster Raid calls both Guild routes through Gateway for leader and membership
+checks. Its `guild:read` grant belongs to caller `monster-raid`.
 
 Registry's are:
 
 | Scope | Route | Caller |
 |---|---|---|
-| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | Tamagotchi, User Management, Monster Raid |
+| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | Tamagotchi for package configuration; User Management for currency rules; Monster Raid for stat bonuses |
 | `registry:check-eligibility` | `POST /v1/packages/eligibility-check` | Guild |
 | `registry:read-bosses` | `GET /v1/bosses/{bossId}`, user or service | Monster Raid |
 | `registry:read-occurrences` | `GET /v1/raid-occurrences/{id}`, user or service | Monster Raid |
@@ -421,6 +425,24 @@ Registry's are:
 so nothing should be allowlisted for it until one does.
 
 Registry calls no other service, so it holds no `SERVICE_CLIENT_SECRET` either.
+
+Map and Monster Raid request these issuer allowlist entries. Each row is a
+caller service, a single destination audience and its permitted scope set:
+
+| `service_name` | `audience` | Scopes |
+|---|---|---|
+| `map` | `user-management` | `users:read-relationships` |
+| `monster-raid` | `user-management` | `users:credit-global` |
+| `monster-raid` | `guild` | `guild:read` |
+| `monster-raid` | `package-registry` | `registry:read-config`, `registry:read-bosses`, `registry:read-occurrences` |
+| `monster-raid` | `tamagotchi` | `tamagotchi:read-collection`, `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp` |
+
+Raid requests one operation scope per token; the table describes the allowed
+set, not a combined token for all destinations. The older proposal names
+`tamagotchi:engage` and `tamagotchi:grant-xp` are superseded. `raid:read` protects
+service reads of a raid and its leaderboard, but has no current service caller;
+do not add a speculative issuer grant. These caller requirements do not establish
+that the User Management policy or deployed images already implement them.
 
 A user needs no scope on the routes marked user or service. A service without the scope
 gets `403 insufficient_scope`. Which service may have which scope is the User Management
@@ -450,9 +472,11 @@ Never log bearer tokens, assertions, key material or refresh credentials.
 
 ### Work limits proposal
 
-Pending Victoria, Patricia and service-owner review. Gateway currently reads
-5000 ms and 128 slots as unused configuration; the pools below are proposed
-enforcement, not measured capacity or current middleware.
+This remains the specification for affected-owner review. Gateway, Map and
+Monster Raid integration source enforces admission, deadlines and cancellation.
+The values below are initial policy defaults, not measured throughput. Other
+service implementations and the selected deployed images need their own
+acceptance evidence.
 
 | Component | Local timeout | Per-process admission |
 |---|---|---|
@@ -488,10 +512,13 @@ deadline/abort/shutdown cancellation, rollback, worker recovery and slot reuse.
 HTTP failure does not prove that an external side effect did not commit; command
 replay and durable reward effects handle uncertain outcomes.
 
-### Command replay and pagination proposal
+<a id="command-replay-and-pagination-proposal"></a>
 
-Pending affected-owner review. Map/Raid currently do not implement command-key
-replay or cursors; the successful response shapes below stay unchanged.
+### Command replay and pagination
+
+Map/Raid integration branches implement command replay and cursors. The pinned
+published images predate this work. Affected-owner compatibility review and real
+deployment validation remain required; successful response shapes stay unchanged.
 
 Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
 `POST /raid/v1/raids/{raidId}/attack`, and the nine User Management commands
@@ -925,6 +952,21 @@ model.
 Friends and enemies are visible while their location is fresh. Strangers appear
 within 6 metres, which is configurable.
 
+Every location write, deletion, raw read and nearby query requires a verified
+user matching `user_id` or the path's `userId`. Nearby is the interface for
+viewing other players. Plain identity headers grant no access.
+
+Map fetches the complete relationships list through Gateway. If any page fails,
+it discards classification and returns only fresh six-metre strangers, with
+`partial=true` and `partial_reason=RELATIONSHIPS_UNAVAILABLE`. Reads publish no
+events. Accepted observations persist encounter transitions and outbox facts;
+an encounter emits once per episode and ends on deletion, expiry or separation.
+Unavailable relationship classification produces no proximity event.
+
+The public `GET`/`HEAD /map/demo/` assets display nearby markers with MapLibre
+and OpenFreeMap. Their application API calls remain authenticated through
+Gateway; provider assets and tiles are the documented external exception.
+
 ### Monster Raid, `/raid`
 
 | Method and path | Request | Response | Access |
@@ -936,11 +978,40 @@ within 6 metres, which is configurable.
 | `GET /v1/raids/{raidId}/leaderboard` | query limit, cursor | 200 Leaderboard | user or service |
 | `DELETE /v1/raids/{raidId}` | none | 204 | user |
 
-The current Monster Raid implementation accepts `X-User-Id` with a UUID v7 on domain requests while mock identity is enabled. This local header does not replace gateway authentication in the target contract.
+Creation and cancellation require the Guild leader. Attacks require membership
+and a verified user matching `user_id`. Global listing requires a user; a guild
+filter requires membership. User detail/leaderboard reads require membership;
+verified service reads require `raid:read`. Plain identity headers grant no access.
 
-The shared contract requires Tamagotchi engagement reservation when a member
-contributes a primary creature. Mock integration mode does not acquire the
-cross-service lock.
+Creation requires an active occurrence inside its availability window. Raid
+expiry is the earlier of configured duration and `available_until`. Boss
+configuration and participant creature/bonus snapshots remain immutable.
+Admission persists its engagement reference before reserving through Tamagotchi;
+pending admissions count toward capacity. External calls run outside mutation
+locks, followed by transactional invariant and one-second cooldown checks.
+
+Damage starts at `10 * level`, applies matching `ATTACK_BPS` bonuses, then
+weakness `*1.5` or resistance `*0.75`, and subtracts boss defense. Weakness takes
+precedence. Floor the result with minimum one; credit at most remaining boss HP.
+No boost consumption is included.
+
+Victory global currency and XP are total reward pools, allocated in proportion
+to credited damage. Rounding remainders use fractional remainder descending,
+then user UUID ascending. XP targets the contributed creature. Terminal state,
+entitlements, engagement cleanup and lifecycle outbox facts commit together;
+HTTP effects use stable keys and durable progress outside mutation locks.
+Permanent delivery failures become `NEEDS_ATTENTION`.
+
+Expiry fails active raids once. When the pinned boss has non-null defeat rewards,
+each admitted participant receives the configured global currency and XP amounts;
+XP targets the contributed creature. Pending admissions earn nothing. Null
+configuration or no participants produces no payout. Existing raids keep their
+original snapshots. Currency credits use RAID_WIN or RAID_DEFEAT; XP uses RAID.
+Registry deactivation or
+cancellation cancels matching active raids and releases engagements without
+rewards. Older occurrence versions are ignored. Existing legacy mocked snapshots
+remain readable/cancellable but production attacks return
+`409 legacy_snapshot_unavailable`.
 
 ### Notification, `/notification`
 
@@ -1060,6 +1131,25 @@ name the variable without credentials. Gateway and database credentials are
 separate. Validate outage/recovery, redelivery, poison-message retries/DLQ,
 consumer restart and unroutable publication before claiming real delivery.
 
+## Image publication
+
+Release, code, package and image versions use `X.Y.Z`: integration milestone,
+release revision and patch.
+Start each release line at Z=0. Existing tags and releases remain unchanged.
+
+Each service's workflow must publish after CI passes on a tested merge into
+`main`. One build produces the numeric version and `latest` for `linux/amd64`
+and `linux/arm64`. Choose an unused version in the service's release metadata;
+serialize publication, reject existing numeric tags and stop if registry checks fail.
+
+Repository owners configure `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` as Actions
+secrets and approve publication activation. Workflows with a publication gate
+remain disabled until that approval.
+
+Shared publishes no image. It pins tested numeric image versions in Compose and
+records them in release notes. Only Shared receives an annotated `vX.Y.Z` tag
+and GitHub Release on its tested `main` merge. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Deployment
 
 `deploy/compose.yaml` pulls nine versioned images under the `tamagotchi-go`
@@ -1071,13 +1161,19 @@ one account per publishing or consuming service (see below).
 |---|---|---|
 | Gateway | `victoriamutruc/gateway:2.0.2` | 3000 |
 | User Management | `patriciamoraru/user-management:2.0.0` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:1.0.0` | 3002 |
+| Tamagotchi | `victoriamutruc/tamagotchi:2.0.1` | 3002 |
 | Battle | `patriciamoraru/battle:1.2.0` | 3003 |
 | Guild | `mihaelacatan/guild-service:0.2.0` | 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:0.2.0` | 3005 |
 | Map | `sergedbs/map:1.0.0` | 3006 |
 | Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
-| Notification | `victoriamutruc/notification:1.0.0` | 3008 |
+| Notification | `victoriamutruc/notification:2.0.1` | 3008 |
+
+The pinned Map/Raid images predate their current integration branches. To test
+unpublished source, use a local Compose override that builds Map, Monster Raid
+and Gateway from their standalone checkouts, with distinct local image names
+and `pull_policy: never`. Keep the override outside Git. Replace canonical pins
+only after the corresponding numeric images are published and validated.
 
 Requires Docker with Compose v2 and free host ports 3000 through 3008 and
 5432. The Gateway starts last, after all eight services report healthy, so a
@@ -1104,19 +1200,25 @@ Use distinct URL-safe passwords in the untracked `.env`.
 
 `rabbitmq` runs with the management plugin, bound to `127.0.0.1` (AMQP `5672`,
 management `15672`). `rabbitmq-provision` runs once after the broker is healthy:
-it creates one account per service from `deploy/rabbitmq/provision.sh`. Each
-account can configure, write and read only its own exchanges and queues. The
-admin account (`RABBITMQ_USER`) is used only by that step. Set `RABBITMQ_USER`,
-`RABBITMQ_PASSWORD`, `USER_MANAGEMENT_RABBITMQ_PASSWORD`, `GUILD_RABBITMQ_PASSWORD` and `REGISTRY_RABBITMQ_PASSWORD`
-in `.env`. Guild and Registry retry their broker connection at startup, so they
-do not wait for it in Compose. Their settings, and the account names, are in
-their own READMEs.
+it merges service accounts, all seven exchanges, exact subscription bindings
+and quorum work/retry/DLQ queues through `deploy/rabbitmq/provision.py`.
+It includes User Management's publisher account and preserves existing broker
+data and Guild/Registry account names. Retry queues
+use five-/thirty-second message TTLs and an at-least-once dead-letter policy.
+The passive audit queue has no processing service.
+
+The provisioning step uses the admin account. Publishers can write only their
+exchange; consumers can read their subscribed exchanges/queues and transfer
+retries through the default exchange. Set every broker password named in
+`deploy/.env.example`; no credentials are committed. Provisioning does not
+prove consumer delivery. Runtime validation
+against RabbitMQ 4.1 remains required before deployment acceptance.
 
 Gateway signing keys: `deploy/gateway/generate-keys.sh` creates the Gateway's
 private signing key and the public key set in `deploy/secrets/`, which Git ignores.
-The Gateway mounts both files; Guild and Registry mount the public key set, and
-refuse to start without it. Run the script once before the first start, and keep
-the private key on your machine.
+The Gateway mounts both files; Guild, Registry, Map and Monster Raid mount the
+public key set. Usable keys are required for authenticated requests. Run the
+script once before the first start, and keep the private key on your machine.
 
 User Management keys: `deploy/user-management/generate-keys.sh` creates the
 private key it signs access tokens with, `deploy/secrets/access-token.pem`,
@@ -1137,6 +1239,16 @@ A service that calls another service fetches its own token from
 `MAP_SERVICE_CLIENT_SECRET` and `MONSTER_RAID_SERVICE_CLIENT_SECRET` in `.env`.
 Registry and Notification call no other service, so they have no secret.
 
+Caller secrets must match User Management's registered client credentials and
+scope policy. Setting a caller variable does not configure the issuer or grant
+permission. Preserve existing keys and credentials when updating local settings.
+
+Map and Monster Raid call `http://gateway:3000`. Configure their distinct
+base64 cursor keys and broker credentials from `.env.example`; Raid's broker
+account is `monster-raid`. Both wait for broker provisioning before startup.
+Scope overrides must match the issuer policy; their defaults are requested
+grants, not evidence of permission. Existing database volumes are preserved.
+
 On first start, the
 database initializer creates eight databases and roles, applies the User
 Management and Battle SQL, and enables PostGIS for Map. The remaining services
@@ -1156,9 +1268,19 @@ docker compose exec user-management dotnet UserManagement.dll seed
 docker compose exec battle dotnet Battle.dll seed
 ```
 
-Map and Monster Raid seed through their APIs. From their standalone repositories,
-run `scripts/seed.sh` with `MAP_BASE_URL=http://localhost:3006` or
-`MONSTER_RAID_BASE_URL=http://localhost:3007`, respectively.
+Map and Monster Raid seed through Gateway using Python 3. From each standalone
+repository, run `scripts/seed.sh` after configuring real fixtures in your
+untracked environment:
+
+| Service | Required inputs | Default Gateway URL |
+|---|---|---|
+| Map | `MAP_USER_ID`, `MAP_USER_TOKEN` | `http://localhost:3000/map` |
+| Monster Raid | `RAID_GUILD_ID`, `RAID_OCCURRENCE_ID`, `RAID_LEADER_TOKEN` | `http://localhost:3000/raid` |
+
+Tokens must match the location owner or Guild leader. The occurrence must be
+active. Override `MAP_BASE_URL` or `MONSTER_RAID_BASE_URL` for another Gateway
+address. Existing matching records are preserved; auth/dependency failures stop
+seeding. Mutations carry command keys and are not automatically retried.
 
 ### API collections
 
@@ -1167,7 +1289,10 @@ Import the eight collections in `postman/` and select
 base URL per service, and all of them now point at the Gateway
 (`http://localhost:3000/<prefix>`). The Gateway and the services must be running
 first. Registry's admin-only requests need a caller whose token carries the
-`admin` role; until User Management issues that role, they are refused. Map and Monster Raid requests create their own fixtures.
+`admin` role; otherwise they are refused. Map requests prepare locations for two
+supplied real accounts. Raid requests require a supplied real Guild, leader,
+active occurrence and eligible primary creature; they do not create those
+external prerequisites.
 Run the other service collections in order when a request depends on a previous
 response. See [Postman instructions](postman/README.md).
 
@@ -1180,9 +1305,7 @@ conversations, and a passing `ci` check. New commits dismiss prior approvals.
 Squash work branches into `develop` and merge releases into `main` with a
 merge commit. Contract changes also need review from affected service owners.
 
-Versions use `X.Y` for milestone and revision. The shared release is tagged
-`vX.Y` on main and recorded as a GitHub Release. Service releases use the main
-merge; their published images retain explicit immutable versions.
+Versioning and publication follow [Image publication](#image-publication).
 
 Track work in the [team project](https://github.com/orgs/PAD-TEAM-9-2026/projects/1).
 See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
