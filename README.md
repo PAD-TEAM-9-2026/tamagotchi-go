@@ -535,8 +535,9 @@ published images predate this work. Affected-owner compatibility review and real
 deployment validation remain required; successful response shapes stay unchanged.
 
 Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
-`POST /raid/v1/raids/{raidId}/attack`, and the nine User Management commands
-named under its implementation notes. Require an Idempotency-Key of 1 to 128
+`POST /raid/v1/raids/{raidId}/attack`, the nine User Management commands
+named under its implementation notes, and the five Battle commands (create,
+accept, reject, attack and forfeit) named under its implementation notes. Require an Idempotency-Key of 1 to 128
 printable ASCII characters after HTTP header whitespace normalization; absence
 or invalid values return `400 invalid_idempotency_key`. Keys are case-sensitive.
 Scope is the verified caller, HTTP operation and resource path. Fingerprint the
@@ -819,6 +820,34 @@ validated against the caller's holder set, so a player may field any creature
 they hold, including one they won from someone else. A creature is not refused
 for being shared with the opponent already, but a grant to a user who is already
 a holder is a no-op, so nothing is gained by fighting for one twice.
+
+**Command replay.** The five commands above marked `Idempotency-Key` (create, accept, reject, attack
+and forfeit) follow the replay rules under "Command replay and pagination": a key of 1 to 128 printable
+ASCII characters, scope of verified caller, HTTP operation and resource path, and receipts kept 24 hours.
+`GET` routes carry no key. Beyond those rules, as implemented by Battle:
+
+- A request without a valid key is `400 invalid_idempotency_key`, before anything else is done. Authentication
+  is checked first, on every replay. A request the use case rejects as malformed (`400 validation_error`)
+  reserves no key, so the corrected request can reuse it.
+- The same key with a changed request is `409 idempotency_conflict`. A changed boost list or another creature is a
+  changed request. A retry that arrives while the first is still running waits for it and gets the same answer,
+  or is `409 command_in_progress` after 5 seconds.
+- A replay returns the stored answer with the status the route defines: `201` for a create, `202` for an
+  accept.
+- A success and a final domain error about Battle's own data (`404 battle_not_found`, `409 not_pending`,
+  `409 not_ongoing`, `410 challenge_expired`, `422 self_challenge`) are stored and replayed. A failure that may
+  pass is not stored, so the retry runs again: `502 upstream_unavailable`, `503`, `504`, and an answer that
+  depends on the state of another service at that moment, such as `409 creature_engaged` or
+  `404 unknown_opponent`. A creature that was engaged a minute ago may be free now.
+- The effect and its receipt are saved together or not at all.
+- **A forfeit whose settlement could not be completed is stored with `settlement_status` or
+  `access_grant_status` as `NEEDS_ATTENTION`.** The battle is over, so a retry never pays again. Retrying the
+  failed half is a separate step that does not depend on the caller's key.
+- **Keys for the calls Battle makes.** Each outbound command carries its own `Idempotency-Key`, so a retry is
+  replayed by the other service. One that happens once per battle (a boost consumption, the settlement, an XP
+  award, the access grant) is keyed by the battle. A reservation is keyed by the attempt, that is the caller's own
+  key, and a release by the engagement it lets go of: a creature lock that was reserved, released and reserved
+  again must not be answered with the stored first reservation, which is no longer held.
 
 **Settlement is three calls and one event.** Battle credits the winner and debits
 the loser through User Management, writes the XP split through Tamagotchi at
