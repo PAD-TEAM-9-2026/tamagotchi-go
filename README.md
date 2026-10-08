@@ -1352,3 +1352,7 @@ Gateway logs HTTP requests and Guild negotiation; direct WebSocket activity
 belongs to Guild. Its owner should log socket open/close, rejected upgrades,
 message outcomes and errors, without tickets or message contents. Never log
 Authorization, service secrets, assertions or query strings containing credentials.
+
+Map/Raid's supplied database pools are capped at 10 connections each, independently
+of their 64-task admission limits. Account for every service pool when sizing the
+shared PostgreSQL connection budget. Pool waits inherit request cancellation.
