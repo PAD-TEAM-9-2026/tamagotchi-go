@@ -902,8 +902,11 @@ checked again at that point.
 | `rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} | yes |
 | `defeat_rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | yes |
 
-`defeat_rewards` is what a participant gets when the raid ends without the boss
-being defeated (timeout or wipe). `null` means nothing is paid out on defeat.
+`defeat_rewards` gives the currency and XP amounts per admitted participant when
+the raid ends without the boss being defeated (timeout or wipe). `null` means no
+defeat payout. Monster Raid currently implements timeout, not a wipe mechanism.
+Pending admissions and cancelled raids receive no rewards. XP goes to the
+participant's contributed creature; existing raids retain their pinned amounts.
 Both reward objects are restricted to the two currencies every Tamagotchi has
 regardless of package — global currency and XP — never a package-defined stat
 key, so a reward never references an attribute a participant's package does

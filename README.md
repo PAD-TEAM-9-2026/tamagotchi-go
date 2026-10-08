@@ -995,14 +995,19 @@ weakness `*1.5` or resistance `*0.75`, and subtracts boss defense. Weakness take
 precedence. Floor the result with minimum one; credit at most remaining boss HP.
 No boost consumption is included.
 
-Configured global currency and XP are total reward pools, allocated in proportion
+Victory global currency and XP are total reward pools, allocated in proportion
 to credited damage. Rounding remainders use fractional remainder descending,
 then user UUID ascending. XP targets the contributed creature. Terminal state,
 entitlements, engagement cleanup and lifecycle outbox facts commit together;
 HTTP effects use stable keys and durable progress outside mutation locks.
 Permanent delivery failures become `NEEDS_ATTENTION`.
 
-Expiry fails active raids once without rewards. Registry deactivation or
+Expiry fails active raids once. When the pinned boss has non-null defeat rewards,
+each admitted participant receives the configured global currency and XP amounts;
+XP targets the contributed creature. Pending admissions earn nothing. Null
+configuration or no participants produces no payout. Existing raids keep their
+original snapshots. Currency credits use RAID_WIN or RAID_DEFEAT; XP uses RAID.
+Registry deactivation or
 cancellation cancels matching active raids and releases engagements without
 rewards. Older occurrence versions are ignored. Existing legacy mocked snapshots
 remain readable/cancellable but production attacks return
