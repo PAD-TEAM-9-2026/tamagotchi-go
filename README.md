@@ -1257,9 +1257,11 @@ A service that calls another service fetches its own token from
 `MAP_SERVICE_CLIENT_SECRET` and `MONSTER_RAID_SERVICE_CLIENT_SECRET` in `.env`.
 Registry and Notification call no other service, so they have no secret.
 
-Caller secrets must match User Management's registered client credentials and
-scope policy. Setting a caller variable does not configure the issuer or grant
-permission. Preserve existing keys and credentials when updating local settings.
+Compose registers each caller secret with User Management using the same local
+variable. For a fresh local setup, choose distinct values; preserve existing
+credentials when updating it. Matching secrets authenticate the client but do
+not grant scopes: the issuer allowlist must permit each requested destination
+and scope.
 
 Map and Monster Raid call `http://gateway:3000`. Configure their distinct
 base64 cursor keys and broker credentials from `.env.example`; Raid's broker
