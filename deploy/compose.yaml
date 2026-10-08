@@ -71,7 +71,7 @@ services:
       retries: 10
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:1.0.0
+    image: victoriamutruc/tamagotchi:2.0.1
     pull_policy: always
     depends_on:
       database:
@@ -80,8 +80,10 @@ services:
       PORT: 3000
       STORAGE: postgres
       DATABASE_URL: postgres://${TAMAGOTCHI_DB_USER:-tamagotchi}:${TAMAGOTCHI_DB_PASSWORD}@database:5432/${TAMAGOTCHI_DB_NAME:-tamagotchi}
-      AUTH_MODE: dev
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       SERVICE_CLIENT_SECRET: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET:?set TAMAGOTCHI_SERVICE_CLIENT_SECRET in .env}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3002:3000"
     healthcheck:
@@ -228,7 +230,7 @@ services:
       retries: 10
 
   notification:
-    image: victoriamutruc/notification:1.0.0
+    image: victoriamutruc/notification:2.0.1
     pull_policy: always
     depends_on:
       database:
@@ -237,7 +239,11 @@ services:
       PORT: 3000
       STORAGE: postgres
       DATABASE_URL: postgres://${NOTIFICATION_DB_USER:-notification}:${NOTIFICATION_DB_PASSWORD}@database:5432/${NOTIFICATION_DB_NAME:-notification}
-      AUTH_MODE: dev
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      PUSH_PROVIDER: ${NOTIFICATION_PUSH_PROVIDER:-stub}
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3008:3000"
     healthcheck:

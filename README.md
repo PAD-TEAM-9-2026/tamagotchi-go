@@ -385,7 +385,7 @@ Tamagotchi's are:
 | Scope | Route | Caller |
 |---|---|---|
 | `tamagotchi:read-creature` | `GET /v1/tamagotchis/{id}`, user or service | |
-| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle at settlement, Monster Raid at victory |
+| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle and Monster Raid, at settlement |
 | `tamagotchi:grant-access` | `POST /v1/tamagotchis/{id}/holders` | Battle, at settlement |
 | `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | |
 | `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | Monster Raid |
@@ -415,10 +415,14 @@ Registry's are:
 
 | Scope | Route | Caller |
 |---|---|---|
-| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | User Management for currency rules; Monster Raid for stat bonuses |
+| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | Tamagotchi for package configuration; User Management for currency rules; Monster Raid for stat bonuses |
 | `registry:check-eligibility` | `POST /v1/packages/eligibility-check` | Guild |
 | `registry:read-bosses` | `GET /v1/bosses/{bossId}`, user or service | Monster Raid |
 | `registry:read-occurrences` | `GET /v1/raid-occurrences/{id}`, user or service | Monster Raid |
+| `registry:read-members` | `GET /v1/packages/{packageId}/users` | none yet |
+
+`registry:read-members` is named for completeness; no service calls it today,
+so nothing should be allowlisted for it until one does.
 
 Registry calls no other service, so it holds no `SERVICE_CLIENT_SECRET` either.
 
@@ -517,7 +521,8 @@ published images predate this work. Affected-owner compatibility review and real
 deployment validation remain required; successful response shapes stay unchanged.
 
 Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
-`POST /raid/v1/raids/{raidId}/attack`. Require an Idempotency-Key of 1 to 128
+`POST /raid/v1/raids/{raidId}/attack`, and the nine User Management commands
+named under its implementation notes. Require an Idempotency-Key of 1 to 128
 printable ASCII characters after HTTP header whitespace normalization; absence
 or invalid values return `400 invalid_idempotency_key`. Keys are case-sensitive.
 Scope is the verified caller, HTTP operation and resource path. Fingerprint the
@@ -551,6 +556,9 @@ sort tuple and return next_cursor=null when no further results remain.
 | Map nearby | distance_m ascending, user_id ascending | changed viewer observation returns 409 cursor_stale |
 | Raid list | started_at descending, raid_id descending | caller/filter mismatch returns 400 invalid_cursor |
 | Raid leaderboard | damage_dealt descending, joined_at ascending, user_id ascending | changed raid_version returns 409 cursor_stale |
+| User Management friend requests | expires_at descending, request_id descending | caller or page size mismatch returns 400 invalid_cursor |
+| User Management relationships | other_user_id ascending | caller, listed user or page size mismatch returns 400 invalid_cursor |
+| User Management boosts | boost_id ascending | caller or page size mismatch returns 400 invalid_cursor |
 
 Bind Map's cursor to the full viewer observation, including coordinates, since
 equal-timestamp location changes remain valid. Freshness and current visibility
@@ -663,6 +671,45 @@ above did not spell out, as implemented by User Management:
   `kid`, then remove the old key once its tokens have expired.
 - Callers are identified only by the verified Gateway assertion. The answers for a missing
   or wrong caller are in the downstream failure table of the verified identity proposal.
+
+**Command replay.** The nine commands above marked `Idempotency-Key` (register, join a package,
+create, accept and reject a friend request, both currency credits, battle settlement and boost
+consumption) follow the replay rules of the proposal under "Command replay and pagination
+proposal": a key of 1 to 128 printable ASCII characters, scope of verified caller, HTTP operation
+and resource path, and receipts kept 24 hours. The anonymous caller of register is scoped by the
+route alone. Beyond those rules, as implemented by User Management:
+
+- A request without a valid key is `400 invalid_idempotency_key`, before anything else is done.
+  Authentication and scope are checked first, on every replay.
+- The same key with a changed request is `409 idempotency_conflict`.
+- A retry that arrives while the first request is still running waits for it and then gets the
+  same answer. If the first has not finished after 5 seconds the retry is
+  `409 command_in_progress`.
+- A successful result and a final domain error (for example `409 already_joined` or
+  `422 unknown_package`) are stored and replayed. A failure that may pass, such as
+  `502 upstream_unavailable`, `503` or `504`, is not stored, so the retry runs again.
+- The effect and its receipt are saved together or not at all. A stored response never
+  contains a password or a token.
+
+**Pagination.** The three lists above that take `limit` and `cursor` (friend requests, relationships and
+boosts) follow the cursor rules of the proposal under "Command replay and pagination proposal", with the
+sort tuples in its table. There is no membership list any more, so there is no fourth. As implemented by
+User Management:
+
+- `limit` defaults to 100. A value below 1 or above 100, or one that is not a whole number, is
+  `400 validation_error`, not a silently clamped page.
+- The sort tuple is unique for relationships (`other_user_id`) and boosts (`boost_id`), because each is
+  unique for the listed user. Friend requests break ties between equal `expires_at` by `request_id`, so
+  no request is skipped or repeated.
+- A cursor is bound to the verified caller, the endpoint, the listed user (relationships) and the page
+  size. A different caller, endpoint, listed user or `limit` is `400 invalid_cursor`, as are a tampered,
+  malformed, expired or unsupported-version cursor. Every page returns a new cursor, valid for five
+  minutes from the moment it was issued.
+- The lists are live queries, not snapshots. A row added or removed between two pages is seen or not
+  according to where it sorts relative to the cursor: one that sorts before the last tuple is not shown
+  and one that sorts after it is. `next_cursor` is `null` on the last page, including when the last page
+  is exactly full.
+- The signing key is service configuration (`CURSOR_SIGNING_KEY`), never part of a cursor or committed.
 
 Joining a package grants that package's starter once per user per package, and
 that is the only path by which a creature is minted for a player. There is no
@@ -851,7 +898,7 @@ contract above did not spell out:
 | `POST /v1/packages/eligibility-check` | EligibilityInput | 200 Eligibility | service |
 | `POST /v1/bosses` | BossInput, Idempotency-Key | 201 Boss | admin |
 | `GET /v1/bosses` | query limit, cursor | 200 BossPage | admin |
-| `GET /v1/bosses/{bossId}` | query config_version | 200 Boss | admin or service |
+| `GET /v1/bosses/{bossId}` | query config_version | 200 Boss | user or service |
 | `PUT /v1/bosses/{bossId}` | BossInput, If-Match | 200 Boss | admin |
 | `POST /v1/raid-occurrences` | OccurrenceInput, Idempotency-Key | 201 Occurrence | admin |
 | `GET /v1/raid-occurrences` | query limit, cursor | 200 OccurrencePage | user |
