@@ -1,21 +1,21 @@
 {
   "info": {
     "name": "Tamagotchi",
-    "description": "Every endpoint of the Tamagotchi service, in an order that runs start to finish. Requests capture ids into collection variables, so a full run needs no manual input beyond the Tamagotchi Go Local environment.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
+    "description": "A scenario of the Tamagotchi service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry, registers and logs in two fresh users, and fetches a Battle service token. Each registration publishes user.package_joined.v1, and Tamagotchi mints the package starter from it, so the creatures are polled for rather than minted: no service is allowed tamagotchi:mint.\n\nNeeds the shared stack with the broker, a seeded Registry, Tamagotchi with USER_MANAGEMENT_URL and PACKAGE_REGISTRY_URL set, and battle_service_secret set as a current value to BATTLE_SERVICE_CLIENT_SECRET from deploy/.env. Never save that value in the collection. Care expectations follow the seeded Dragon Tamers rules: feed adds 20 hunger, capped at 100, and 5 xp.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
-      "key": "package_id",
-      "value": "0192f3c1-8a44-7c31-9e02-6b1d4f8a2c11"
+      "key": "tamagotchi_direct_url",
+      "value": "http://localhost:3002"
     },
     {
-      "key": "package_sprouts_id",
-      "value": "0192f3c1-9b55-7d42-af13-7c2e5a9b3d22"
+      "key": "package_id",
+      "value": ""
     },
     {
       "key": "service_credential",
-      "value": "service.battle"
+      "value": ""
     },
     {
       "key": "owner_credential",
@@ -38,15 +38,7 @@
       "value": ""
     },
     {
-      "key": "pet_secondary_id",
-      "value": ""
-    },
-    {
       "key": "winner_pet_id",
-      "value": ""
-    },
-    {
-      "key": "winner_pet_secondary_id",
       "value": ""
     },
     {
@@ -78,15 +70,35 @@
       "value": ""
     },
     {
-      "key": "pet_secondary_version",
-      "value": ""
-    },
-    {
       "key": "fresh_uuid",
       "value": ""
     },
     {
       "key": "second_uuid",
+      "value": ""
+    },
+    {
+      "key": "battle_service_secret",
+      "value": ""
+    },
+    {
+      "key": "run_suffix",
+      "value": ""
+    },
+    {
+      "key": "owner_password",
+      "value": ""
+    },
+    {
+      "key": "winner_password",
+      "value": ""
+    },
+    {
+      "key": "pet_hunger",
+      "value": ""
+    },
+    {
+      "key": "starter_tries",
       "value": ""
     }
   ],
@@ -118,16 +130,26 @@
           "pm.collectionVariables.set('fresh_uuid', uuidv7());",
           "pm.collectionVariables.set('second_uuid', uuidv7());",
           "",
-          "function seed(key, value) {",
-          "  if (!pm.collectionVariables.get(key)) {",
-          "    pm.collectionVariables.set(key, value);",
-          "  }",
+          "const OPEN = [",
+          "  'Health',",
+          "  'Readiness',",
+          "  'List combat types',",
+          "  'Type advantage matrix',",
+          "  'Find the package in Registry',",
+          "  'Register the owner',",
+          "  'Log in the owner',",
+          "  'Register the rival',",
+          "  'Log in the rival',",
+          "];",
+          "const NEEDS_SECRET = ['Fetch a Battle service token', 'No service may be issued tamagotchi:mint'];",
+          "",
+          "if (NEEDS_SECRET.includes(pm.info.requestName) && !pm.variables.get('battle_service_secret')) {",
+          "  throw new Error('Set battle_service_secret to BATTLE_SERVICE_CLIENT_SECRET from deploy/.env as a current value.');",
           "}",
           "",
-          "seed('owner_id', pm.collectionVariables.get('fresh_uuid'));",
-          "seed('winner_id', pm.collectionVariables.get('second_uuid'));",
-          "seed('owner_credential', 'dev.' + pm.collectionVariables.get('owner_id'));",
-          "seed('winner_credential', 'dev.' + pm.collectionVariables.get('winner_id'));"
+          "if (!OPEN.includes(pm.info.requestName) && !NEEDS_SECRET.includes(pm.info.requestName) && !pm.collectionVariables.get('service_credential')) {",
+          "  throw new Error('Run the Setup folder first: it creates the users and fetches the service token.');",
+          "}"
         ]
       }
     }
@@ -139,18 +161,6 @@
         {
           "name": "Health",
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.set('owner_id', pm.collectionVariables.get('fresh_uuid'));",
-                  "pm.collectionVariables.set('winner_id', pm.collectionVariables.get('second_uuid'));",
-                  "pm.collectionVariables.set('owner_credential', 'dev.' + pm.collectionVariables.get('fresh_uuid'));",
-                  "pm.collectionVariables.set('winner_credential', 'dev.' + pm.collectionVariables.get('second_uuid'));"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -171,9 +181,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{tamagotchi_base_url}}/health",
+              "raw": "{{tamagotchi_direct_url}}/health",
               "host": [
-                "{{tamagotchi_base_url}}"
+                "{{tamagotchi_direct_url}}"
               ],
               "path": [
                 "health"
@@ -201,9 +211,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{tamagotchi_base_url}}/ready",
+              "raw": "{{tamagotchi_direct_url}}/ready",
               "host": [
-                "{{tamagotchi_base_url}}"
+                "{{tamagotchi_direct_url}}"
               ],
               "path": [
                 "ready"
@@ -290,213 +300,458 @@
       ]
     },
     {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Find the package in Registry",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('run_suffix', Date.now().toString(36));",
+                  "pm.collectionVariables.set('owner_password', 'Owner-' + pm.collectionVariables.get('fresh_uuid'));",
+                  "pm.collectionVariables.set('winner_password', 'Rival-' + pm.collectionVariables.get('second_uuid'));",
+                  "['owner_id', 'winner_id', 'owner_credential', 'winner_credential', 'service_credential', 'starter_tries'].forEach((key) => pm.collectionVariables.set(key, ''));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with an active package', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const active = pm.response.json().items.filter((p) => p.status === 'active');",
+                  "  pm.expect(active.length).to.be.above(0);",
+                  "  const chosen = active.find((p) => p.name === 'Dragon Tamers') || active[0];",
+                  "  pm.collectionVariables.set('package_id', chosen.package_id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{registry_base_url}}/v1/packages?limit=100",
+              "host": [
+                "{{registry_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register the owner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 registered', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('owner_id', body.user.user_id);",
+                  "pm.test('the starter is left to Tamagotchi', () => {",
+                  "  pm.expect(body.starter_status).to.eql('PENDING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"owner_{{run_suffix}}\",\n  \"email\": \"owner_{{run_suffix}}@example.com\",\n  \"password\": \"{{owner_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Log in the owner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with an access token', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('owner_credential', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner_{{run_suffix}}@example.com\",\n  \"password\": \"{{owner_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/login",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register the rival",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 registered', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('winner_id', pm.response.json().user.user_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"rival_{{run_suffix}}\",\n  \"email\": \"rival_{{run_suffix}}@example.com\",\n  \"password\": \"{{winner_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Log in the rival",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with an access token', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('winner_credential', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rival_{{run_suffix}}@example.com\",\n  \"password\": \"{{winner_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/login",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Fetch a Battle service token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with a bearer token for Tamagotchi', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().token_type).to.eql('Bearer');",
+                  "  pm.expect(pm.response.json().expires_in).to.eql(300);",
+                  "});",
+                  "pm.collectionVariables.set('service_credential', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Service-Secret",
+                "value": "{{battle_service_secret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service_name\": \"battle\",\n  \"audience\": \"tamagotchi\",\n  \"scopes\": [\n    \"tamagotchi:award-xp\",\n    \"tamagotchi:grant-access\",\n    \"tamagotchi:reserve-engagement\",\n    \"tamagotchi:read-engagement\",\n    \"tamagotchi:release-engagement\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/service-tokens",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "service-tokens"
+              ]
+            }
+          }
+        },
+        {
+          "name": "No service may be issued tamagotchi:mint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 scope_not_allowed, starters come only from user.package_joined.v1', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().code).to.eql('scope_not_allowed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Service-Secret",
+                "value": "{{battle_service_secret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service_name\": \"battle\",\n  \"audience\": \"tamagotchi\",\n  \"scopes\": [\n    \"tamagotchi:mint\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/service-tokens",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "service-tokens"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Creatures",
       "item": [
         {
-          "name": "Mint the owner's first creature",
+          "name": "The owner's starter arrives from user.package_joined.v1",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (Number(pm.collectionVariables.get('starter_tries') || 0) > 0) {",
+                  "  setTimeout(() => {}, 1000);",
+                  "}"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('201 minted', () => pm.response.to.have.status(201));",
+                  "const tries = Number(pm.collectionVariables.get('starter_tries') || 0);",
                   "const body = pm.response.json();",
-                  "pm.collectionVariables.set('pet_id', body.id);",
-                  "pm.collectionVariables.set('pet_version', body.version);",
-                  "pm.test('the first creature becomes the primary', () => {",
-                  "  pm.expect(body.role).to.eql('PRIMARY');",
-                  "});",
-                  "pm.test('starts at level 1 with the owner as the only holder', () => {",
-                  "  pm.expect(body.level).to.eql(1);",
-                  "  pm.expect(body.xp).to.eql(0);",
-                  "  pm.expect(body.holder_user_ids).to.eql([pm.collectionVariables.get('owner_id')]);",
-                  "});",
-                  "pm.test('carries every contract field', () => {",
-                  "  ['id','name','origin_package_id','config_version','origin_owner_id','holder_user_ids','role','combat_type','level','xp','sprite_ref','package_stats','acquired_at','version'].forEach((field) => {",
-                  "    pm.expect(body).to.have.property(field);",
+                  "",
+                  "if (pm.response.code === 200 && body.primary === null && tries < 30) {",
+                  "  pm.collectionVariables.set('starter_tries', tries + 1);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set('starter_tries', 0);",
+                  "  pm.test('200 with the package starter as the primary', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.primary).to.be.an('object');",
+                  "    pm.expect(body.primary.role).to.eql('PRIMARY');",
+                  "    pm.expect(body.primary.origin_package_id).to.eql(pm.collectionVariables.get('package_id'));",
                   "  });",
-                  "});",
-                  "pm.test('ETag matches the version', () => {",
-                  "  pm.expect(pm.response.headers.get('ETag')).to.eql('\"' + body.version + '\"');",
-                  "});"
+                  "  pm.test('starts at level 1 with the user as the only holder', () => {",
+                  "    pm.expect(body.primary.level).to.eql(1);",
+                  "    pm.expect(body.primary.xp).to.eql(0);",
+                  "    pm.expect(body.primary.holder_user_ids).to.eql([pm.collectionVariables.get('owner_id')]);",
+                  "  });",
+                  "  pm.test('carries every contract field', () => {",
+                  "    ['id','name','origin_package_id','config_version','origin_owner_id','holder_user_ids','role','combat_type','level','xp','sprite_ref','package_stats','acquired_at','version'].forEach((field) => {",
+                  "      pm.expect(body.primary).to.have.property(field);",
+                  "    });",
+                  "  });",
+                  "  pm.collectionVariables.set('pet_id', body.primary.id);",
+                  "  pm.collectionVariables.set('pet_version', body.primary.version);",
+                  "  pm.collectionVariables.set('pet_hunger', body.primary.package_stats.hunger);",
+                  "}"
                 ]
               }
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
+                "value": "Bearer {{owner_credential}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
-            },
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
-                "tamagotchis"
+                "users",
+                "{{owner_id}}",
+                "collection"
               ]
             }
           }
         },
         {
-          "name": "Mint the owner's second creature",
+          "name": "The rival's starter arrives",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (Number(pm.collectionVariables.get('starter_tries') || 0) > 0) {",
+                  "  setTimeout(() => {}, 1000);",
+                  "}"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('201 minted', () => pm.response.to.have.status(201));",
+                  "const tries = Number(pm.collectionVariables.get('starter_tries') || 0);",
                   "const body = pm.response.json();",
-                  "pm.collectionVariables.set('pet_secondary_id', body.id);",
-                  "pm.test('a later creature is secondary', () => {",
-                  "  pm.expect(body.role).to.eql('SECONDARY');",
-                  "});"
+                  "",
+                  "if (pm.response.code === 200 && body.primary === null && tries < 30) {",
+                  "  pm.collectionVariables.set('starter_tries', tries + 1);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set('starter_tries', 0);",
+                  "  pm.test('200 with the package starter as the primary', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.primary).to.be.an('object');",
+                  "    pm.expect(body.primary.role).to.eql('PRIMARY');",
+                  "    pm.expect(body.primary.origin_package_id).to.eql(pm.collectionVariables.get('package_id'));",
+                  "  });",
+                  "  pm.test('starts at level 1 with the user as the only holder', () => {",
+                  "    pm.expect(body.primary.level).to.eql(1);",
+                  "    pm.expect(body.primary.xp).to.eql(0);",
+                  "    pm.expect(body.primary.holder_user_ids).to.eql([pm.collectionVariables.get('winner_id')]);",
+                  "  });",
+                  "  pm.collectionVariables.set('winner_pet_id', body.primary.id);",
+                  "}"
                 ]
               }
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
+                "value": "Bearer {{winner_credential}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
-            },
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{winner_id}}/collection",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
-                "tamagotchis"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Mint the rival's primary",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('201 minted', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('winner_pet_id', pm.response.json().id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"origin_owner_id\": \"{{winner_id}}\",\n  \"package_id\": \"{{package_sprouts_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Mint the rival's secondary",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('201 minted', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('winner_pet_secondary_id', pm.response.json().id);",
-                  "pm.test('a second package mints its own starter', () => {",
-                  "  pm.expect(pm.response.json().combat_type).to.eql('NATURE');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"origin_owner_id\": \"{{winner_id}}\",\n  \"package_id\": \"{{package_sprouts_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis"
+                "users",
+                "{{winner_id}}",
+                "collection"
               ]
             }
           }
@@ -513,7 +768,7 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.headers.get('ETag')).to.be.a('string');",
                   "});",
-                  "pm.test('is the creature we minted', () => {",
+                  "pm.test('is the starter we polled for', () => {",
                   "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('pet_id'));",
                   "});"
                 ]
@@ -549,9 +804,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 with both creatures', () => {",
+                  "pm.test('200 with the starter', () => {",
                   "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().items).to.have.lengthOf(2);",
+                  "  pm.expect(pm.response.json().items).to.have.lengthOf(1);",
                   "});",
                   "pm.test('a single page ends with a null cursor', () => {",
                   "  pm.expect(pm.response.json().next_cursor).to.eql(null);",
@@ -587,54 +842,6 @@
           }
         },
         {
-          "name": "Page with a cursor",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 with one item and a cursor', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.items).to.have.lengthOf(1);",
-                  "  pm.expect(body.next_cursor).to.be.a('string');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{owner_credential}}"
-              }
-            ],
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis?holder_id={{owner_id}}&limit=1",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis"
-              ],
-              "query": [
-                {
-                  "key": "holder_id",
-                  "value": "{{owner_id}}"
-                },
-                {
-                  "key": "limit",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
           "name": "Care: feed",
           "event": [
             {
@@ -645,12 +852,13 @@
                   "pm.test('200 with a care receipt', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "pm.collectionVariables.set('pet_version', body.tamagotchi.version);",
-                  "pm.test('applies the package deltas', () => {",
-                  "  pm.expect(body.tamagotchi.package_stats.hunger).to.eql(75);",
-                  "  pm.expect(body.tamagotchi.package_stats.tiredness).to.eql(25);",
+                  "pm.test('applies the package delta, capped at the stat maximum', () => {",
+                  "  const before = Number(pm.collectionVariables.get('pet_hunger'));",
+                  "  pm.expect(body.tamagotchi.package_stats.hunger).to.eql(Math.min(100, before + 20));",
+                  "  pm.collectionVariables.set('pet_hunger', body.tamagotchi.package_stats.hunger);",
                   "});",
                   "pm.test('awards the xp the rule declares', () => {",
-                  "  pm.expect(body.tamagotchi.xp).to.eql(10);",
+                  "  pm.expect(body.tamagotchi.xp).to.eql(5);",
                   "});",
                   "pm.test('local currency is left pending for User Management', () => {",
                   "  pm.expect(body.currency_status).to.eql('PENDING');",
@@ -868,8 +1076,8 @@
                   "pm.test('200 with an xp receipt', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "pm.collectionVariables.set('pet_version', body.version);",
-                  "pm.test('6600 xp on top of 10 reaches level 12', () => {",
-                  "  pm.expect(body.xp).to.eql(6610);",
+                  "pm.test('6600 xp on top of 5 reaches level 12', () => {",
+                  "  pm.expect(body.xp).to.eql(6605);",
                   "  pm.expect(body.level).to.eql(12);",
                   "});",
                   "pm.test('reports every level crossed at once', () => {",
@@ -923,7 +1131,7 @@
                 "exec": [
                   "pm.test('200 replaying the first receipt', () => pm.response.to.have.status(200));",
                   "pm.test('xp is unchanged', () => {",
-                  "  pm.expect(pm.response.json().xp).to.eql(6610);",
+                  "  pm.expect(pm.response.json().xp).to.eql(6605);",
                   "  pm.expect(pm.response.json().levels_gained).to.eql(11);",
                   "});"
                 ]
@@ -970,7 +1178,7 @@
       "name": "Engagements",
       "item": [
         {
-          "name": "Reserve all four creatures",
+          "name": "Reserve both primaries",
           "event": [
             {
               "listen": "prerequest",
@@ -989,12 +1197,12 @@
                   "pm.test('201 engaged', () => pm.response.to.have.status(201));",
                   "const body = pm.response.json();",
                   "pm.collectionVariables.set('engagement_id', body.engagement_id);",
-                  "pm.test('locks all four pets', () => {",
+                  "pm.test('locks both pets', () => {",
                   "  pm.expect(body.status).to.eql('ACTIVE');",
-                  "  pm.expect(body.pets).to.have.lengthOf(4);",
+                  "  pm.expect(body.pets).to.have.lengthOf(2);",
                   "});",
                   "pm.test('roles follow the lineup slots', () => {",
-                  "  pm.expect(body.pets.map((p) => p.role)).to.eql(['PRIMARY','SECONDARY','PRIMARY','SECONDARY']);",
+                  "  pm.expect(body.pets.map((p) => p.role)).to.eql(['PRIMARY','PRIMARY']);",
                   "});"
                 ]
               }
@@ -1018,7 +1226,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"source\": \"BATTLE\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"ttl_seconds\": 300,\n  \"lineups\": [\n    {\n      \"user_id\": \"{{owner_id}}\",\n      \"primary_id\": \"{{pet_id}}\",\n      \"secondary_id\": \"{{pet_secondary_id}}\"\n    },\n    {\n      \"user_id\": \"{{winner_id}}\",\n      \"primary_id\": \"{{winner_pet_id}}\",\n      \"secondary_id\": \"{{winner_pet_secondary_id}}\"\n    }\n  ]\n}"
+              "raw": "{\n  \"source\": \"BATTLE\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"ttl_seconds\": 300,\n  \"lineups\": [\n    {\n      \"user_id\": \"{{owner_id}}\",\n      \"primary_id\": \"{{pet_id}}\"\n    },\n    {\n      \"user_id\": \"{{winner_id}}\",\n      \"primary_id\": \"{{winner_pet_id}}\"\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{tamagotchi_base_url}}/v1/internal/engagements",
@@ -1286,7 +1494,7 @@
                   "  pm.expect(pm.response.json().role).to.eql('SECONDARY');",
                   "});",
                   "pm.test('both holders see one shared hunger value', () => {",
-                  "  pm.expect(pm.response.json().package_stats.hunger).to.eql(75);",
+                  "  pm.expect(pm.response.json().package_stats.hunger).to.eql(Number(pm.collectionVariables.get('pet_hunger')));",
                   "});"
                 ]
               }
@@ -1309,6 +1517,99 @@
                 "v1",
                 "tamagotchis",
                 "{{pet_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The rival now holds two creatures",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with the starter and the won creature', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().items.map((p) => p.id)).to.have.members([",
+                  "    pm.collectionVariables.get('winner_pet_id'),",
+                  "    pm.collectionVariables.get('pet_id'),",
+                  "  ]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{winner_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis?holder_id={{winner_id}}",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "tamagotchis"
+              ],
+              "query": [
+                {
+                  "key": "holder_id",
+                  "value": "{{winner_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Page with a cursor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with one item and a cursor', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.items).to.have.lengthOf(1);",
+                  "  pm.expect(body.next_cursor).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{winner_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis?holder_id={{winner_id}}&limit=1",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "tamagotchis"
+              ],
+              "query": [
+                {
+                  "key": "holder_id",
+                  "value": "{{winner_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
               ]
             }
           }
@@ -1440,7 +1741,7 @@
           }
         },
         {
-          "name": "Grant the second creature as well",
+          "name": "Grant it to the rival again",
           "event": [
             {
               "listen": "test",
@@ -1449,8 +1750,8 @@
                 "exec": [
                   "pm.test('200 granted', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
-                  "pm.collectionVariables.set('pet_secondary_version', body.version);",
-                  "pm.test('the winner now holds the second creature too', () => {",
+                  "pm.collectionVariables.set('pet_version', body.version);",
+                  "pm.test('a holder who dropped the creature can be granted it again', () => {",
                   "  pm.expect(body.outcome).to.eql('GRANTED');",
                   "});"
                 ]
@@ -1478,14 +1779,14 @@
               "raw": "{\n  \"to_user_id\": \"{{winner_id}}\",\n  \"reason\": \"BATTLE_LOSS\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"engagement_id\": \"{{engagement_id}}\"\n}"
             },
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_secondary_id}}/holders",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
                 "tamagotchis",
-                "{{pet_secondary_id}}",
+                "{{pet_id}}",
                 "holders"
               ]
             }
@@ -1506,10 +1807,9 @@
                 "exec": [
                   "pm.test('200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
-                  "pm.test('the primary is split out from the rest', () => {",
+                  "pm.test('the owner holds only their starter', () => {",
                   "  pm.expect(body.primary.id).to.eql(pm.collectionVariables.get('pet_id'));",
-                  "  pm.expect(body.primary.role).to.eql('PRIMARY');",
-                  "  pm.expect(body.secondary.map((p) => p.id)).to.eql([pm.collectionVariables.get('pet_secondary_id')]);",
+                  "  pm.expect(body.secondary).to.eql([]);",
                   "});"
                 ]
               }
@@ -1538,6 +1838,47 @@
           }
         },
         {
+          "name": "Read the rival's collection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('the primary is split out from the rest', () => {",
+                  "  pm.expect(body.primary.id).to.eql(pm.collectionVariables.get('winner_pet_id'));",
+                  "  pm.expect(body.primary.role).to.eql('PRIMARY');",
+                  "  pm.expect(body.secondary.map((p) => p.id)).to.eql([pm.collectionVariables.get('pet_id')]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{winner_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{winner_id}}/collection",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{winner_id}}",
+                "collection"
+              ]
+            }
+          }
+        },
+        {
           "name": "Another user's collection is refused",
           "event": [
             {
@@ -1545,9 +1886,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('403 another_users_collection', () => {",
+                  "pm.test('403 not_self', () => {",
                   "  pm.response.to.have.status(403);",
-                  "  pm.expect(pm.response.json().code).to.eql('another_users_collection');",
+                  "  pm.expect(pm.response.json().code).to.eql('not_self');",
                   "});"
                 ]
               }
@@ -1585,8 +1926,8 @@
                 "exec": [
                   "pm.test('200 with an ETag', () => pm.response.to.have.status(200));",
                   "pm.collectionVariables.set('primary_etag', pm.response.headers.get('ETag'));",
-                  "pm.test('points at the first creature minted', () => {",
-                  "  pm.expect(pm.response.json().tamagotchi_id).to.eql(pm.collectionVariables.get('pet_id'));",
+                  "pm.test('points at the starter of the rival', () => {",
+                  "  pm.expect(pm.response.json().tamagotchi_id).to.eql(pm.collectionVariables.get('winner_pet_id'));",
                   "});"
                 ]
               }
@@ -1597,18 +1938,18 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{owner_credential}}"
+                "value": "Bearer {{winner_credential}}"
               }
             ],
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection/primary",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{winner_id}}/collection/primary",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
                 "users",
-                "{{owner_id}}",
+                "{{winner_id}}",
                 "collection",
                 "primary"
               ]
@@ -1616,7 +1957,7 @@
           }
         },
         {
-          "name": "Move the primary to the other creature",
+          "name": "Move the rival's primary to the won creature",
           "event": [
             {
               "listen": "test",
@@ -1625,7 +1966,7 @@
                 "exec": [
                   "pm.test('200', () => pm.response.to.have.status(200));",
                   "pm.test('the selection moved and the version advanced', () => {",
-                  "  pm.expect(pm.response.json().tamagotchi_id).to.eql(pm.collectionVariables.get('pet_secondary_id'));",
+                  "  pm.expect(pm.response.json().tamagotchi_id).to.eql(pm.collectionVariables.get('pet_id'));",
                   "  pm.expect(pm.response.json().version).to.eql(2);",
                   "});"
                 ]
@@ -1637,7 +1978,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{owner_credential}}"
+                "value": "Bearer {{winner_credential}}"
               },
               {
                 "key": "Content-Type",
@@ -1650,17 +1991,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tamagotchi_id\": \"{{pet_secondary_id}}\"\n}"
+              "raw": "{\n  \"tamagotchi_id\": \"{{pet_id}}\"\n}"
             },
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection/primary",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{winner_id}}/collection/primary",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
                 "users",
-                "{{owner_id}}",
+                "{{winner_id}}",
                 "collection",
                 "primary"
               ]
@@ -1688,7 +2029,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{owner_credential}}"
+                "value": "Bearer {{winner_credential}}"
               },
               {
                 "key": "Content-Type",
@@ -1701,17 +2042,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tamagotchi_id\": \"{{pet_id}}\"\n}"
+              "raw": "{\n  \"tamagotchi_id\": \"{{winner_pet_id}}\"\n}"
             },
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/users/{{owner_id}}/collection/primary",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{winner_id}}/collection/primary",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
                 "users",
-                "{{owner_id}}",
+                "{{winner_id}}",
                 "collection",
                 "primary"
               ]
@@ -1834,11 +2175,11 @@
               },
               {
                 "key": "If-Match",
-                "value": "\"{{pet_secondary_version}}\""
+                "value": "\"{{pet_version}}\""
               }
             ],
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/users/{{winner_id}}/collection/{{pet_secondary_id}}",
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{winner_id}}/collection/{{pet_id}}",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
@@ -1847,7 +2188,7 @@
                 "users",
                 "{{winner_id}}",
                 "collection",
-                "{{pet_secondary_id}}"
+                "{{pet_id}}"
               ]
             }
           }
@@ -1962,9 +2303,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('401 with WWW-Authenticate', () => {",
+                  "pm.test('401 unauthorized: the Gateway sends an anonymous assertion', () => {",
                   "  pm.response.to.have.status(401);",
-                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.eql('Bearer');",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthorized');",
                   "});"
                 ]
               }
@@ -1988,6 +2329,54 @@
           }
         },
         {
+          "name": "Minting needs tamagotchi:mint, which no service holds",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 insufficient_scope', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().code).to.eql('insufficient_scope');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{service_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "tamagotchis"
+              ]
+            }
+          }
+        },
+        {
           "name": "A user token where a service token is required",
           "event": [
             {
@@ -1995,9 +2384,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('403 service_token_required', () => {",
+                  "pm.test('403 insufficient_scope, the wrong kind of caller', () => {",
                   "  pm.response.to.have.status(403);",
-                  "  pm.expect(pm.response.json().code).to.eql('service_token_required');",
+                  "  pm.expect(pm.response.json().code).to.eql('insufficient_scope');",
                   "});"
                 ]
               }
@@ -2102,16 +2491,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+              "raw": "{\n  \"amount\": 10,\n  \"source\": \"BATTLE\",\n  \"source_id\": \"{{fresh_uuid}}\"\n}"
             },
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
-                "tamagotchis"
+                "tamagotchis",
+                "{{pet_id}}",
+                "xp"
               ]
             }
           }
@@ -2153,13 +2544,15 @@
               "raw": "not json"
             },
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
-                "tamagotchis"
+                "tamagotchis",
+                "{{pet_id}}",
+                "xp"
               ]
             }
           }
@@ -2197,16 +2590,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"origin_owner_id\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\",\n  \"package_id\": \"{{package_id}}\"\n}"
+              "raw": "{\n  \"amount\": 10,\n  \"source\": \"BATTLE\",\n  \"source_id\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\"\n}"
             },
             "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
               "host": [
                 "{{tamagotchi_base_url}}"
               ],
               "path": [
                 "v1",
-                "tamagotchis"
+                "tamagotchis",
+                "{{pet_id}}",
+                "xp"
               ]
             }
           }

@@ -79,17 +79,22 @@ services:
       retries: 10
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:2.0.1
+    image: victoriamutruc/tamagotchi:2.0.3
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 3000
       STORAGE: postgres
       DATABASE_URL: postgres://${TAMAGOTCHI_DB_USER:-tamagotchi}:${TAMAGOTCHI_DB_PASSWORD}@database:5432/${TAMAGOTCHI_DB_NAME:-tamagotchi}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       SERVICE_CLIENT_SECRET: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET:?set TAMAGOTCHI_SERVICE_CLIENT_SECRET in .env}
+      USER_MANAGEMENT_URL: http://gateway:3000/users
+      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      RABBITMQ_URL: amqp://tamagotchi:${TAMAGOTCHI_RABBITMQ_PASSWORD:?set TAMAGOTCHI_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
@@ -240,11 +245,13 @@ services:
       retries: 10
 
   notification:
-    image: victoriamutruc/notification:2.0.1
+    image: victoriamutruc/notification:2.0.2
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 3000
       STORAGE: postgres
@@ -252,6 +259,7 @@ services:
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       PUSH_PROVIDER: ${NOTIFICATION_PUSH_PROVIDER:-stub}
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
+      RABBITMQ_URL: amqp://notification:${NOTIFICATION_RABBITMQ_PASSWORD:?set NOTIFICATION_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:

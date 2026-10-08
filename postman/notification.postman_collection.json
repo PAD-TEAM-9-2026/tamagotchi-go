@@ -1,13 +1,17 @@
 {
   "info": {
     "name": "Notification",
-    "description": "Every endpoint of the Notification service, in an order that runs start to finish. Requests capture ids into collection variables, so a full run needs no manual input beyond the Tamagotchi Go Local environment.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.\n\nThe history is empty on a fresh service because a notification is only ever created by consuming an event from another service, and the contract exposes no route to inject one.",
+    "description": "A scenario of the Notification service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry and registers and logs in three fresh users. A notification is only ever created by consuming an event, and the contract exposes no route to inject one, so the Events folder makes real ones: friend requests sent through User Management are published as user.friend_request_created.v1, and the scenario waits for each to arrive.\n\nNeeds the shared stack with the broker, with User Management publishing and Notification consuming. Probes go straight to the service, because the Gateway routes only /v1/ paths.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
+      "key": "notification_direct_url",
+      "value": "http://localhost:3008"
+    },
+    {
       "key": "package_id",
-      "value": "0192f3c1-8a44-7c31-9e02-6b1d4f8a2c11"
+      "value": ""
     },
     {
       "key": "package_other_id",
@@ -27,10 +31,6 @@
     },
     {
       "key": "other_credential",
-      "value": ""
-    },
-    {
-      "key": "probe_credential",
       "value": ""
     },
     {
@@ -110,31 +110,51 @@
       "value": ""
     },
     {
-      "key": "seed_user_id",
-      "value": "0192f3d0-0001-7000-8000-000000000001"
-    },
-    {
-      "key": "seed_other_id",
-      "value": "0192f3d0-0002-7000-8000-000000000002"
-    },
-    {
-      "key": "seed_raid_id",
-      "value": "0192f3e2-0006-7000-8000-000000000006"
-    },
-    {
-      "key": "seed_credential",
+      "key": "run_suffix",
       "value": ""
     },
     {
-      "key": "seed_other_credential",
+      "key": "user_password",
       "value": ""
     },
     {
-      "key": "seed_cursor",
+      "key": "other_password",
       "value": ""
     },
     {
-      "key": "seed_nearby_event_id",
+      "key": "third_password",
+      "value": ""
+    },
+    {
+      "key": "third_id",
+      "value": ""
+    },
+    {
+      "key": "third_credential",
+      "value": ""
+    },
+    {
+      "key": "friend_request_id",
+      "value": ""
+    },
+    {
+      "key": "third_request_id",
+      "value": ""
+    },
+    {
+      "key": "notification_id",
+      "value": ""
+    },
+    {
+      "key": "notification_read_at",
+      "value": ""
+    },
+    {
+      "key": "history_cursor",
+      "value": ""
+    },
+    {
+      "key": "event_tries",
       "value": ""
     }
   ],
@@ -165,7 +185,6 @@
           "pm.collectionVariables.set('idempotency_key', uuidv7());",
           "pm.collectionVariables.set('fresh_uuid', uuidv7());",
           "pm.collectionVariables.set('unknown_id', uuidv7());",
-          "pm.collectionVariables.set('probe_credential', 'dev.' + pm.collectionVariables.get('fresh_uuid'));",
           "",
           "function seed(key, value) {",
           "  if (!pm.collectionVariables.get(key)) {",
@@ -173,10 +192,6 @@
           "  }",
           "}",
           "",
-          "seed('user_id', uuidv7());",
-          "seed('other_id', uuidv7());",
-          "seed('user_credential', 'dev.' + pm.collectionVariables.get('user_id'));",
-          "seed('other_credential', 'dev.' + pm.collectionVariables.get('other_id'));",
           "seed('read_all_before', new Date().toISOString());",
           "seed('android_token', 'fcm-' + uuidv7());",
           "seed('rotated_token', 'fcm-' + uuidv7());",
@@ -184,8 +199,22 @@
           "seed('web_token', 'fcm-' + uuidv7());",
           "seed('other_token', 'fcm-' + uuidv7());",
           "",
-          "pm.collectionVariables.set('seed_credential', 'dev.' + pm.collectionVariables.get('seed_user_id'));",
-          "pm.collectionVariables.set('seed_other_credential', 'dev.' + pm.collectionVariables.get('seed_other_id'));"
+          "",
+          "const OPEN = [",
+          "  'Health',",
+          "  'Ready',",
+          "  'Find the package in Registry',",
+          "  'Register the user',",
+          "  'Log in the user',",
+          "  'Register the other user',",
+          "  'Log in the other user',",
+          "  'Register a third user',",
+          "  'Log in the third user',",
+          "];",
+          "",
+          "if (!OPEN.includes(pm.info.requestName) && !pm.collectionVariables.get('third_credential')) {",
+          "  throw new Error('Run the Setup folder first: it creates the users the scenario acts as.');",
+          "}"
         ]
       }
     }
@@ -212,9 +241,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{notification_base_url}}/health",
+              "raw": "{{notification_direct_url}}/health",
               "host": [
-                "{{notification_base_url}}"
+                "{{notification_direct_url}}"
               ],
               "path": [
                 "health"
@@ -240,12 +269,319 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{notification_base_url}}/ready",
+              "raw": "{{notification_direct_url}}/ready",
               "host": [
-                "{{notification_base_url}}"
+                "{{notification_direct_url}}"
               ],
               "path": [
                 "ready"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Find the package in Registry",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('run_suffix', Date.now().toString(36));",
+                  "['user', 'other', 'third'].forEach((who) => {",
+                  "  pm.collectionVariables.set(who + '_password', 'Pass-' + who + '-' + pm.collectionVariables.get('fresh_uuid'));",
+                  "  pm.collectionVariables.set(who + '_id', '');",
+                  "  pm.collectionVariables.set(who + '_credential', '');",
+                  "});",
+                  "pm.collectionVariables.set('read_all_before', new Date().toISOString());",
+                  "pm.collectionVariables.set('event_tries', 0);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with an active package', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const active = pm.response.json().items.filter((p) => p.status === 'active');",
+                  "  pm.expect(active.length).to.be.above(0);",
+                  "  const chosen = active.find((p) => p.name === 'Dragon Tamers') || active[0];",
+                  "  pm.collectionVariables.set('package_id', chosen.package_id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{registry_base_url}}/v1/packages?limit=100",
+              "host": [
+                "{{registry_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "packages"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register the user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 registered', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('user_id', pm.response.json().user.user_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"user_{{run_suffix}}\",\n  \"email\": \"user_{{run_suffix}}@example.com\",\n  \"password\": \"{{user_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Log in the user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with an access token', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('user_credential', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user_{{run_suffix}}@example.com\",\n  \"password\": \"{{user_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/login",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register the other user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 registered', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('other_id', pm.response.json().user.user_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"other_{{run_suffix}}\",\n  \"email\": \"other_{{run_suffix}}@example.com\",\n  \"password\": \"{{other_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Log in the other user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with an access token', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('other_credential', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"other_{{run_suffix}}@example.com\",\n  \"password\": \"{{other_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/login",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register a third user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 registered', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('third_id', pm.response.json().user.user_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"third_{{run_suffix}}\",\n  \"email\": \"third_{{run_suffix}}@example.com\",\n  \"password\": \"{{third_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Log in the third user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with an access token', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('third_credential', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"third_{{run_suffix}}@example.com\",\n  \"password\": \"{{third_password}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/login",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "login"
               ]
             }
           }
@@ -919,18 +1255,18 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{probe_credential}}"
+                "value": "Bearer {{other_credential}}"
               }
             ],
             "url": {
-              "raw": "{{notification_base_url}}/v1/users/{{fresh_uuid}}/preferences",
+              "raw": "{{notification_base_url}}/v1/users/{{other_id}}/preferences",
               "host": [
                 "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
                 "users",
-                "{{fresh_uuid}}",
+                "{{other_id}}",
                 "preferences"
               ]
             }
@@ -1183,32 +1519,95 @@
       ]
     },
     {
-      "name": "Seeded history",
+      "name": "Events",
       "item": [
         {
-          "name": "The seed script has been run",
+          "name": "The other user sends a friend request",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.test('the demo history is present, run ./scripts/run.sh seed if this fails', () => {",
-                  "  pm.expect(body.items.length).to.be.at.least(4);",
-                  "});",
-                  "const nearby = body.items.find((item) => item.type === 'PLAYER_NEARBY');",
-                  "pm.collectionVariables.set('seed_nearby_event_id', nearby ? nearby.event_id : '');",
-                  "pm.test('the history is newest first', () => {",
-                  "  const ids = body.items.map((item) => item.id);",
-                  "  pm.expect(ids).to.eql([...ids].sort().reverse());",
-                  "});",
-                  "pm.test('every notification carries the contract fields', () => {",
-                  "  ['id','user_id','type','event_id','params','created_at','read_at','delivery_status'].forEach((field) => {",
-                  "    pm.expect(body.items[0]).to.have.property(field);",
+                  "pm.test('201 sent', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('friend_request_id', pm.response.json().request_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{other_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to_user_id\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/friend-requests",
+              "host": [
+                "{{user_management_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "friend-requests"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The friend request arrives as a notification",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (Number(pm.collectionVariables.get('event_tries') || 0) > 0) {",
+                  "  setTimeout(() => {}, 1000);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const tries = Number(pm.collectionVariables.get('event_tries') || 0);",
+                  "const items = pm.response.code === 200 ? pm.response.json().items : [];",
+                  "const found = items.find((n) => n.type === 'FRIEND_REQUEST' && n.params.request_id === pm.collectionVariables.get('friend_request_id'));",
+                  "",
+                  "if (found === undefined && tries < 30) {",
+                  "  pm.collectionVariables.set('event_tries', tries + 1);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set('event_tries', 0);",
+                  "  pm.test('200 with the notification the event created', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(found).to.be.an('object');",
                   "  });",
-                  "});"
+                  "  pm.collectionVariables.set('notification_id', found.id);",
+                  "  pm.test('carries who asked, by id', () => {",
+                  "    pm.expect(found.params.from_user_id).to.eql(pm.collectionVariables.get('other_id'));",
+                  "  });",
+                  "  pm.test('a muted category is kept in the history rather than dropped', () => {",
+                  "    pm.expect(found.delivery_status).to.eql('SUPPRESSED');",
+                  "  });",
+                  "  pm.test('arrives unread', () => pm.expect(found.read_at).to.eql(null));",
+                  "}"
                 ]
               }
             }
@@ -1218,99 +1617,110 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{seed_credential}}"
+                "value": "Bearer {{user_credential}}"
               }
             ],
             "url": {
-              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/notifications",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/notifications",
               "host": [
                 "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
                 "users",
-                "{{seed_user_id}}",
+                "{{user_id}}",
                 "notifications"
               ]
             }
           }
         },
         {
-          "name": "A muted category is kept, not dropped",
+          "name": "A third user sends the user a friend request",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 read', () => pm.response.to.have.status(200));",
-                  "pm.test('the demo user muted raids', () => {",
-                  "  pm.expect(pm.response.json().muted_categories).to.include('RAID_STARTED');",
-                  "});"
+                  "pm.test('201 sent', () => pm.response.to.have.status(201));"
                 ]
               }
             }
           ],
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{seed_credential}}"
+                "value": "Bearer {{third_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to_user_id\": \"{{user_id}}\"\n}"
+            },
             "url": {
-              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/preferences",
+              "raw": "{{user_management_base_url}}/v1/friend-requests",
               "host": [
-                "{{notification_base_url}}"
+                "{{user_management_base_url}}"
               ],
               "path": [
                 "v1",
-                "users",
-                "{{seed_user_id}}",
-                "preferences"
+                "friend-requests"
               ]
             }
           }
         },
         {
-          "name": "The muted notification is suppressed",
+          "name": "The third user asks the other user too",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
-                  "const raid = pm.response.json().items.find((item) => item.type === 'RAID_STARTED');",
-                  "pm.test('a muted category still reaches the history', () => {",
-                  "  pm.expect(raid).to.not.be.undefined;",
-                  "});",
-                  "pm.test('it was suppressed rather than delivered', () => {",
-                  "  pm.expect(raid.delivery_status).to.eql('SUPPRESSED');",
-                  "});"
+                  "pm.test('201 sent', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('third_request_id', pm.response.json().request_id);"
                 ]
               }
             }
           ],
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{seed_credential}}"
+                "value": "Bearer {{third_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to_user_id\": \"{{other_id}}\"\n}"
+            },
             "url": {
-              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/notifications",
+              "raw": "{{user_management_base_url}}/v1/friend-requests",
               "host": [
-                "{{notification_base_url}}"
+                "{{user_management_base_url}}"
               ],
               "path": [
                 "v1",
-                "users",
-                "{{seed_user_id}}",
-                "notifications"
+                "friend-requests"
               ]
             }
           }
@@ -1319,22 +1729,39 @@
           "name": "A user with no device gets NO_DEVICE",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (Number(pm.collectionVariables.get('event_tries') || 0) > 0) {",
+                  "  setTimeout(() => {}, 1000);",
+                  "}"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.test('the second demo user has a history', () => {",
-                  "  pm.expect(body.items.length).to.be.at.least(2);",
-                  "});",
-                  "pm.test('nothing could be delivered, because no device is registered', () => {",
-                  "  body.items.forEach((item) => pm.expect(item.delivery_status).to.eql('NO_DEVICE'));",
-                  "});",
-                  "pm.test('one event reached both users, which is why the index is on the pair', () => {",
-                  "  const nearby = body.items.find((item) => item.type === 'PLAYER_NEARBY');",
-                  "  pm.expect(nearby.event_id).to.eql(pm.collectionVariables.get('seed_nearby_event_id'));",
-                  "});"
+                  "const tries = Number(pm.collectionVariables.get('event_tries') || 0);",
+                  "const items = pm.response.code === 200 ? pm.response.json().items : [];",
+                  "const found = items.find((n) => n.params.request_id === pm.collectionVariables.get('third_request_id'));",
+                  "",
+                  "if (found === undefined && tries < 30) {",
+                  "  pm.collectionVariables.set('event_tries', tries + 1);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set('event_tries', 0);",
+                  "  pm.test('200 with the notification the event created', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(found).to.be.an('object');",
+                  "  });",
+                  "  pm.test('stored, but nothing could be delivered without a device', () => {",
+                  "    pm.expect(found.type).to.eql('FRIEND_REQUEST');",
+                  "    pm.expect(found.delivery_status).to.eql('NO_DEVICE');",
+                  "  });",
+                  "}"
                 ]
               }
             }
@@ -1344,25 +1771,25 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{seed_other_credential}}"
+                "value": "Bearer {{other_credential}}"
               }
             ],
             "url": {
-              "raw": "{{notification_base_url}}/v1/users/{{seed_other_id}}/notifications",
+              "raw": "{{notification_base_url}}/v1/users/{{other_id}}/notifications",
               "host": [
                 "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
                 "users",
-                "{{seed_other_id}}",
+                "{{other_id}}",
                 "notifications"
               ]
             }
           }
         },
         {
-          "name": "Mark a seeded notification read",
+          "name": "Mark the notification read",
           "event": [
             {
               "listen": "test",
@@ -1371,14 +1798,13 @@
                 "exec": [
                   "pm.test('200 marked read', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
+                  "pm.collectionVariables.set('notification_read_at', body.read_at);",
                   "pm.test('it comes back with the moment it was read', () => {",
-                  "  pm.expect(body.read_at).to.not.be.null;",
-                  "  pm.expect(Date.parse(body.read_at)).to.not.be.NaN;",
+                  "  pm.expect(body.read_at).to.be.a('string');",
                   "});",
                   "pm.test('nothing else about it changed', () => {",
-                  "  pm.expect(body.id).to.eql(pm.collectionVariables.get('seed_raid_id'));",
-                  "  pm.expect(body.type).to.eql('RAID_STARTED');",
-                  "  pm.expect(body.delivery_status).to.eql('SUPPRESSED');",
+                  "  pm.expect(body.id).to.eql(pm.collectionVariables.get('notification_id'));",
+                  "  pm.expect(body.type).to.eql('FRIEND_REQUEST');",
                   "});"
                 ]
               }
@@ -1389,27 +1815,27 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{seed_credential}}"
+                "value": "Bearer {{user_credential}}"
               },
               {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"read\": true\n}"
+            },
             "url": {
-              "raw": "{{notification_base_url}}/v1/notifications/{{seed_raid_id}}",
+              "raw": "{{notification_base_url}}/v1/notifications/{{notification_id}}",
               "host": [
                 "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
                 "notifications",
-                "{{seed_raid_id}}"
+                "{{notification_id}}"
               ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"read\": true\n}"
             }
           }
         },
@@ -1423,8 +1849,7 @@
                 "exec": [
                   "pm.test('200 marked read', () => pm.response.to.have.status(200));",
                   "pm.test('the read moment is not moved forward', () => {",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.read_at).to.not.be.null;",
+                  "  pm.expect(pm.response.json().read_at).to.eql(pm.collectionVariables.get('notification_read_at'));",
                   "});"
                 ]
               }
@@ -1435,43 +1860,68 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{seed_credential}}"
+                "value": "Bearer {{user_credential}}"
               },
               {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"read\": true\n}"
+            },
             "url": {
-              "raw": "{{notification_base_url}}/v1/notifications/{{seed_raid_id}}",
+              "raw": "{{notification_base_url}}/v1/notifications/{{notification_id}}",
               "host": [
                 "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
                 "notifications",
-                "{{seed_raid_id}}"
+                "{{notification_id}}"
               ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"read\": true\n}"
             }
           }
         },
         {
-          "name": "Page through the seeded history",
+          "name": "Page through the history",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (Number(pm.collectionVariables.get('event_tries') || 0) > 0) {",
+                  "  setTimeout(() => {}, 1000);",
+                  "}"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 listed', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.collectionVariables.set('seed_cursor', body.next_cursor);",
-                  "pm.test('two on the page', () => pm.expect(body.items).to.have.lengthOf(2));",
-                  "pm.test('a cursor points at the rest', () => pm.expect(body.next_cursor).to.be.a('string'));"
+                  "const tries = Number(pm.collectionVariables.get('event_tries') || 0);",
+                  "const items = pm.response.code === 200 ? pm.response.json().items : [];",
+                  "const found = items.length === 1 && pm.response.json().next_cursor ? items[0] : undefined;",
+                  "",
+                  "if (found === undefined && tries < 30) {",
+                  "  pm.collectionVariables.set('event_tries', tries + 1);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set('event_tries', 0);",
+                  "  pm.test('200 with the notification the event created', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(found).to.be.an('object');",
+                  "  });",
+                  "  pm.collectionVariables.set('history_cursor', pm.response.json().next_cursor);",
+                  "  pm.collectionVariables.set('notification_id', found.id);",
+                  "  pm.test('one on the page and a cursor to the rest', () => {",
+                  "    pm.expect(items).to.have.lengthOf(1);",
+                  "  });",
+                  "}"
                 ]
               }
             }
@@ -1481,24 +1931,24 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{seed_credential}}"
+                "value": "Bearer {{user_credential}}"
               }
             ],
             "url": {
-              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/notifications?limit=2",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/notifications?limit=1",
               "host": [
                 "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
                 "users",
-                "{{seed_user_id}}",
+                "{{user_id}}",
                 "notifications"
               ],
               "query": [
                 {
                   "key": "limit",
-                  "value": "2"
+                  "value": "1"
                 }
               ]
             }
@@ -1513,9 +1963,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200 listed', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
                   "pm.test('older notifications, none repeated', () => {",
-                  "  pm.expect(body.items.length).to.be.at.least(1);",
+                  "  const items = pm.response.json().items;",
+                  "  pm.expect(items).to.have.lengthOf(1);",
+                  "  pm.expect(items[0].id).to.not.eql(pm.collectionVariables.get('notification_id'));",
                   "});"
                 ]
               }
@@ -1526,28 +1977,28 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{seed_credential}}"
+                "value": "Bearer {{user_credential}}"
               }
             ],
             "url": {
-              "raw": "{{notification_base_url}}/v1/users/{{seed_user_id}}/notifications?limit=2&cursor={{seed_cursor}}",
+              "raw": "{{notification_base_url}}/v1/users/{{user_id}}/notifications?limit=1&cursor={{history_cursor}}",
               "host": [
                 "{{notification_base_url}}"
               ],
               "path": [
                 "v1",
                 "users",
-                "{{seed_user_id}}",
+                "{{user_id}}",
                 "notifications"
               ],
               "query": [
                 {
                   "key": "limit",
-                  "value": "2"
+                  "value": "1"
                 },
                 {
                   "key": "cursor",
-                  "value": "{{seed_cursor}}"
+                  "value": "{{history_cursor}}"
                 }
               ]
             }
@@ -1953,7 +2404,7 @@
                 "exec": [
                   "pm.test('403 another user', () => pm.response.to.have.status(403));",
                   "pm.test('names the problem', () => {",
-                  "  pm.expect(pm.response.json().code).to.eql('another_users_notifications');",
+                  "  pm.expect(pm.response.json().code).to.eql('not_self');",
                   "});"
                 ]
               }
@@ -2132,7 +2583,7 @@
                 "exec": [
                   "pm.test('403 another user', () => pm.response.to.have.status(403));",
                   "pm.test('names the problem', () => {",
-                  "  pm.expect(pm.response.json().code).to.eql('another_users_preferences');",
+                  "  pm.expect(pm.response.json().code).to.eql('not_self');",
                   "});"
                 ]
               }
@@ -2314,9 +2765,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('401 with WWW-Authenticate', () => {",
+                  "pm.test('401 unauthorized: the Gateway sends an anonymous assertion', () => {",
                   "  pm.response.to.have.status(401);",
-                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.eql('Bearer');",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthorized');",
                   "});"
                 ]
               }
