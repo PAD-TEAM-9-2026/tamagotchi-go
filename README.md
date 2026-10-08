@@ -1339,3 +1339,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
 
 Each private repository README repeats its own endpoints, events and dependencies, so the
 service can be read on its own.
+
+### Runtime logging
+
+Map/Raid log each domain request once with method, path, status, duration and
+correlation ID. Routine SQL/framework messages and successful probes are quiet
+at the default level. Configure MAP_LOG_LEVEL and MONSTER_RAID_LOG_LEVEL using
+.NET levels such as Debug, Information, Warning or Error. GATEWAY_LOG_LEVEL uses
+debug, info, warn or error. Restart the affected service after changing its level.
+
+Gateway logs HTTP requests and Guild negotiation; direct WebSocket activity
+belongs to Guild. Its owner should log socket open/close, rejected upgrades,
+message outcomes and errors, without tickets or message contents. Never log
+Authorization, service secrets, assertions or query strings containing credentials.

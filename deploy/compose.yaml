@@ -189,9 +189,10 @@ services:
         condition: service_completed_successfully
     environment:
       PORT: 8080
+      Logging__LogLevel__Default: ${MAP_LOG_LEVEL:-Information}
       LOCATION_FRESHNESS_SECONDS: 60
       PROXIMITY_THRESHOLD_METRES: 6
-      ConnectionStrings__Default: Host=database;Port=5432;Database=${MAP_DB_NAME:-map};Username=${MAP_DB_USER:-map};Password=${MAP_DB_PASSWORD}
+      ConnectionStrings__Default: Host=database;Port=5432;Database=${MAP_DB_NAME:-map};Username=${MAP_DB_USER:-map};Password=${MAP_DB_PASSWORD};GSS Encryption Mode=Disable
       SERVICE_CLIENT_SECRET: ${MAP_SERVICE_CLIENT_SECRET:?set MAP_SERVICE_CLIENT_SECRET in .env}
       GATEWAY_BASE_URL: http://gateway:3000
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
@@ -218,7 +219,8 @@ services:
         condition: service_completed_successfully
     environment:
       PORT: 8080
-      ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD}
+      Logging__LogLevel__Default: ${MONSTER_RAID_LOG_LEVEL:-Information}
+      ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD};GSS Encryption Mode=Disable
       SERVICE_CLIENT_SECRET: ${MONSTER_RAID_SERVICE_CLIENT_SECRET:?set MONSTER_RAID_SERVICE_CLIENT_SECRET in .env}
       GATEWAY_BASE_URL: http://gateway:3000
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
@@ -330,7 +332,7 @@ services:
         condition: service_healthy
     environment:
       PORT: 3000
-      LOG_LEVEL: info
+      LOG_LEVEL: ${GATEWAY_LOG_LEVEL:-info}
       GATEWAY_ASSERTION_PRIVATE_KEY_PATH: /run/secrets/gateway-assertion.pem
       GATEWAY_ASSERTION_KEY_ID: ${GATEWAY_ASSERTION_KEY_ID:?set GATEWAY_ASSERTION_KEY_ID in .env (run deploy/gateway/generate-keys.sh)}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
