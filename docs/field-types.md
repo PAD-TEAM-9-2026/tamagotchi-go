@@ -967,8 +967,9 @@ not define.
 | `available_until` | timestamp (ISO 8601 UTC) | yes |
 | `status` | scheduled / active / inactive / cancelled | yes |
 | `version` | integer [1..2147483647] | yes |
-| `rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} | yes |
-| `defeat_rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | yes |
+
+Reward amounts are not repeated on the occurrence: `boss_version` already
+pins which boss config, `rewards`/`defeat_rewards` included, a raid uses.
 
 ### OccurrenceInput
 
@@ -978,15 +979,6 @@ not define.
 | `boss_version` | integer [1..2147483647] | yes |
 | `available_from` | timestamp (ISO 8601 UTC) | yes |
 | `available_until` | timestamp (ISO 8601 UTC) | yes |
-| `rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | no |
-| `defeat_rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | no |
-
-`rewards` and `defeat_rewards` on an occurrence override the boss's own values
-for that occurrence only, for example to run a double-reward event without
-creating a new boss config version. Omitted or `null` means "use the boss's
-value at this occurrence's `boss_version`"; this is also why `Occurrence`
-always echoes back the effective values, resolved at creation time, rather
-than leaving a caller to go fetch the boss to find out.
 
 ### OccurrencePage
 
