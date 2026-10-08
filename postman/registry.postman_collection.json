@@ -86,7 +86,10 @@
           "seed('moderator_id', uuidv7());",
           "seed('outsider_id', uuidv7());",
           "seed('run_suffix', Date.now().toString());",
-          ""
+          "",
+          "",
+          "pm.variables.set('occurrence_available_from', new Date(Date.now() - 60000).toISOString());",
+          "pm.variables.set('occurrence_available_until', new Date(Date.now() + 7200000).toISOString());"
         ]
       }
     }
@@ -862,7 +865,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": {{boss_version}},\n  \"available_from\": \"2026-01-01T00:00:00.000Z\",\n  \"available_until\": \"2026-01-01T01:00:00.000Z\"\n}",
+              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": {{boss_version}},\n  \"available_from\": \"{{occurrence_available_from}}\",\n  \"available_until\": \"{{occurrence_available_until}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1431,7 +1434,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": 999,\n  \"available_from\": \"2026-01-01T00:00:00.000Z\",\n  \"available_until\": \"2026-01-01T01:00:00.000Z\"\n}",
+              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": 999,\n  \"available_from\": \"{{occurrence_available_from}}\",\n  \"available_until\": \"{{occurrence_available_until}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

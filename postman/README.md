@@ -28,7 +28,16 @@ probes require no bearer token. Refusal requests assert expected status/codes.
 Run other collections in order when they depend on earlier state. Their owner
 must reconcile remaining implementation differences before full-stack acceptance.
 
-For Package Registry admin requests, set `REGISTRY_ADMIN_USER_IDS` in the
-untracked deployment `.env` to the collection's `admin_id`, then recreate that
-service. Seed Notification on an empty database before running its seeded
-history requests. See the main README for seed commands.
+For Package Registry admin requests, use a real User Management token carrying
+`admin`. On a local stack, its supported command is `docker compose exec
+user-management dotnet UserManagement.Api.dll grant-role <test-email> admin`;
+this requires explicit approval for the role grant. Log in again afterwards.
+Registry verifies assertion roles; `REGISTRY_ADMIN_USER_IDS` does not grant access
+in the current image. Occurrence requests use a fresh two-hour availability window.
+
+Existing databases need the owning service's migrations before domain checks.
+Health/readiness alone does not prove schema compatibility. Preserve existing
+volumes; do not rerun first-start SQL or unrelated standalone seed commands.
+Use dedicated registered users and active Registry packages for shared fixtures.
+Keep bearer credentials in an untracked local environment; exported Newman
+reports can contain tokens and must also stay private.
