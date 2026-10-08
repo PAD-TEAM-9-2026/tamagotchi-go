@@ -1302,8 +1302,8 @@ one account per publishing or consuming service (see below).
 | User Management | `patriciamoraru/user-management:2.0.1` | `sha256:ecb7e8db5a07e647a9e1ae4d7a0b086e700ac067185ddc1004219f775cc0312a` | 3001 |
 | Tamagotchi | `victoriamutruc/tamagotchi:2.0.4` | `sha256:cc5a3b8cd9cbd61927090c60ca2775ff0b8f54cb989bef0c17cacfc3240c99dd` | 3002 |
 | Battle | `patriciamoraru/battle:2.0.1` | `sha256:4cc5ee7d1206e459832ce2d48f421729f7bb2d546bc24490c4a1d7849a3d1aec` | 3003 |
-| Guild | `mihaelacatan/guild-service:0.2.0` | `sha256:34535171aed7f5752fab51960c393584228f6d3415e562bbd317bb0cc0940140` | 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:2.0.1` | `sha256:77a83a6bb6feb7d3cd13b270162b7e9d84bc54f0af8a0103feb6d7db70d68bdd` | 3005 |
+| Guild | `mihaelacatan/guild-service:2.0.3` | `sha256:f3e41f56901a5378e43edc457d7908aaa2e8d6b5cb8e047428a2c3313f62d86d` | 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:2.0.3` | `sha256:34d73c2b2ac0eb8448421a4fdd67821d4d1de015c58cc78e67357559b20d3689` | 3005 |
 | Map | `sergedbs/map:1.0.0` | `sha256:b70681bcdac1958d9ed00d7be913f57cf12dfa4750d556ac3dc1435367de87dc` | 3006 |
 | Monster Raid | `sergedbs/monster-raid:1.0.0` | `sha256:5828d016053f30903d123aaaa41876f7d80d6c426ef5a92bb2ffc1ca2fb2ebcd` | 3007 |
 | Notification | `victoriamutruc/notification:2.0.3` | `sha256:b3c03037195717ef7be38fb2141b8c0634f436d7c00da8a78d8b769d403b2dd5` | 3008 |

@@ -108,7 +108,7 @@ services:
       retries: 10
 
   guild:
-    image: mihaelacatan/guild-service:0.2.0
+    image: mihaelacatan/guild-service:2.0.3
     pull_policy: always
     depends_on:
       database:
@@ -136,7 +136,7 @@ services:
       retries: 10
 
   registry:
-    image: mihaelacatan/package-registry-service:2.0.1
+    image: mihaelacatan/package-registry-service:2.0.3
     pull_policy: always
     depends_on:
       database:
