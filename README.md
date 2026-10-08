@@ -1292,9 +1292,9 @@ one account per publishing or consuming service (see below).
 | Service | Image | Digest | Host port |
 |---|---|---|---|
 | Gateway | `victoriamutruc/gateway:2.0.2` | `sha256:7724cff304f693193833a6d2db702f35587a95e4d5a200c571e28391e42f1333` | 3000 |
-| User Management | `patriciamoraru/user-management:2.0.0` | `sha256:eec4326267303a0dda4482715ffa2026cfe5bbe30ff7cc2e21fdbc799177b167` | 3001 |
+| User Management | `patriciamoraru/user-management:2.0.1` | `sha256:ecb7e8db5a07e647a9e1ae4d7a0b086e700ac067185ddc1004219f775cc0312a` | 3001 |
 | Tamagotchi | `victoriamutruc/tamagotchi:2.0.4` | `sha256:cc5a3b8cd9cbd61927090c60ca2775ff0b8f54cb989bef0c17cacfc3240c99dd` | 3002 |
-| Battle | `patriciamoraru/battle:1.2.0` | `sha256:64133eadda6c8f330743f37471f257fd5f9d847d714db7228d20e6ddccdd2746` | 3003 |
+| Battle | `patriciamoraru/battle:2.0.1` | `sha256:4cc5ee7d1206e459832ce2d48f421729f7bb2d546bc24490c4a1d7849a3d1aec` | 3003 |
 | Guild | `mihaelacatan/guild-service:0.2.0` | `sha256:34535171aed7f5752fab51960c393584228f6d3415e562bbd317bb0cc0940140` | 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:2.0.1` | `sha256:77a83a6bb6feb7d3cd13b270162b7e9d84bc54f0af8a0103feb6d7db70d68bdd` | 3005 |
 | Map | `sergedbs/map:1.0.0` | `sha256:b70681bcdac1958d9ed00d7be913f57cf12dfa4750d556ac3dc1435367de87dc` | 3006 |
@@ -1403,9 +1403,24 @@ docker compose exec guild node dist/db/seed.js
 docker compose exec registry node dist/db/seed.js
 docker compose exec tamagotchi node dist/db/seed.js
 docker compose exec notification node dist/db/seed.js
-docker compose exec user-management dotnet UserManagement.dll seed
+docker compose exec user-management dotnet UserManagement.Api.dll seed
 docker compose exec battle dotnet Battle.dll seed
 ```
+
+**Database schema.** User Management and Battle do not migrate their own databases at start. A fresh volume gets the schema from
+`deploy/db/user-management/001_init.sql` and `deploy/db/battle/001_init.sql`, which are generated from each service's migrations (every
+migration in order, with the `__EFMigrationsHistory` rows, so a later `dotnet ef database update` runs cleanly). A volume that already
+exists is brought up to the same schema with the `upgrade.sql` next to each of them, which applies only the migrations whose row is not
+in the history yet and so is safe to run again:
+
+```bash
+docker compose exec -T database sh -c 'psql -U "$USER_MANAGEMENT_DB_USER" -d "$USER_MANAGEMENT_DB_NAME" -v ON_ERROR_STOP=1' < db/user-management/upgrade.sql
+docker compose exec -T database sh -c 'psql -U "$BATTLE_DB_USER" -d "$BATTLE_DB_NAME" -v ON_ERROR_STOP=1' < db/battle/upgrade.sql
+```
+
+User Management 2.0.1 needs the three tables of its once-only ledgers (`CurrencyCredits`, `SettledBattles`, `ConsumedBoosts`), and Battle 2.0.1
+needs the outbox, the idempotency receipts, the combat snapshot columns and the settlement retry columns, so an old volume must be upgraded
+before the new images start. If a migration was applied by hand earlier, add its row to `__EFMigrationsHistory` first.
 
 Map and Monster Raid seed through Gateway using Python 3. From each standalone
 repository, run `scripts/seed.sh` after configuring real fixtures in your
