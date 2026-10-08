@@ -411,7 +411,7 @@ Registry's are:
 
 | Scope | Route | Caller |
 |---|---|---|
-| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | |
+| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | Tamagotchi, User Management |
 | `registry:check-eligibility` | `POST /v1/packages/eligibility-check` | Guild |
 | `registry:read-bosses` | `GET /v1/bosses/{bossId}`, user or service | Monster Raid |
 | `registry:read-occurrences` | `GET /v1/raid-occurrences/{id}`, user or service | Monster Raid |
