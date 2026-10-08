@@ -381,10 +381,10 @@ Tamagotchi's are:
 | Scope | Route | Caller |
 |---|---|---|
 | `tamagotchi:read-creature` | `GET /v1/tamagotchis/{id}`, user or service | |
-| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle, at settlement |
+| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle and Monster Raid, at settlement |
 | `tamagotchi:grant-access` | `POST /v1/tamagotchis/{id}/holders` | Battle, at settlement |
 | `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | |
-| `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | |
+| `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | Monster Raid |
 | `tamagotchi:reserve-engagement` | `POST /v1/internal/engagements` | Battle, Monster Raid |
 | `tamagotchi:read-engagement` | `GET /v1/internal/engagements/{referenceId}` | Battle, Monster Raid |
 | `tamagotchi:release-engagement` | `POST /v1/internal/engagements/{referenceId}/release` | Battle, Monster Raid |
@@ -411,10 +411,14 @@ Registry's are:
 
 | Scope | Route | Caller |
 |---|---|---|
-| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | |
+| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | Tamagotchi, User Management |
 | `registry:check-eligibility` | `POST /v1/packages/eligibility-check` | Guild |
 | `registry:read-bosses` | `GET /v1/bosses/{bossId}`, user or service | Monster Raid |
 | `registry:read-occurrences` | `GET /v1/raid-occurrences/{id}`, user or service | Monster Raid |
+| `registry:read-members` | `GET /v1/packages/{packageId}/users` | none yet |
+
+`registry:read-members` is named for completeness; no service calls it today,
+so nothing should be allowlisted for it until one does.
 
 Registry calls no other service, so it holds no `SERVICE_CLIENT_SECRET` either.
 
@@ -844,7 +848,7 @@ contract above did not spell out:
 | `POST /v1/packages/eligibility-check` | EligibilityInput | 200 Eligibility | service |
 | `POST /v1/bosses` | BossInput, Idempotency-Key | 201 Boss | admin |
 | `GET /v1/bosses` | query limit, cursor | 200 BossPage | admin |
-| `GET /v1/bosses/{bossId}` | query config_version | 200 Boss | admin or service |
+| `GET /v1/bosses/{bossId}` | query config_version | 200 Boss | user or service |
 | `PUT /v1/bosses/{bossId}` | BossInput, If-Match | 200 Boss | admin |
 | `POST /v1/raid-occurrences` | OccurrenceInput, Idempotency-Key | 201 Occurrence | admin |
 | `GET /v1/raid-occurrences` | query limit, cursor | 200 OccurrencePage | user |
