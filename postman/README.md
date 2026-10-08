@@ -48,3 +48,10 @@ outsider IDs; set Registry developer, moderator and outsider IDs. Probes use
 guild_probe_url and registry_probe_url directly. Registry configuration reads use
 a Monster Raid token with registry:read-config; occurrence reads also require
 registry:read-occurrences. Do not add Battle grants for these collection calls.
+
+Battle requires real `challenger_id`, `opponent_id` and `outsider_id`, with matching
+`challenger_credential`, `opponent_credential` and `outsider_credential`. Supply
+`challenger_primary_id`, `challenger_secondary_id`, `opponent_primary_id` and
+`opponent_secondary_id`: distinct held creatures with no pending challenge or
+engagement. Run requests in order for challenge replay, acceptance, attack and
+forfeit. Direct probes use `battle_probe_url`; domain calls use Gateway.
