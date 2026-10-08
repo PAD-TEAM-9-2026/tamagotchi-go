@@ -1165,17 +1165,17 @@ Compose project. Each service has its own credentials and database in one
 PostGIS-enabled PostgreSQL container. A RabbitMQ broker runs alongside it, with
 one account per publishing or consuming service (see below).
 
-| Service | Image | Host port |
-|---|---|---|
-| Gateway | `victoriamutruc/gateway:2.0.2` | 3000 |
-| User Management | `patriciamoraru/user-management:2.0.0` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:2.0.3` | 3002 |
-| Battle | `patriciamoraru/battle:1.2.0` | 3003 |
-| Guild | `mihaelacatan/guild-service:0.2.0` | 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:0.2.0` | 3005 |
-| Map | `sergedbs/map:1.0.0` | 3006 |
-| Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
-| Notification | `victoriamutruc/notification:2.0.2` | 3008 |
+| Service | Image | Digest | Host port |
+|---|---|---|---|
+| Gateway | `victoriamutruc/gateway:2.0.2` | `sha256:7724cff304f693193833a6d2db702f35587a95e4d5a200c571e28391e42f1333` | 3000 |
+| User Management | `patriciamoraru/user-management:2.0.0` | `sha256:eec4326267303a0dda4482715ffa2026cfe5bbe30ff7cc2e21fdbc799177b167` | 3001 |
+| Tamagotchi | `victoriamutruc/tamagotchi:2.0.3` | `sha256:b2948185ca675fc813409b1a85626aa6fcc958d2b2fafa678374f9246d2f38e8` | 3002 |
+| Battle | `patriciamoraru/battle:1.2.0` | `sha256:64133eadda6c8f330743f37471f257fd5f9d847d714db7228d20e6ddccdd2746` | 3003 |
+| Guild | `mihaelacatan/guild-service:0.2.0` | `sha256:34535171aed7f5752fab51960c393584228f6d3415e562bbd317bb0cc0940140` | 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:2.0.1` | `sha256:77a83a6bb6feb7d3cd13b270162b7e9d84bc54f0af8a0103feb6d7db70d68bdd` | 3005 |
+| Map | `sergedbs/map:1.0.0` | `sha256:b70681bcdac1958d9ed00d7be913f57cf12dfa4750d556ac3dc1435367de87dc` | 3006 |
+| Monster Raid | `sergedbs/monster-raid:1.0.0` | `sha256:5828d016053f30903d123aaaa41876f7d80d6c426ef5a92bb2ffc1ca2fb2ebcd` | 3007 |
+| Notification | `victoriamutruc/notification:2.0.2` | `sha256:8acea69b01b5a2b36e8a8ef454cdd7957a776853e0426910156b8b090c7db654` | 3008 |
 
 The pinned Map/Raid images predate their current integration branches. To test
 unpublished source, use a local Compose override that builds Map, Monster Raid
