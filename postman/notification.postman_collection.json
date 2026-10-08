@@ -2404,7 +2404,7 @@
                 "exec": [
                   "pm.test('403 another user', () => pm.response.to.have.status(403));",
                   "pm.test('names the problem', () => {",
-                  "  pm.expect(pm.response.json().code).to.eql('another_users_notifications');",
+                  "  pm.expect(pm.response.json().code).to.eql('not_self');",
                   "});"
                 ]
               }
@@ -2583,7 +2583,7 @@
                 "exec": [
                   "pm.test('403 another user', () => pm.response.to.have.status(403));",
                   "pm.test('names the problem', () => {",
-                  "  pm.expect(pm.response.json().code).to.eql('another_users_preferences');",
+                  "  pm.expect(pm.response.json().code).to.eql('not_self');",
                   "});"
                 ]
               }
@@ -2765,9 +2765,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('401 with WWW-Authenticate', () => {",
+                  "pm.test('401 unauthorized: the Gateway sends an anonymous assertion', () => {",
                   "  pm.response.to.have.status(401);",
-                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.eql('Bearer');",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthorized');",
                   "});"
                 ]
               }

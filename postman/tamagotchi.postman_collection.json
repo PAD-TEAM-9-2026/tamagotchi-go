@@ -1886,9 +1886,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('403 another_users_collection', () => {",
+                  "pm.test('403 not_self', () => {",
                   "  pm.response.to.have.status(403);",
-                  "  pm.expect(pm.response.json().code).to.eql('another_users_collection');",
+                  "  pm.expect(pm.response.json().code).to.eql('not_self');",
                   "});"
                 ]
               }
@@ -2303,9 +2303,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('401 with WWW-Authenticate', () => {",
+                  "pm.test('401 unauthorized: the Gateway sends an anonymous assertion', () => {",
                   "  pm.response.to.have.status(401);",
-                  "  pm.expect(pm.response.headers.get('WWW-Authenticate')).to.eql('Bearer');",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthorized');",
                   "});"
                 ]
               }
@@ -2384,9 +2384,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('403 service_token_required', () => {",
+                  "pm.test('403 insufficient_scope, the wrong kind of caller', () => {",
                   "  pm.response.to.have.status(403);",
-                  "  pm.expect(pm.response.json().code).to.eql('service_token_required');",
+                  "  pm.expect(pm.response.json().code).to.eql('insufficient_scope');",
                   "});"
                 ]
               }
