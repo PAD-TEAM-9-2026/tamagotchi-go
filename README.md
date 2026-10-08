@@ -529,6 +529,9 @@ sort tuple and return next_cursor=null when no further results remain.
 | Map nearby | distance_m ascending, user_id ascending | changed viewer observation returns 409 cursor_stale |
 | Raid list | started_at descending, raid_id descending | caller/filter mismatch returns 400 invalid_cursor |
 | Raid leaderboard | damage_dealt descending, joined_at ascending, user_id ascending | changed raid_version returns 409 cursor_stale |
+| User Management friend requests | expires_at descending, request_id descending | caller or page size mismatch returns 400 invalid_cursor |
+| User Management relationships | other_user_id ascending | caller, listed user or page size mismatch returns 400 invalid_cursor |
+| User Management boosts | boost_id ascending | caller or page size mismatch returns 400 invalid_cursor |
 
 Bind Map's cursor to the full viewer observation, including coordinates, since
 equal-timestamp location changes remain valid. Freshness and current visibility
@@ -660,6 +663,26 @@ route alone. Beyond those rules, as implemented by User Management:
   `502 upstream_unavailable`, `503` or `504`, is not stored, so the retry runs again.
 - The effect and its receipt are saved together or not at all. A stored response never
   contains a password or a token.
+
+**Pagination.** The three lists above that take `limit` and `cursor` (friend requests, relationships and
+boosts) follow the cursor rules of the proposal under "Command replay and pagination proposal", with the
+sort tuples in its table. There is no membership list any more, so there is no fourth. As implemented by
+User Management:
+
+- `limit` defaults to 100. A value below 1 or above 100, or one that is not a whole number, is
+  `400 validation_error`, not a silently clamped page.
+- The sort tuple is unique for relationships (`other_user_id`) and boosts (`boost_id`), because each is
+  unique for the listed user. Friend requests break ties between equal `expires_at` by `request_id`, so
+  no request is skipped or repeated.
+- A cursor is bound to the verified caller, the endpoint, the listed user (relationships) and the page
+  size. A different caller, endpoint, listed user or `limit` is `400 invalid_cursor`, as are a tampered,
+  malformed, expired or unsupported-version cursor. Every page returns a new cursor, valid for five
+  minutes from the moment it was issued.
+- The lists are live queries, not snapshots. A row added or removed between two pages is seen or not
+  according to where it sorts relative to the cursor: one that sorts before the last tuple is not shown
+  and one that sorts after it is. `next_cursor` is `null` on the last page, including when the last page
+  is exactly full.
+- The signing key is service configuration (`CURSOR_SIGNING_KEY`), never part of a cursor or committed.
 
 Joining a package grants that package's starter once per user per package, and
 that is the only path by which a creature is minted for a player. There is no
