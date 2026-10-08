@@ -900,6 +900,14 @@ checked again at that point.
 | `duration_seconds` | integer [1..3600] | yes |
 | `max_participants` | integer [1..100] | yes |
 | `rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} | yes |
+| `defeat_rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | yes |
+
+`defeat_rewards` is what a participant gets when the raid ends without the boss
+being defeated (timeout or wipe). `null` means nothing is paid out on defeat.
+Both reward objects are restricted to the two currencies every Tamagotchi has
+regardless of package — global currency and XP — never a package-defined stat
+key, so a reward never references an attribute a participant's package does
+not define.
 
 ### BossPage
 
@@ -959,6 +967,8 @@ checked again at that point.
 | `available_until` | timestamp (ISO 8601 UTC) | yes |
 | `status` | scheduled / active / inactive / cancelled | yes |
 | `version` | integer [1..2147483647] | yes |
+| `rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} | yes |
+| `defeat_rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | yes |
 
 ### OccurrenceInput
 
@@ -968,6 +978,15 @@ checked again at that point.
 | `boss_version` | integer [1..2147483647] | yes |
 | `available_from` | timestamp (ISO 8601 UTC) | yes |
 | `available_until` | timestamp (ISO 8601 UTC) | yes |
+| `rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | no |
+| `defeat_rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | no |
+
+`rewards` and `defeat_rewards` on an occurrence override the boss's own values
+for that occurrence only, for example to run a double-reward event without
+creating a new boss config version. Omitted or `null` means "use the boss's
+value at this occurrence's `boss_version`"; this is also why `Occurrence`
+always echoes back the effective values, resolved at creation time, rather
+than leaving a caller to go fetch the boss to find out.
 
 ### OccurrencePage
 
