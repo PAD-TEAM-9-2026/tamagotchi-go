@@ -1131,6 +1131,25 @@ name the variable without credentials. Gateway and database credentials are
 separate. Validate outage/recovery, redelivery, poison-message retries/DLQ,
 consumer restart and unroutable publication before claiming real delivery.
 
+## Image publication
+
+Release, code, package and image versions use `X.Y.Z`: integration milestone,
+release revision and patch.
+Start each release line at Z=0. Existing tags and releases remain unchanged.
+
+Each service's workflow must publish after CI passes on a tested merge into
+`main`. One build produces the numeric version and `latest` for `linux/amd64`
+and `linux/arm64`. Choose an unused version in the service's release metadata;
+serialize publication, reject existing numeric tags and stop if registry checks fail.
+
+Repository owners configure `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` as Actions
+secrets and approve publication activation. Workflows with a publication gate
+remain disabled until that approval.
+
+Shared publishes no image. It pins tested numeric image versions in Compose and
+records them in release notes. Only Shared receives an annotated `vX.Y.Z` tag
+and GitHub Release on its tested `main` merge. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Deployment
 
 `deploy/compose.yaml` pulls nine versioned images under the `tamagotchi-go`
@@ -1149,9 +1168,6 @@ one account per publishing or consuming service (see below).
 | Map | `sergedbs/map:1.0.0` | 3006 |
 | Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
 | Notification | `victoriamutruc/notification:2.0.1` | 3008 |
-
-Code and image versions use `X.Y.Z`. Only this repository receives `X.Y.Z`
-Git tags and GitHub Releases. Never overwrite a released numeric version.
 
 The pinned Map/Raid images predate their current integration branches. To test
 unpublished source, use a local Compose override that builds Map, Monster Raid
@@ -1277,11 +1293,7 @@ conversations, and a passing `ci` check. New commits dismiss prior approvals.
 Squash work branches into `develop` and merge releases into `main` with a
 merge commit. Contract changes also need review from affected service owners.
 
-Versions use `X.Y.Z`: milestone, release revision and patch revision. Start each
-release line at Z=0. The shared release receives an annotated `vX.Y.Z` tag on the
-tested main merge and a GitHub Release. Service releases use the main merge;
-images remain explicitly pinned and immutable. Historical tags and releases
-remain unchanged.
+Versioning and publication follow [Image publication](#image-publication).
 
 Track work in the [team project](https://github.com/orgs/PAD-TEAM-9-2026/projects/1).
 See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
