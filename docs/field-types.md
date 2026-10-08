@@ -32,7 +32,7 @@ database.
 
 | Field | Type / constraint | Required |
 |---|---|---|
-| `type` | "about:blank" | yes |
+| `type` | `about:blank` or an absolute problem-type URI | yes |
 | `title` | string [1..128] | yes |
 | `status` | integer [400..599] | yes |
 | `detail` | string [1..1024] | yes |
@@ -45,6 +45,10 @@ database.
 | Field | Type / constraint | Required |
 |---|---|---|
 | `status` | READY / NOT_READY | yes |
+
+The `code` is the stable application error identifier. Clients must not require
+`type` to equal `about:blank`; a service may identify its problem type with an
+absolute URI. Existing status codes and other Problem fields are unchanged.
 
 ### VersionReceipt
 

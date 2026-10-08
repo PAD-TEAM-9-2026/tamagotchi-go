@@ -218,7 +218,7 @@ owners' agreement before implementation.
 | Payload | JSON, UTF-8, snake_case |
 | IDs | UUID v7, string encoded |
 | Timestamps | ISO 8601, UTC, milliseconds |
-| Errors | RFC 9457, `application/problem+json` |
+| Errors | RFC 9457, `application/problem+json`; `type` is `about:blank` or an absolute problem-type URI, `code` identifies the application error |
 | Pagination | Opaque cursor, never an offset |
 | Concurrency | `ETag` on reads, `If-Match` on writes, 412 on mismatch |
 | Idempotency | `Idempotency-Key` header on non-repeatable commands |
