@@ -862,6 +862,37 @@ and an accepted battle whose turn timer runs out is auto-forfeited. Both exist t
 release the engagement lock, and both are enforced here rather than in Tamagotchi
 because Battle owns the turn state.
 
+**Combat.** The creatures and rules a battle is fought with are read once, when it starts, and an attack calls no
+other service. As implemented by Battle:
+
+- At `accept` the reservation answer's `pets` give the four creatures as they are at that moment (level, combat type,
+  package, config version and stats). Battle also reads the type matrix from Tamagotchi and, for each package and config
+  version those creatures are pinned to, the bonus rules from Registry. Registry's `registry:read-config` is the scope
+  for the rules; Tamagotchi's `tamagotchi:read-creature` is not needed, because the snapshot comes with the reservation.
+- Each side gets its HP and its base damage from the levels of its two creatures. The contract fixes the ranges
+  (HP 1 to 1500, one hit 1 to 1500) and the modifiers, but no base number, so Battle chooses them:
+  HP is `100 + 10 * primary level + 4 * secondary level`, and base damage is
+  `(12 + 2 * primary level + secondary level) / 2`, rounded down.
+- A bonus rule is evaluated as written: the creature's stat named by `stat_key` is compared with `threshold` using
+  `operator`. A creature without that stat, or whose stat is not a number, does not match. The `value_bps` of every
+  matching `ATTACK_BPS` rule of either creature of a side, plus the boost, is added to the side's attack. The
+  `DEFENSE_BPS` rules are added up the same way and lower the hits the side takes.
+- The type multiplier is the matrix value of the side's primary creature's type against the other side's primary's.
+- A hit is `base damage * (1 + attack) * type multiplier * (1 - the other side's defense)`, in basis points, in whole
+  numbers, rounded down, never below 1 or above 1500. The order follows the damage rules of Monster Raid, further down. There is no
+  randomness. A boost adds the `attack_bps` User Management reports (1000 for `ATTACK_10`) to every hit of the
+  side that paid for it. Both players' boosts are paid at `accept`, the accepting player's first.
+- The challenger attacks first and each attack passes the turn. A turn lasts 30 seconds (`turn_expires_at`). A hit that
+  leaves no HP ends the battle, the attacker wins, and the winner is paid out exactly as for a forfeit.
+- `attack` answers `400 validation_error` (no `user_id`), `403 not_self` (`user_id` is not the caller),
+  `403 not_participant`, `404 battle_not_found`, `409 not_ongoing`, `409 not_your_turn`, `409 battle_changed` (another
+  request changed the battle at the same moment), `409 legacy_snapshot_unavailable` (the battle started before attacks
+  existed) and `410 turn_expired`. `not_your_turn` and `battle_changed` depend on the moment and are not stored under an
+  `Idempotency-Key`.
+- Whatever Registry or Tamagotchi answers while a battle is being prepared, the player asked for neither, so it is
+  `502 upstream_unavailable`. If anything fails after the creatures were reserved, they are released and the battle
+  stays pending. User Management has no way to give a boost back, so one spent before a later failure is not refunded.
+
 ### Guild, `/guild`
 
 | Method and path | Request | Response | Access |
