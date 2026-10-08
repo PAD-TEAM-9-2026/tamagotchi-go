@@ -269,6 +269,13 @@ explicit exceptions. Gateway is not an arbitrary external proxy.
 | `GET /health` | none | 200 Health | public |
 | `GET /ready` | none | 200 Readiness or 503 Problem | public |
 
+Gateway also serves Prometheus metrics at `GET /metrics` on a separate monitoring
+port, `METRICS_PORT` (default 9090), from the first image after `2.0.2`. It is not part
+of the public route table above: it carries request counts, latencies and work-pool
+usage, no domain data, and needs no assertion. Deployments publish it only to the
+monitoring network, never to clients. The shared Compose file does not publish or
+scrape it yet. The Gateway README lists the metric names.
+
 Only `guild.chat` is supported. Gateway forwards negotiation
 to Guild; the exact internal negotiation endpoint must be agreed with Mihaela
 before implementation. Guild issues and validates a single-use 30-second ticket.
