@@ -1571,43 +1571,37 @@
           "name": "The friend request arrives as a notification",
           "event": [
             {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (Number(pm.collectionVariables.get('event_tries') || 0) > 0) {",
-                  "  setTimeout(() => {}, 1000);",
-                  "}"
-                ]
-              }
-            },
-            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const tries = Number(pm.collectionVariables.get('event_tries') || 0);",
-                  "const items = pm.response.code === 200 ? pm.response.json().items : [];",
-                  "const found = items.find((n) => n.type === 'FRIEND_REQUEST' && n.params.request_id === pm.collectionVariables.get('friend_request_id'));",
-                  "",
-                  "if (found === undefined && tries < 30) {",
-                  "  pm.collectionVariables.set('event_tries', tries + 1);",
-                  "  postman.setNextRequest(pm.info.requestName);",
-                  "} else {",
-                  "  pm.collectionVariables.set('event_tries', 0);",
-                  "  pm.test('200 with the notification the event created', () => {",
-                  "    pm.response.to.have.status(200);",
-                  "    pm.expect(found).to.be.an('object');",
-                  "  });",
-                  "  pm.collectionVariables.set('notification_id', found.id);",
-                  "  pm.test('carries who asked, by id', () => {",
-                  "    pm.expect(found.params.from_user_id).to.eql(pm.collectionVariables.get('other_id'));",
-                  "  });",
-                  "  pm.test('a muted category is kept in the history rather than dropped', () => {",
-                  "    pm.expect(found.delivery_status).to.eql('SUPPRESSED');",
-                  "  });",
-                  "  pm.test('arrives unread', () => pm.expect(found.read_at).to.eql(null));",
-                  "}"
+                  "const deadline = Date.now() + 15000;",
+                  "function poll(response) {",
+                  "  if (response.code !== 200) { pm.test('event lookup returns 200', () => pm.expect(response.code).to.eql(200)); return; }",
+                  "  const items = response.code === 200 ? response.json().items : [];",
+                  "  const found = items.find((n) => n.type === 'FRIEND_REQUEST' && n.params.request_id === pm.collectionVariables.get('friend_request_id'));",
+                  "  if (found !== undefined) {",
+                  "    pm.test('200 with the notification the event created', () => {",
+                  "      response.to.have.status(200);",
+                  "      pm.expect(found).to.be.an('object');",
+                  "    });",
+                  "    pm.collectionVariables.set('notification_id', found.id);",
+                  "    pm.test('carries who asked, by id', () => {",
+                  "      pm.expect(found.params.from_user_id).to.eql(pm.collectionVariables.get('other_id'));",
+                  "    });",
+                  "    pm.test('a muted category is kept in the history rather than dropped', () => {",
+                  "      pm.expect(found.delivery_status).to.eql('SUPPRESSED');",
+                  "    });",
+                  "    pm.test('arrives unread', () => pm.expect(found.read_at).to.eql(null));",
+                  "    return;",
+                  "  }",
+                  "  if (Date.now() >= deadline) { pm.test('event arrives within 15 seconds', () => pm.expect.fail('Expected committed event effect did not arrive')); return; }",
+                  "  setTimeout(() => pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: Object.fromEntries(Object.entries(pm.request.headers.toObject()).map(([key, value]) => [key, pm.variables.replaceIn(value)]))}, (error, next) => {",
+                  "    if (error) { pm.test('event lookup transport', () => pm.expect.fail(String(error))); return; }",
+                  "    poll(next);",
+                  "  }), 500);",
+                  "}",
+                  "poll(pm.response);"
                 ]
               }
             }
@@ -1729,39 +1723,33 @@
           "name": "A user with no device gets NO_DEVICE",
           "event": [
             {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (Number(pm.collectionVariables.get('event_tries') || 0) > 0) {",
-                  "  setTimeout(() => {}, 1000);",
-                  "}"
-                ]
-              }
-            },
-            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const tries = Number(pm.collectionVariables.get('event_tries') || 0);",
-                  "const items = pm.response.code === 200 ? pm.response.json().items : [];",
-                  "const found = items.find((n) => n.params.request_id === pm.collectionVariables.get('third_request_id'));",
-                  "",
-                  "if (found === undefined && tries < 30) {",
-                  "  pm.collectionVariables.set('event_tries', tries + 1);",
-                  "  postman.setNextRequest(pm.info.requestName);",
-                  "} else {",
-                  "  pm.collectionVariables.set('event_tries', 0);",
-                  "  pm.test('200 with the notification the event created', () => {",
-                  "    pm.response.to.have.status(200);",
-                  "    pm.expect(found).to.be.an('object');",
-                  "  });",
-                  "  pm.test('stored, but nothing could be delivered without a device', () => {",
-                  "    pm.expect(found.type).to.eql('FRIEND_REQUEST');",
-                  "    pm.expect(found.delivery_status).to.eql('NO_DEVICE');",
-                  "  });",
-                  "}"
+                  "const deadline = Date.now() + 15000;",
+                  "function poll(response) {",
+                  "  if (response.code !== 200) { pm.test('event lookup returns 200', () => pm.expect(response.code).to.eql(200)); return; }",
+                  "  const items = response.code === 200 ? response.json().items : [];",
+                  "  const found = items.find((n) => n.params.request_id === pm.collectionVariables.get('third_request_id'));",
+                  "  if (found !== undefined) {",
+                  "    pm.test('200 with the notification the event created', () => {",
+                  "      response.to.have.status(200);",
+                  "      pm.expect(found).to.be.an('object');",
+                  "    });",
+                  "    pm.test('stored, but nothing could be delivered without a device', () => {",
+                  "      pm.expect(found.type).to.eql('FRIEND_REQUEST');",
+                  "      pm.expect(found.delivery_status).to.eql('NO_DEVICE');",
+                  "    });",
+                  "    return;",
+                  "  }",
+                  "  if (Date.now() >= deadline) { pm.test('event arrives within 15 seconds', () => pm.expect.fail('Expected committed event effect did not arrive')); return; }",
+                  "  setTimeout(() => pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: Object.fromEntries(Object.entries(pm.request.headers.toObject()).map(([key, value]) => [key, pm.variables.replaceIn(value)]))}, (error, next) => {",
+                  "    if (error) { pm.test('event lookup transport', () => pm.expect.fail(String(error))); return; }",
+                  "    poll(next);",
+                  "  }), 500);",
+                  "}",
+                  "poll(pm.response);"
                 ]
               }
             }
@@ -1888,40 +1876,34 @@
           "name": "Page through the history",
           "event": [
             {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (Number(pm.collectionVariables.get('event_tries') || 0) > 0) {",
-                  "  setTimeout(() => {}, 1000);",
-                  "}"
-                ]
-              }
-            },
-            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const tries = Number(pm.collectionVariables.get('event_tries') || 0);",
-                  "const items = pm.response.code === 200 ? pm.response.json().items : [];",
-                  "const found = items.length === 1 && pm.response.json().next_cursor ? items[0] : undefined;",
-                  "",
-                  "if (found === undefined && tries < 30) {",
-                  "  pm.collectionVariables.set('event_tries', tries + 1);",
-                  "  postman.setNextRequest(pm.info.requestName);",
-                  "} else {",
-                  "  pm.collectionVariables.set('event_tries', 0);",
-                  "  pm.test('200 with the notification the event created', () => {",
-                  "    pm.response.to.have.status(200);",
-                  "    pm.expect(found).to.be.an('object');",
-                  "  });",
-                  "  pm.collectionVariables.set('history_cursor', pm.response.json().next_cursor);",
-                  "  pm.collectionVariables.set('notification_id', found.id);",
-                  "  pm.test('one on the page and a cursor to the rest', () => {",
-                  "    pm.expect(items).to.have.lengthOf(1);",
-                  "  });",
-                  "}"
+                  "const deadline = Date.now() + 15000;",
+                  "function poll(response) {",
+                  "  if (response.code !== 200) { pm.test('event lookup returns 200', () => pm.expect(response.code).to.eql(200)); return; }",
+                  "  const items = response.code === 200 ? response.json().items : [];",
+                  "  const found = items.length === 1 && response.json().next_cursor ? items[0] : undefined;",
+                  "  if (found !== undefined) {",
+                  "    pm.test('200 with the notification the event created', () => {",
+                  "      response.to.have.status(200);",
+                  "      pm.expect(found).to.be.an('object');",
+                  "    });",
+                  "    pm.collectionVariables.set('history_cursor', response.json().next_cursor);",
+                  "    pm.collectionVariables.set('notification_id', found.id);",
+                  "    pm.test('one on the page and a cursor to the rest', () => {",
+                  "      pm.expect(items).to.have.lengthOf(1);",
+                  "    });",
+                  "    return;",
+                  "  }",
+                  "  if (Date.now() >= deadline) { pm.test('event arrives within 15 seconds', () => pm.expect.fail('Expected committed event effect did not arrive')); return; }",
+                  "  setTimeout(() => pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: Object.fromEntries(Object.entries(pm.request.headers.toObject()).map(([key, value]) => [key, pm.variables.replaceIn(value)]))}, (error, next) => {",
+                  "    if (error) { pm.test('event lookup transport', () => pm.expect.fail(String(error))); return; }",
+                  "    poll(next);",
+                  "  }), 500);",
+                  "}",
+                  "poll(pm.response);"
                 ]
               }
             }

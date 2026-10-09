@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Battle",
-    "description": "Battle API. Run requests in order when they share state. The collection covers implemented endpoints and expected refusal responses. Attack and idempotency replay are not implemented in this image.",
+    "description": "Authenticated Battle scenario through Gateway. Supply real challenger/opponent/outsider IDs, matching bearer credentials and distinct held primary/secondary creature IDs. Use fresh lineups with no pending challenge or engagement. Probes are direct. Run requests in order; replay and attack are included.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -78,14 +78,13 @@
           "",
           "pm.collectionVariables.set('idempotency_key', uuidv7());",
           "",
-          "seed('challenger_id', uuidv7());",
-          "seed('opponent_id', uuidv7());",
-          "seed('outsider_id', uuidv7());",
-          "seed('challenger_primary_id', uuidv7());",
-          "seed('challenger_secondary_id', uuidv7());",
-          "seed('opponent_primary_id', uuidv7());",
-          "seed('opponent_secondary_id', uuidv7());",
-          ""
+          "function fixture(key) {",
+          "  const value = pm.environment.get(key) || pm.collectionVariables.get(key);",
+          "  if (!value) throw new Error('Supply a real fixture and matching credential for ' + key);",
+          "  pm.collectionVariables.set(key, value);",
+          "}",
+          "['challenger_id', 'opponent_id', 'outsider_id', 'challenger_primary_id', 'challenger_secondary_id', 'opponent_primary_id', 'opponent_secondary_id', 'challenger_credential', 'opponent_credential', 'outsider_credential'].forEach(fixture);",
+          "seed('unknown_battle_id', uuidv7());"
         ]
       }
     }
@@ -100,8 +99,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{battle_base_url}}/health",
-              "host": ["{{battle_base_url}}"],
+              "raw": "{{battle_probe_url}}/health",
+              "host": ["{{battle_probe_url}}"],
               "path": ["health"]
             }
           },
@@ -123,8 +122,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{battle_base_url}}/ready",
-              "host": ["{{battle_base_url}}"],
+              "raw": "{{battle_probe_url}}/ready",
+              "host": ["{{battle_probe_url}}"],
               "path": ["ready"]
             }
           },
@@ -150,7 +149,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Authorization", "value": "Bearer {{challenger_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
@@ -180,7 +179,42 @@
                   "  pm.expect(body.sides).to.have.lengthOf(1);",
                   "  pm.expect(body.version).to.eql(1);",
                   "  pm.collectionVariables.set('battle_id', body.battle_id);",
-                  "});"
+                  "});",
+                  "pm.collectionVariables.set('create_key', pm.collectionVariables.get('idempotency_key'));",
+                  "pm.collectionVariables.set('create_receipt', pm.response.text());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replay challenge creation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{challenger_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{create_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{battle_base_url}}/v1/battles",
+              "host": ["{{battle_base_url}}"],
+              "path": ["v1", "battles"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"opponent_id\": \"{{opponent_id}}\",\n  \"primary_id\": \"{{challenger_primary_id}}\",\n  \"secondary_id\": \"{{challenger_secondary_id}}\",\n  \"boost_ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 replayed creation', () => pm.response.to.have.status(201));",
+                  "pm.test('identical creation receipt', () => pm.expect(pm.response.json()).to.deep.equal(JSON.parse(pm.collectionVariables.get('create_receipt'))));"
                 ]
               }
             }
@@ -190,12 +224,16 @@
           "name": "List battles as the challenger",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{challenger_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{challenger_credential}}" }
+            ],
             "url": {
               "raw": "{{battle_base_url}}/v1/battles?limit=10",
               "host": ["{{battle_base_url}}"],
               "path": ["v1", "battles"],
-              "query": [{ "key": "limit", "value": "10" }]
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
             }
           },
           "event": [
@@ -218,7 +256,9 @@
           "name": "Read the battle as the challenger",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{challenger_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{challenger_credential}}" }
+            ],
             "url": {
               "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}",
               "host": ["{{battle_base_url}}"],
@@ -244,7 +284,9 @@
           "name": "Read the battle as the opponent",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{opponent_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{opponent_credential}}" }
+            ],
             "url": {
               "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}",
               "host": ["{{battle_base_url}}"],
@@ -268,7 +310,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{opponent_id}}" },
+              { "key": "Authorization", "value": "Bearer {{opponent_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
@@ -295,7 +337,42 @@
                   "  pm.expect(body.status).to.eql('ONGOING');",
                   "  pm.expect(body.sides).to.have.lengthOf(2);",
                   "  pm.expect(body.version).to.eql(2);",
-                  "});"
+                  "});",
+                  "const turn = pm.response.json().turn_user_id;",
+                  "pm.collectionVariables.set('attack_actor_id', turn);",
+                  "pm.collectionVariables.set('attack_credential', turn === pm.collectionVariables.get('challenger_id') ? pm.collectionVariables.get('challenger_credential') : pm.collectionVariables.get('opponent_credential'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Attack on the current turn",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{attack_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}/attack",
+              "host": ["{{battle_base_url}}"],
+              "path": ["v1", "battles", "{{battle_id}}", "attack"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{attack_actor_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 positive damage', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().damage_dealt).to.be.above(0); });"
                 ]
               }
             }
@@ -306,7 +383,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Authorization", "value": "Bearer {{challenger_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
@@ -345,7 +422,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Authorization", "value": "Bearer {{challenger_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
@@ -380,7 +457,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{opponent_id}}" },
+              { "key": "Authorization", "value": "Bearer {{opponent_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
@@ -440,7 +517,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Authorization", "value": "Bearer {{challenger_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
@@ -475,7 +552,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Authorization", "value": "Bearer {{challenger_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
@@ -509,11 +586,13 @@
           "name": "An unknown battle",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{outsider_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{outsider_credential}}" }
+            ],
             "url": {
-              "raw": "{{battle_base_url}}/v1/battles/00000000-0000-7000-8000-000000000000",
+              "raw": "{{battle_base_url}}/v1/battles/{{unknown_battle_id}}",
               "host": ["{{battle_base_url}}"],
-              "path": ["v1", "battles", "00000000-0000-7000-8000-000000000000"]
+              "path": ["v1", "battles", "{{unknown_battle_id}}"]
             }
           },
           "event": [
@@ -535,7 +614,9 @@
           "name": "An outsider cannot read the battle",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{outsider_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{outsider_credential}}" }
+            ],
             "url": {
               "raw": "{{battle_base_url}}/v1/battles/{{battle_id}}",
               "host": ["{{battle_base_url}}"],
@@ -562,7 +643,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{outsider_id}}" },
+              { "key": "Authorization", "value": "Bearer {{outsider_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
@@ -597,7 +678,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{opponent_id}}" },
+              { "key": "Authorization", "value": "Bearer {{opponent_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
@@ -633,7 +714,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{opponent_id}}" },
+              { "key": "Authorization", "value": "Bearer {{opponent_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
@@ -662,7 +743,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{challenger_id}}" },
+              { "key": "Authorization", "value": "Bearer {{challenger_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {

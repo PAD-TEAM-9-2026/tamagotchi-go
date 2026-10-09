@@ -94,12 +94,18 @@
           "",
           "pm.collectionVariables.set('idempotency_key', uuidv7());",
           "",
-          "seed('leader_id', uuidv7());",
-          "seed('officer_to_be_id', uuidv7());",
-          "seed('decliner_id', uuidv7());",
-          "seed('revokee_id', uuidv7());",
-          "seed('kicked_id', uuidv7());",
-          "seed('outsider_id', uuidv7());",
+          "function fixture(key) {",
+          "  const value = pm.environment.get(key) || pm.collectionVariables.get(key);",
+          "  if (!value) throw new Error('Supply a real fixture ID and matching credential for ' + key);",
+          "  pm.collectionVariables.set(key, value);",
+          "}",
+          "",
+          "fixture('leader_id');",
+          "fixture('officer_to_be_id');",
+          "fixture('decliner_id');",
+          "fixture('revokee_id');",
+          "fixture('kicked_id');",
+          "fixture('outsider_id');",
           "seed('run_suffix', Date.now().toString());",
           ""
         ]
@@ -116,9 +122,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{guild_base_url}}/health",
+              "raw": "{{guild_probe_url}}/health",
               "host": [
-                "{{guild_base_url}}"
+                "{{guild_probe_url}}"
               ],
               "path": [
                 "health"
@@ -143,9 +149,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{guild_base_url}}/ready",
+              "raw": "{{guild_probe_url}}/ready",
               "host": [
-                "{{guild_base_url}}"
+                "{{guild_probe_url}}"
               ],
               "path": [
                 "ready"

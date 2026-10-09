@@ -100,10 +100,38 @@ This section describes the target architecture. Gateway source implements
 routing and authorization; Map and Monster Raid integration source uses real
 HTTP adapters and durable broker delivery. Published image versions may predate
 these changes. Validate the selected image set against real dependencies before
-claiming deployment compatibility. The existing diagram still needs its routing
-and obsolete dependency paths reconciled with this contract.
+claiming deployment compatibility. The diagram distinguishes transport paths from domain ownership.
 
-![Tamagotchi Go architecture with 8 microservices, PostgreSQL per service, and RabbitMQ](docs/img/architecture_diagram.png)
+```mermaid
+flowchart TB
+    Client[Application / Postman] -->|REST and socket negotiation| Gateway[Python Gateway]
+    Gateway --> Users[User Management]
+    Gateway --> Pets[Tamagotchi]
+    Gateway --> Battle[Battle]
+    Gateway --> Guild[Guild]
+    Gateway --> Registry[Package Registry]
+    Gateway --> Map[Map]
+    Gateway --> Raid[Monster Raid]
+    Gateway --> Notification[Notification]
+    Services[Service REST callers] -->|service bearer and signed context| Gateway
+    Client -->|negotiated ticket / direct WebSocket| Guild
+    Publishers[Users / Pets / Battle / Guild / Registry / Map / Raid] -->|committed facts| Broker[RabbitMQ]
+    Broker -->|package membership| Pets
+    Broker -->|package membership| Registry
+    Broker -->|occurrence lifecycle| Raid
+    Broker -->|notification events| Notification
+    Notification -->|configured push provider| Firebase[Firebase]
+    Domain[Each domain service] -->|own credentials / own schema| Data[Eight separate PostgreSQL databases]
+```
+
+Service REST dependencies traverse Gateway: Map reads User Management;
+Raid reads Guild, Registry and Tamagotchi and delivers rewards to User Management
+and Tamagotchi. Battle uses User Management, Registry and Tamagotchi. Guild uses
+User Management and Registry. User Management and Tamagotchi read Registry
+configuration. Notification consumes events rather than making domain REST calls.
+Direct probes, Gateway's JWKS bootstrap, broker traffic and provider assets are
+explicit exceptions. Registry has no membership-rebuild REST call to User
+Management; its projection is updated by committed membership events.
 
 Every client goes through the HTTP Gateway. It routes by path prefix to the eight
 services, so a frontend package never learns where a service lives or how many
@@ -1302,14 +1330,13 @@ one account per publishing or consuming service (see below).
 | User Management | `patriciamoraru/user-management:2.0.1` | `sha256:ecb7e8db5a07e647a9e1ae4d7a0b086e700ac067185ddc1004219f775cc0312a` | 3001 |
 | Tamagotchi | `victoriamutruc/tamagotchi:2.0.4` | `sha256:cc5a3b8cd9cbd61927090c60ca2775ff0b8f54cb989bef0c17cacfc3240c99dd` | 3002 |
 | Battle | `patriciamoraru/battle:2.0.1` | `sha256:4cc5ee7d1206e459832ce2d48f421729f7bb2d546bc24490c4a1d7849a3d1aec` | 3003 |
-| Guild | `mihaelacatan/guild-service:0.2.0` | `sha256:34535171aed7f5752fab51960c393584228f6d3415e562bbd317bb0cc0940140` | 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:2.0.1` | `sha256:77a83a6bb6feb7d3cd13b270162b7e9d84bc54f0af8a0103feb6d7db70d68bdd` | 3005 |
-| Map | `sergedbs/map:1.0.0` | `sha256:b70681bcdac1958d9ed00d7be913f57cf12dfa4750d556ac3dc1435367de87dc` | 3006 |
-| Monster Raid | `sergedbs/monster-raid:1.0.0` | `sha256:5828d016053f30903d123aaaa41876f7d80d6c426ef5a92bb2ffc1ca2fb2ebcd` | 3007 |
+| Guild | `mihaelacatan/guild-service:2.0.3` | `sha256:f3e41f56901a5378e43edc457d7908aaa2e8d6b5cb8e047428a2c3313f62d86d` | 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:2.0.3` | `sha256:34d73c2b2ac0eb8448421a4fdd67821d4d1de015c58cc78e67357559b20d3689` | 3005 |
+| Map | `sergedbs/map:2.0.0` | `sha256:b9928555973e65aacf2df3d2826b39093628c999ccb4a69c8884c05831e9faf1` | 3006 |
+| Monster Raid | `sergedbs/monster-raid:2.0.0` | `sha256:50d1424235f9638aa1d3436ca1f7d789e1293b2f0d28fe935bdfe91d5cdcd2aa` | 3007 |
 | Notification | `victoriamutruc/notification:2.0.3` | `sha256:b3c03037195717ef7be38fb2141b8c0634f436d7c00da8a78d8b769d403b2dd5` | 3008 |
 
-The pinned Map/Raid images predate their current integration branches. To test
-unpublished source, use a local Compose override that builds Map, Monster Raid
+To test unpublished source, use a local Compose override that builds Map, Monster Raid
 and Gateway from their standalone checkouts, with distinct local image names
 and `pull_policy: never`. Keep the override outside Git. Replace canonical pins
 only after the corresponding numeric images are published and validated.
@@ -1475,3 +1502,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
 
 Each private repository README repeats its own endpoints, events and dependencies, so the
 service can be read on its own.
+
+### Runtime logging
+
+Map/Raid log each domain request once with method, path, status, duration and
+correlation ID. Routine SQL/framework messages and successful probes are quiet
+at the default level. Configure MAP_LOG_LEVEL and MONSTER_RAID_LOG_LEVEL using
+.NET levels such as Debug, Information, Warning or Error. GATEWAY_LOG_LEVEL uses
+debug, info, warn or error. Restart the affected service after changing its level.
+
+Gateway logs HTTP requests and Guild negotiation; direct WebSocket activity
+belongs to Guild. Its owner should log socket open/close, rejected upgrades,
+message outcomes and errors, without tickets or message contents. Never log
+Authorization, service secrets, assertions or query strings containing credentials.
+
+Map/Raid's supplied database pools are capped at 10 connections each, independently
+of their 64-task admission limits. Account for every service pool when sizing the
+shared PostgreSQL connection budget. Pool waits inherit request cancellation.
