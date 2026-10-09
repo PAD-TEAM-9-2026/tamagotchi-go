@@ -55,3 +55,15 @@ Battle requires real `challenger_id`, `opponent_id` and `outsider_id`, with matc
 `opponent_secondary_id`: distinct held creatures with no pending challenge or
 engagement. Run requests in order for challenge replay, acceptance, attack and
 forfeit. Direct probes use `battle_probe_url`; domain calls use Gateway.
+
+User Management registers fresh dedicated users and logs them in through Gateway.
+Supply real pkg1_id/pkg2_id and um_config_version. Package 1 must define FEED=10,
+PLAY=5 and daily_currency_cap=30 at that immutable configuration version. This
+is real Registry configuration, not a mock. Supply narrowly scoped service tokens:
+um_global_credential (Monster Raid, users:credit-global), um_local_credential
+(Tamagotchi, users:credit-local), um_relationship_credential (Guild,
+users:check-relationship), um_membership_credential (Guild, users:read-membership),
+and um_battle_credential (Battle, users:consume-boost/users:settle-battle).
+The collection never requests broader grants. Direct probes use
+user_management_probe_url. Fresh-stranger version is asserted against the shared
+contract; a failing owner candidate remains a failing check.
