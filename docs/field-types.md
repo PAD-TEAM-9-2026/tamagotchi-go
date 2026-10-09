@@ -1171,6 +1171,11 @@ require the caller's own user ID.
 | `current_timestamp` | date-time or null | yes |
 | `expires_at` | date-time or null | yes |
 
+`STALE` means the observation is older than the configured freshness window
+(default 60 seconds), not that a newer observation exists. `OUT_OF_ORDER` means
+a newer reading is already stored. `expires_at` is the accepted observation
+timestamp plus the freshness window; refused writes do not extend it.
+
 ### MapProximityDetectedEvent
 
 | Field | Type / constraint | Required |
