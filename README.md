@@ -162,49 +162,24 @@ answers `GET /v1/internal/users/{userId}/membership` for one user at a time.
 
 ![Gateway architecture: clients reach the eight services only through the Gateway, which verifies them, signs their identity and routes by prefix; Guild chat sockets go directly to Guild](docs/img/gateway_architecture_diagram.png)
 
-The Gateway is the only public entry point for REST. Every client call and every
-service-to-service call goes through it, so a service never sees a caller it did
-not get from the Gateway. It holds no domain state: no database and no events.
-What it needs comes from configuration, User Management's public keys and its own
-signing key.
+The Gateway is the only public entry point for REST. Every client call and every service-to-service call goes through it, so a service never sees a caller it did not get from the Gateway. It holds no domain state: no database and no events. What it needs comes from configuration, User Management's public keys and its own signing key.
 
 How one request is handled, in the order the code does it:
 
-1. **Correlation.** A valid UUIDv7 `X-Correlation-Id` is kept, anything else is
-   replaced by a new one. It is forwarded to the service and returned to the caller.
-2. **Admission.** The request takes one of 128 slots or gets `503 too_many_tasks`
-   with `Retry-After: 1`. A five-second deadline starts for the whole request.
-3. **Routing.** The first path segment names the service. An unknown prefix, or a
-   path that does not continue with `/v1/`, gets `404 unknown_route`.
-4. **Credential limit.** Login, register and refresh are refused with
-   `429 too_many_attempts` after 10 failed attempts from one address in 60 seconds.
-5. **Authentication.** A bearer token is verified against User Management's JWKS:
-   signature, expiry, audience and claims. An invalid one gets `401`. A request
-   without `Authorization` goes on as anonymous, and the service decides.
-6. **Forwarding pool.** User traffic and service traffic each have 64 slots, so one
-   cannot starve the other.
-7. **Signed identity.** `Authorization` and any client-sent identity headers are
-   removed. The Gateway signs `X-Gateway-Assertion` for the destination service,
-   carrying the verified caller, the correlation ID and the deadline.
-8. **Forwarding.** The prefix is stripped once, and the service's answer comes
-   back unchanged. Bodies are capped at 10 MiB in both directions. An unreachable
-   service gets `502 upstream_unavailable` and a passed deadline `504 task_timeout`.
+1. **Correlation.** A valid UUIDv7 `X-Correlation-Id` is kept, anything else is replaced by a new one. It is forwarded to the service and returned to the caller.
+2. **Admission.** The request takes one of 128 slots or gets `503 too_many_tasks` with `Retry-After: 1`. A five-second deadline starts for the whole request.
+3. **Routing.** The first path segment names the service. An unknown prefix, or a path that does not continue with `/v1/`, gets `404 unknown_route`.
+4. **Credential limit.** Login, register and refresh are refused with `429 too_many_attempts` after 10 failed attempts from one address in 60 seconds.
+5. **Authentication.** A bearer token is verified against User Management's JWKS: signature, expiry, audience and claims. An invalid one gets `401`. A request without `Authorization` goes on as anonymous, and the service decides.
+6. **Forwarding pool.** User traffic and service traffic each have 64 slots, so one cannot starve the other.
+7. **Signed identity.** `Authorization` and any client-sent identity headers are removed. The Gateway signs `X-Gateway-Assertion` for the destination service, carrying the verified caller, the correlation ID and the deadline.
+8. **Forwarding.** The prefix is stripped once, and the service's answer comes back unchanged. Bodies are capped at 10 MiB in both directions. An unreachable service gets `502 upstream_unavailable` and a passed deadline `504 task_timeout`.
 
-**Service-to-service calls** use the same path. The calling service sends its own
-service token and, when it acts for a user, the assertion it received as
-`X-Gateway-Context`. The Gateway verifies that assertion with its own key, keeps the
-correlation ID and the earlier deadline, and names the user as the actor in the new
-assertion. A chain of calls therefore shares one ID and one five-second budget.
+**Service-to-service calls** use the same path. The calling service sends its own service token and, when it acts for a user, the assertion it received as `X-Gateway-Context`. The Gateway verifies that assertion with its own key, keeps the correlation ID and the earlier deadline, and names the user as the actor in the new assertion. A chain of calls therefore shares one ID and one five-second budget.
 
-**WebSockets** are negotiated, not proxied. A signed-in user calls
-`POST /gateway/v1/ws-negotiate` for `guild.chat`. The Gateway verifies the user, asks
-Guild for a ticket and returns the socket URL with a single-use ticket that expires
-within 30 seconds. The browser then connects straight to Guild and sends the ticket
-in the first frame. The Gateway holds no socket, so chat traffic never uses its slots.
+**WebSockets** are negotiated, not proxied. A signed-in user calls `POST /gateway/v1/ws-negotiate` for `guild.chat`. The Gateway verifies the user, asks Guild for a ticket and returns the socket URL with a single-use ticket that expires within 30 seconds. The browser then connects straight to Guild and sends the ticket in the first frame. The Gateway holds no socket, so chat traffic never uses its slots.
 
-**Observability.** Every completed request is logged as JSON with method, path,
-status, duration, correlation ID and target service. Prometheus metrics are served
-on a separate port, 9090, which Compose does not publish.
+**Observability.** Every completed request is logged as JSON with method, path, status, duration, correlation ID and target service. Prometheus metrics are served on a separate port, 9090, which Compose does not publish.
 
 Patterns the Gateway applies:
 
@@ -222,16 +197,9 @@ Patterns the Gateway applies:
 | Correlation Identifier | One ID across the client call, every nested call and the logs |
 | Health Endpoint Monitoring | `/health` for the process; `/ready` checks that both key sets are usable |
 
-What it deliberately does not do: it never retries a request, so a write cannot run
-twice. It has no circuit breaker, load balancer or service discovery; the eight
-addresses are fixed in configuration. It caches no responses, and it does not stream,
-so Server-Sent Events would not pass through it.
+What it deliberately does not do: it never retries a request, so a write cannot run twice. It has no circuit breaker, load balancer or service discovery; the eight addresses are fixed in configuration. It caches no responses, and it does not stream, so Server-Sent Events would not pass through it.
 
-Lab 2 added the Gateway as its own service: a separate repository linked here as a
-submodule, an image on Docker Hub (`victoriamutruc/gateway:2.0.3`, published by CI
-on every merge to `main`), all REST traffic routed through it, the WebSocket
-negotiation, the task timeout and concurrency limits, and authorization at the
-Gateway.
+Lab 2 added the Gateway as its own service: a separate repository linked here as a submodule, an image on Docker Hub (`victoriamutruc/gateway:2.0.3`, published by CI on every merge to `main`), all REST traffic routed through it, the WebSocket negotiation, the task timeout and concurrency limits, and authorization at the Gateway.
 
 ## Technologies
 
