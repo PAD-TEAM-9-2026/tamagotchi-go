@@ -1,6 +1,6 @@
 # Postman collections
 
-Import all eight service collections and `tamagotchi-go.postman_environment.json`.
+Import the eight service test collections, optional demo collection and `tamagotchi-go.postman_environment.json`.
 Select the **Tamagotchi Go Local** environment. Application base URLs use
 Gateway on port 3000 with service prefixes. Map/Raid probes use their separate
 direct URLs on ports 3006/3007.
@@ -67,3 +67,26 @@ and um_battle_credential (Battle, users:consume-boost/users:settle-battle).
 The collection never requests broader grants. Direct probes use
 user_management_probe_url. Fresh-stranger version is asserted against the shared
 contract; a failing owner candidate remains a failing check.
+
+## Demo and independent requests
+
+Import demo.postman_collection.json. Set demo_credential to a fresh user token
+matching demo_user_id. Reads, probes and refusal requests run independently.
+Use the process-probe folder without credentials. Probes go directly to services;
+all application calls use Gateway. Each request adds and logs a correlation ID.
+
+The Map log scenario refreshes the dedicated viewer location, then performs a
+nearby query with a nested relationship call. Run those two requests in order.
+Friend-request delivery uses demo_other_credential as sender and demo_credential
+as recipient. Use unrelated registered actors with no pending request; reruns
+need fresh actors or an explicitly resolved previous request. Notification history
+is polled every 500 ms for at most 15 seconds. Persistence is not device-push proof.
+
+Guild negotiation uses demo_guild_id containing the authenticated user. Open the
+returned URL in a WebSocket tab and send {"type":"auth","ticket":"<ticket>"}
+within five seconds. Tickets are single-use with a 30-second lifetime.
+
+Refresh local bearer tokens before rehearsal. Use ordinary Postman Send for the
+demo; use Runner/Newman for the canonical regression collections. Keep exported
+environments and raw reports private. A failing owner contract stays a failing
+assertion until the corrected candidate is independently checked.

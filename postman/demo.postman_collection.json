@@ -1,0 +1,758 @@
+{
+  "info": {
+    "name": "Tamagotchi Go Demo",
+    "description": "Manual demo and independent checks through the real Gateway. Supply matching dedicated user IDs/bearers; stateful scenarios declare their own setup. Use canonical collections for full regression. Credentials stay in the local environment. Socket auth frame: {\"type\":\"auth\",\"ticket\":\"<returned ticket>\"}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{demo_credential}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function uuidv7() { const b = new Uint8Array(16); let t = Date.now(); for(let i=5;i>=0;i--){b[i]=t%256;t=Math.floor(t/256);} for(let i=6;i<16;i++)b[i]=Math.floor(Math.random()*256); b[6]=(b[6]&15)|112;b[8]=(b[8]&63)|128;const h=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');return [h.slice(0,8),h.slice(8,12),h.slice(12,16),h.slice(16,20),h.slice(20)].join('-');}",
+          "const cid=uuidv7();pm.variables.set('demo_correlation_id',cid);pm.variables.set('demo_command_key',uuidv7());pm.variables.set('demo_now',new Date().toISOString());pm.request.headers.upsert({key:'X-Correlation-Id',value:cid});console.log('Request correlation:',cid);"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Independent process probes",
+      "description": "Direct loopback probes; no user token, fixture or previous request required. Gateway base URL has no service prefix.",
+      "item": [
+        {
+          "name": "Gateway ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway_base_url}}/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User Management ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{user_management_probe_url}}/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tamagotchi ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{tamagotchi_direct_url}}/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Battle ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{battle_probe_url}}/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guild ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{guild_probe_url}}/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registry ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{registry_probe_url}}/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Map ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{map_probe_url}}/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Monster Raid ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{monster_raid_probe_url}}/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notification ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_direct_url}}/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Independent authenticated reads",
+      "description": "Each request runs alone with a fresh demo_credential matching demo_user_id. No earlier scenario output is needed.",
+      "item": [
+        {
+          "name": "User Management profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{user_management_base_url}}/v1/users/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tamagotchi collection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{tamagotchi_base_url}}/v1/users/{{demo_user_id}}/collection"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Battle list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{battle_base_url}}/v1/battles?limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guild list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{guild_base_url}}/v1/guilds?limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registry packages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{registry_base_url}}/v1/packages?limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Raid list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{monster_raid_base_url}}/v1/raids?limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notification history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_base_url}}/v1/users/{{demo_user_id}}/notifications?limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notification preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_base_url}}/v1/users/{{demo_user_id}}/preferences"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Independent authentication refusals",
+      "description": "No bearer and no mutations; fixture user ID is only a valid route parameter.",
+      "item": [
+        {
+          "name": "User Management profile without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{user_management_base_url}}/v1/users/me",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 response', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tamagotchi collection without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{tamagotchi_base_url}}/v1/users/{{demo_user_id}}/collection",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 response', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Battle list without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{battle_base_url}}/v1/battles?limit=10",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 response', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guild list without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{guild_base_url}}/v1/guilds?limit=10",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 response', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registry packages without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{registry_base_url}}/v1/bosses",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 response', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Raid list without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{monster_raid_base_url}}/v1/raids?limit=10",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 response', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notification history without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_base_url}}/v1/users/{{demo_user_id}}/notifications?limit=10",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 response', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Map identity without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{map_base_url}}/v1/location/{{demo_user_id}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 response', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Map nested-call log demo",
+      "description": "Run these two requests in order. First refreshes only the dedicated viewer location. Nearby reads relationships through a second Gateway call. Both services and Gateway log correlation IDs.",
+      "item": [
+        {
+          "name": "Refresh viewer location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{demo_command_key}}"
+              }
+            ],
+            "url": "{{map_base_url}}/v1/location",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{demo_user_id}}\",\n  \"lat\": 47.0105,\n  \"lng\": 28.8638,\n  \"timestamp\": \"{{demo_now}}\",\n  \"accuracy_m\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nearby players and nested relationship call",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{map_base_url}}/v1/location/nearby/{{demo_user_id}}?limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Friend request to Notification",
+      "description": "Use two fresh unrelated registered users; demo_other_credential is sender, demo_credential/demo_user_id recipient. Run both requests in order. This proves persisted history, not device push. Repeating requires fresh actors or a cleared terminal relationship request.",
+      "item": [
+        {
+          "name": "Send a real friend request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{demo_command_key}}"
+              }
+            ],
+            "url": "{{user_management_base_url}}/v1/friend-requests",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demo_other_credential}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to_user_id\": \"{{demo_user_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 friend request',()=>pm.response.to.have.status(201));",
+                  "if(pm.response.code===201)pm.collectionVariables.set('demo_friend_request_id',pm.response.json().request_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wait for recipient notification",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_base_url}}/v1/users/{{demo_user_id}}/notifications?limit=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 history',()=>pm.response.to.have.status(200));",
+                  "const wanted=pm.collectionVariables.get('demo_friend_request_id'); if(!wanted)throw new Error('Run the producer request in this scenario first');",
+                  "const end=Date.now()+15000; const url=pm.variables.replaceIn('{{notification_base_url}}/v1/users/{{demo_user_id}}/notifications?limit=100');",
+                  "function inspect(response){const rows=response.json().items;return rows.find(n=>n.type==='FRIEND_REQUEST' && JSON.stringify(n.params).includes(wanted));}",
+                  "function wait(response){if(response.code!==200){pm.test('history poll succeeds',()=>pm.expect(response.code).to.eql(200));return;}const n=inspect(response);if(n){pm.test('real event persisted for recipient',()=>pm.expect(n.type).to.eql('FRIEND_REQUEST'));pm.collectionVariables.set('demo_notification_id',n.notification_id);return;}if(Date.now()>=end){pm.test('notification arrives within 15 seconds',()=>pm.expect.fail('Event did not reach recipient history'));return;}setTimeout(()=>pm.sendRequest({url,method:'GET',header:{Authorization:'Bearer '+pm.variables.get('demo_credential')}},(err,r)=>{if(err){pm.test('history poll transport',()=>pm.expect.fail(String(err)));return;}wait(r);}),500);}",
+                  "wait(pm.response);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Guild socket negotiation",
+      "description": "Run independently with a real demo_guild_id containing the authenticated user. The returned URL/ticket is for a direct Guild socket. In a Postman WebSocket tab send the auth frame within five seconds. Tickets are single-use and last 30 seconds.",
+      "item": [
+        {
+          "name": "Negotiate direct Guild socket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{demo_command_key}}"
+              }
+            ],
+            "url": "{{gateway_base_url}}/gateway/v1/ws-negotiate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resource\": \"guild.chat\",\n  \"resource_id\": \"{{demo_guild_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 response', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
