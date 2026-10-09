@@ -1049,7 +1049,7 @@ contract above did not spell out:
 | `POST /v1/packages` | PackageInput, Idempotency-Key | 201 Package | admin |
 | `GET /v1/packages` | query limit, cursor | 200 PackagePage | public |
 | `GET /v1/packages/{packageId}` | none | 200 Package | public |
-| `PATCH /v1/packages/{packageId}` | PackageEdit, If-Match | 200 Package | moderator |
+| `PATCH /v1/packages/{packageId}` | PackageEdit, If-Match, Idempotency-Key | 200 Package | moderator |
 | `PUT /v1/packages/{packageId}/stats` | PackageConfigWrite, Idempotency-Key | 200 PackageConfig | moderator |
 | `GET /v1/packages/{packageId}/stat-definitions` | query config_version | 200 StatDefinitions | service |
 | `GET /v1/packages/{packageId}/stat-bonuses` | query config_version | 200 Bonuses | service |
@@ -1061,13 +1061,16 @@ contract above did not spell out:
 | `POST /v1/bosses` | BossInput, Idempotency-Key | 201 Boss | admin |
 | `GET /v1/bosses` | query limit, cursor | 200 BossPage | admin |
 | `GET /v1/bosses/{bossId}` | query config_version | 200 Boss | user or service |
-| `PUT /v1/bosses/{bossId}` | BossInput, If-Match | 200 Boss | admin |
+| `PUT /v1/bosses/{bossId}` | BossInput, If-Match, Idempotency-Key | 200 Boss | admin |
 | `POST /v1/raid-occurrences` | OccurrenceInput, Idempotency-Key | 201 Occurrence | admin |
 | `GET /v1/raid-occurrences` | query limit, cursor | 200 OccurrencePage | user |
 | `GET /v1/raid-occurrences/{id}` | none | 200 Occurrence | user or service |
 | `POST /v1/raid-occurrences/{id}/activate` | Idempotency-Key | 200 OccurrenceReceipt | admin |
 | `POST /v1/raid-occurrences/{id}/deactivate` | Idempotency-Key | 200 OccurrenceReceipt | admin |
 | `POST /v1/raid-occurrences/{id}/cancel` | Idempotency-Key | 200 OccurrenceReceipt | admin |
+
+New occurrences start as `scheduled`, including when their availability window
+is already open. An admin must explicitly activate them before Raid admission.
 
 Packages are abstract to this backend. A package defines its own creatures, art
 and care rules in its own frontend, and nothing here knows what `hunger` or
@@ -1110,6 +1113,12 @@ model.
 | `GET /v1/location/{userId}` | none | 200 Location | user |
 | `GET /v1/location/nearby/{userId}` | query limit, cursor | 200 Nearby | user |
 | `DELETE /v1/location/{userId}` | none | 204 | user |
+
+Location freshness defaults to 60 seconds (`LOCATION_FRESHNESS_SECONDS`).
+Expiry is the observation timestamp plus that duration. Observations older than
+the freshness window return `STALE`; observations older than the stored reading
+return `OUT_OF_ORDER`. A timestamp more than 60 seconds ahead returns
+`400 invalid_timestamp`. Refresh shared locations before a demonstration.
 
 Friends and enemies are visible while their location is fresh. Strangers appear
 within 6 metres, which is configurable.
