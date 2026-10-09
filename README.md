@@ -100,10 +100,38 @@ This section describes the target architecture. Gateway source implements
 routing and authorization; Map and Monster Raid integration source uses real
 HTTP adapters and durable broker delivery. Published image versions may predate
 these changes. Validate the selected image set against real dependencies before
-claiming deployment compatibility. The existing diagram still needs its routing
-and obsolete dependency paths reconciled with this contract.
+claiming deployment compatibility. The diagram distinguishes transport paths from domain ownership.
 
-![Tamagotchi Go architecture with 8 microservices, PostgreSQL per service, and RabbitMQ](docs/img/architecture_diagram.png)
+```mermaid
+flowchart TB
+    Client[Application / Postman] -->|REST and socket negotiation| Gateway[Python Gateway]
+    Gateway --> Users[User Management]
+    Gateway --> Pets[Tamagotchi]
+    Gateway --> Battle[Battle]
+    Gateway --> Guild[Guild]
+    Gateway --> Registry[Package Registry]
+    Gateway --> Map[Map]
+    Gateway --> Raid[Monster Raid]
+    Gateway --> Notification[Notification]
+    Services[Service REST callers] -->|service bearer and signed context| Gateway
+    Client -->|negotiated ticket / direct WebSocket| Guild
+    Publishers[Users / Pets / Battle / Guild / Registry / Map / Raid] -->|committed facts| Broker[RabbitMQ]
+    Broker -->|package membership| Pets
+    Broker -->|package membership| Registry
+    Broker -->|occurrence lifecycle| Raid
+    Broker -->|notification events| Notification
+    Notification -->|configured push provider| Firebase[Firebase]
+    Domain[Each domain service] -->|own credentials / own schema| Data[Eight separate PostgreSQL databases]
+```
+
+Service REST dependencies traverse Gateway: Map reads User Management;
+Raid reads Guild, Registry and Tamagotchi and delivers rewards to User Management
+and Tamagotchi. Battle uses User Management, Registry and Tamagotchi. Guild uses
+User Management and Registry. User Management and Tamagotchi read Registry
+configuration. Notification consumes events rather than making domain REST calls.
+Direct probes, Gateway's JWKS bootstrap, broker traffic and provider assets are
+explicit exceptions. Registry has no membership-rebuild REST call to User
+Management; its projection is updated by committed membership events.
 
 Every client goes through the HTTP Gateway. It routes by path prefix to the eight
 services, so a frontend package never learns where a service lives or how many
