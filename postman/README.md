@@ -90,3 +90,8 @@ Refresh local bearer tokens before rehearsal. Use ordinary Postman Send for the
 demo; use Runner/Newman for the canonical regression collections. Keep exported
 environments and raw reports private. A failing owner contract stays a failing
 assertion until the corrected candidate is independently checked.
+
+Notification and Tamagotchi event-dependent reads poll within the request itself,
+every 500 ms for at most 15 seconds. They work with Send as well as Runner, and
+fail visibly on transport, authentication or missing effects. No mutation is
+automatically retried.
