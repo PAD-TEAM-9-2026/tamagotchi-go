@@ -212,4 +212,3 @@ INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20261008193531_AddEffectLedgers', '10.0.12');
 
 COMMIT;
-

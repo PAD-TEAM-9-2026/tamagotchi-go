@@ -82,11 +82,20 @@
           "",
           "pm.collectionVariables.set('idempotency_key', uuidv7());",
           "",
-          "seed('developer_id', uuidv7());",
-          "seed('moderator_id', uuidv7());",
-          "seed('outsider_id', uuidv7());",
+          "function fixture(key) {",
+          "  const value = pm.environment.get(key) || pm.collectionVariables.get(key);",
+          "  if (!value) throw new Error('Supply a real fixture ID and matching credential for ' + key);",
+          "  pm.collectionVariables.set(key, value);",
+          "}",
+          "",
+          "fixture('developer_id');",
+          "fixture('moderator_id');",
+          "fixture('outsider_id');",
           "seed('run_suffix', Date.now().toString());",
-          ""
+          "",
+          "",
+          "pm.variables.set('occurrence_available_from', new Date(Date.now() - 60000).toISOString());",
+          "pm.variables.set('occurrence_available_until', new Date(Date.now() + 7200000).toISOString());"
         ]
       }
     }
@@ -101,9 +110,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{registry_base_url}}/health",
+              "raw": "{{registry_probe_url}}/health",
               "host": [
-                "{{registry_base_url}}"
+                "{{registry_probe_url}}"
               ],
               "path": [
                 "health"
@@ -128,9 +137,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{registry_base_url}}/ready",
+              "raw": "{{registry_probe_url}}/ready",
               "host": [
-                "{{registry_base_url}}"
+                "{{registry_probe_url}}"
               ],
               "path": [
                 "ready"
@@ -402,7 +411,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{battle_service_credential}}",
+                "value": "Bearer {{monster_raid_service_credential}}",
                 "type": "text"
               }
             ],
@@ -441,7 +450,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{battle_service_credential}}",
+                "value": "Bearer {{monster_raid_service_credential}}",
                 "type": "text"
               }
             ],
@@ -477,7 +486,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{battle_service_credential}}",
+                "value": "Bearer {{monster_raid_service_credential}}",
                 "type": "text"
               }
             ],
@@ -862,7 +871,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": {{boss_version}},\n  \"available_from\": \"2026-01-01T00:00:00.000Z\",\n  \"available_until\": \"2026-01-01T01:00:00.000Z\"\n}",
+              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": {{boss_version}},\n  \"available_from\": \"{{occurrence_available_from}}\",\n  \"available_until\": \"{{occurrence_available_until}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1431,7 +1440,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": 999,\n  \"available_from\": \"2026-01-01T00:00:00.000Z\",\n  \"available_until\": \"2026-01-01T01:00:00.000Z\"\n}",
+              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": 999,\n  \"available_from\": \"{{occurrence_available_from}}\",\n  \"available_until\": \"{{occurrence_available_until}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "User Management",
-    "description": "User Management API. Run requests in order when they share state. Requests use X-User-Id while JWT authentication is unavailable. Internal and currency mutation endpoints currently have no service-token authentication.",
+    "description": "Authenticated User Management scenarios through Gateway. Supply two real active packages; package 1 must have FEED=10, PLAY=5 and daily cap=30 at um_config_version. Supply narrowly scoped service credentials. Setup registers fresh dedicated users and logs them in. Run stateful folders in order; no plain identity headers.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -53,14 +53,21 @@
           "pm.collectionVariables.set('idempotency_key', uuidv7());",
           "",
           "seed('run_suffix', Date.now().toString());",
-          "seed('pkg1_id', uuidv7());",
-          "seed('pkg2_id', uuidv7());",
           "seed('unknown_package_id', uuidv7());",
           "seed('unknown_user_id', uuidv7());",
           "seed('reference_id', uuidv7());",
           "seed('care_action_id', uuidv7());",
           "seed('battle_id', uuidv7());",
-          ""
+          "",
+          "",
+          "for (const key of ['pkg1_id', 'pkg2_id', 'um_config_version', 'um_global_credential', 'um_local_credential', 'um_relationship_credential', 'um_membership_credential', 'um_battle_credential']) {",
+          "  const value = pm.environment.get(key) || pm.collectionVariables.get(key);",
+          "  if (!value) throw new Error('Supply the real fixture or scoped credential: ' + key);",
+          "  pm.collectionVariables.set(key, value);",
+          "}",
+          "seed('fixture_password', 'Aa1!' + uuidv7());",
+          "pm.request.headers.upsert({key:'X-Correlation-Id', value:uuidv7()});",
+          "seed('unknown_battle_id', uuidv7());"
         ]
       }
     }
@@ -74,7 +81,11 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{user_management_base_url}}/health", "host": ["{{user_management_base_url}}"], "path": ["health"] }
+            "url": {
+              "raw": "{{user_management_probe_url}}/health",
+              "host": ["{{user_management_probe_url}}"],
+              "path": ["health"]
+            }
           },
           "event": [
             {
@@ -93,7 +104,11 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{user_management_base_url}}/ready", "host": ["{{user_management_base_url}}"], "path": ["ready"] }
+            "url": {
+              "raw": "{{user_management_probe_url}}/ready",
+              "host": ["{{user_management_probe_url}}"],
+              "path": ["ready"]
+            }
           },
           "event": [
             {
@@ -120,10 +135,14 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "register"]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"alice_{{run_suffix}}\",\n  \"email\": \"alice_{{run_suffix}}@example.com\",\n  \"password\": \"SuperSecurePassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "raw": "{\n  \"username\": \"alice_{{run_suffix}}\",\n  \"email\": \"alice_{{run_suffix}}@example.com\",\n  \"password\": \"{{fixture_password}}\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
               "options": { "raw": { "language": "json" } }
             }
           },
@@ -147,6 +166,37 @@
           ]
         },
         {
+          "name": "Log in Alice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/login",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice_{{run_suffix}}@example.com\",\n  \"password\": \"{{fixture_password}}\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 bearer token', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().access_token).to.be.a('string'); });",
+                  "if (pm.response.code === 200) pm.collectionVariables.set('alice_credential', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Register Bob",
           "request": {
             "method": "POST",
@@ -154,10 +204,14 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "register"]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"bob_{{run_suffix}}\",\n  \"email\": \"bob_{{run_suffix}}@example.com\",\n  \"password\": \"SuperSecurePassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "raw": "{\n  \"username\": \"bob_{{run_suffix}}\",\n  \"email\": \"bob_{{run_suffix}}@example.com\",\n  \"password\": \"{{fixture_password}}\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
               "options": { "raw": { "language": "json" } }
             }
           },
@@ -177,6 +231,37 @@
           ]
         },
         {
+          "name": "Log in Bob",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/login",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bob_{{run_suffix}}@example.com\",\n  \"password\": \"{{fixture_password}}\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 bearer token', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().access_token).to.be.a('string'); });",
+                  "if (pm.response.code === 200) pm.collectionVariables.set('bob_credential', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Register Carol",
           "request": {
             "method": "POST",
@@ -184,10 +269,14 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "register"]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"carol_{{run_suffix}}\",\n  \"email\": \"carol_{{run_suffix}}@example.com\",\n  \"password\": \"SuperSecurePassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "raw": "{\n  \"username\": \"carol_{{run_suffix}}\",\n  \"email\": \"carol_{{run_suffix}}@example.com\",\n  \"password\": \"{{fixture_password}}\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
               "options": { "raw": { "language": "json" } }
             }
           },
@@ -207,11 +296,48 @@
           ]
         },
         {
+          "name": "Log in Carol",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/login",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"carol_{{run_suffix}}@example.com\",\n  \"password\": \"{{fixture_password}}\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 bearer token', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().access_token).to.be.a('string'); });",
+                  "if (pm.response.code === 200) pm.collectionVariables.set('carol_credential', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Alice reads her own full profile (me)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
-            "url": { "raw": "{{user_management_base_url}}/v1/users/me", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "me"] }
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/me",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "me"]
+            }
           },
           "event": [
             {
@@ -234,7 +360,9 @@
           "name": "Anyone can read Bob's limited public profile",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{bob_id}}",
               "host": ["{{user_management_base_url}}"],
@@ -265,11 +393,15 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{alice_id}}" },
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{user_management_base_url}}/v1/users/me/packages", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "me", "packages"] },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/me/packages",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "me", "packages"]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"package_id\": \"{{pkg2_id}}\"\n}",
@@ -299,15 +431,44 @@
       "name": "Friend requests and relationships",
       "item": [
         {
+          "name": "Fresh strangers have a valid relationship version",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{um_relationship_credential}}" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/relationship/{{bob_id}}",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "{{alice_id}}", "relationship", "{{bob_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 strangers with contract version', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.relationship).to.eql('stranger'); pm.expect(body.reverse_relationship).to.eql('stranger'); pm.expect(body.version).to.be.at.least(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Alice sends a friend request to Bob",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{alice_id}}" },
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{user_management_base_url}}/v1/friend-requests", "host": ["{{user_management_base_url}}"], "path": ["v1", "friend-requests"] },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/friend-requests",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "friend-requests"]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"to_user_id\": \"{{bob_id}}\"\n}",
@@ -335,8 +496,17 @@
           "name": "Bob lists his friend requests",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{bob_id}}" }],
-            "url": { "raw": "{{user_management_base_url}}/v1/friend-requests?limit=10", "host": ["{{user_management_base_url}}"], "path": ["v1", "friend-requests"], "query": [{ "key": "limit", "value": "10" }] }
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bob_credential}}" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/friend-requests?limit=10",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "friend-requests"],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
           },
           "event": [
             {
@@ -359,7 +529,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{bob_id}}" },
+              { "key": "Authorization", "value": "Bearer {{bob_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
@@ -387,7 +557,9 @@
           "name": "Alice and Bob are now mutual friends",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{um_relationship_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/relationship/{{bob_id}}",
               "host": ["{{user_management_base_url}}"],
@@ -415,12 +587,16 @@
           "name": "Alice's relationship list includes Bob",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/relationships?limit=10",
               "host": ["{{user_management_base_url}}"],
               "path": ["v1", "users", "{{alice_id}}", "relationships"],
-              "query": [{ "key": "limit", "value": "10" }]
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
             }
           },
           "event": [
@@ -446,11 +622,15 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{alice_id}}" },
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{user_management_base_url}}/v1/friend-requests", "host": ["{{user_management_base_url}}"], "path": ["v1", "friend-requests"] },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/friend-requests",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "friend-requests"]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"to_user_id\": \"{{carol_id}}\"\n}",
@@ -477,7 +657,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{carol_id}}" },
+              { "key": "Authorization", "value": "Bearer {{carol_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
             ],
             "url": {
@@ -505,7 +685,10 @@
           "name": "Alice marks Carol as an enemy",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/enemies/{{carol_id}}",
               "host": ["{{user_management_base_url}}"],
@@ -533,7 +716,9 @@
           "name": "The enemy mark does not apply the other way",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{um_relationship_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{carol_id}}/relationship/{{alice_id}}",
               "host": ["{{user_management_base_url}}"],
@@ -561,7 +746,9 @@
           "name": "Alice removes the enemy mark",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/enemies/{{carol_id}}",
               "host": ["{{user_management_base_url}}"],
@@ -571,7 +758,12 @@
           "event": [
             {
               "listen": "test",
-              "script": { "type": "text/javascript", "exec": ["pm.test('204', () => pm.response.to.have.status(204));"] }
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
             }
           ]
         },
@@ -579,7 +771,9 @@
           "name": "Alice removes Bob as a friend",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/friends/{{bob_id}}",
               "host": ["{{user_management_base_url}}"],
@@ -589,7 +783,12 @@
           "event": [
             {
               "listen": "test",
-              "script": { "type": "text/javascript", "exec": ["pm.test('204', () => pm.response.to.have.status(204));"] }
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
             }
           ]
         },
@@ -597,7 +796,9 @@
           "name": "The friendship is gone on both sides",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{um_relationship_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{bob_id}}/relationship/{{alice_id}}",
               "host": ["{{user_management_base_url}}"],
@@ -630,7 +831,9 @@
           "name": "Alice's global wallet starts at zero",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/global",
               "host": ["{{user_management_base_url}}"],
@@ -656,7 +859,11 @@
           "name": "Credit Alice's global currency (service call)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_global_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/global/add",
               "host": ["{{user_management_base_url}}"],
@@ -691,7 +898,9 @@
           "name": "Alice's local wallet in package 1 starts at zero",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/{{pkg1_id}}",
               "host": ["{{user_management_base_url}}"],
@@ -717,7 +926,11 @@
           "name": "Credit Alice's local currency for a care action (service call)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
               "host": ["{{user_management_base_url}}"],
@@ -725,7 +938,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"FEED\",\n  \"care_action_id\": \"{{care_action_id}}\"\n}",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"FEED\",\n  \"care_action_id\": \"{{care_action_id}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "description": "The reward amount, valid action names and daily cap come from Package Registry's CurrencyRules/CareRule config, which isn't queryable yet; MockPackageRegistryClient mocks a fixed rule set: FEED=10, PLAY=5, CLEAN=8, daily cap 30 per package. Action names are matched case-sensitively against that mocked set."
@@ -752,7 +965,11 @@
           "name": "Crediting an unknown care action is rejected",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
               "host": ["{{user_management_base_url}}"],
@@ -760,7 +977,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"NOT_A_REAL_ACTION\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"NOT_A_REAL_ACTION\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "description": "An action not in the mocked package's rule set must be rejected before any balance changes."
@@ -784,7 +1001,11 @@
           "name": "Credit Alice's local currency again (PLAY) #1",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
               "host": ["{{user_management_base_url}}"],
@@ -792,7 +1013,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "description": "Running total after the FEED credit above: 10. PLAY's mocked reward is 5, so this should land at 15, still under the package's 30 daily cap."
@@ -818,7 +1039,11 @@
           "name": "Credit Alice's local currency again (PLAY) #2",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
               "host": ["{{user_management_base_url}}"],
@@ -826,7 +1051,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
               "options": { "raw": { "language": "json" } }
             }
           },
@@ -850,7 +1075,11 @@
           "name": "Credit Alice's local currency again (PLAY) #3",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
               "host": ["{{user_management_base_url}}"],
@@ -858,7 +1087,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
               "options": { "raw": { "language": "json" } }
             }
           },
@@ -882,7 +1111,11 @@
           "name": "Credit Alice's local currency again (PLAY) #4, lands exactly on the cap",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
               "host": ["{{user_management_base_url}}"],
@@ -890,7 +1123,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
               "options": { "raw": { "language": "json" } }
             }
           },
@@ -914,7 +1147,11 @@
           "name": "A 5th local credit the same day exceeds the daily cap",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
               "host": ["{{user_management_base_url}}"],
@@ -922,7 +1159,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": 1,\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "description": "Alice's package-1 balance is already at the mocked 30 daily cap, so crediting another 5 must be refused rather than over-crediting."
@@ -946,7 +1183,11 @@
           "name": "Local currency 404s for a package Alice never joined",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
               "host": ["{{user_management_base_url}}"],
@@ -954,7 +1195,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{unknown_package_id}}\",\n  \"config_version\": 1,\n  \"action\": \"FEED\",\n  \"care_action_id\": \"{{$guid}}\"\n}",
+              "raw": "{\n  \"package_id\": \"{{unknown_package_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"FEED\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
               "options": { "raw": { "language": "json" } }
             }
           },
@@ -982,8 +1223,14 @@
           "name": "Alice's boost list has the page shape",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
-            "url": { "raw": "{{user_management_base_url}}/v1/users/me/boosts", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "me", "boosts"] }
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/me/boosts",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "me", "boosts"]
+            }
           },
           "event": [
             {
@@ -1006,8 +1253,16 @@
           "name": "Consuming a boost Alice doesn't have fails (service call)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{user_management_base_url}}/v1/internal/boost-consumptions", "host": ["{{user_management_base_url}}"], "path": ["v1", "internal", "boost-consumptions"] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_battle_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/internal/boost-consumptions",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "internal", "boost-consumptions"]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"user_id\": \"{{alice_id}}\",\n  \"boost_id\": \"ATTACK_10\"\n}",
@@ -1039,7 +1294,9 @@
           "name": "Alice's membership snapshot",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{um_membership_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/internal/users/{{alice_id}}/membership",
               "host": ["{{user_management_base_url}}"],
@@ -1072,8 +1329,16 @@
           "name": "Settle a battle between Bob and Carol",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{user_management_base_url}}/v1/internal/battle-settlements", "host": ["{{user_management_base_url}}"], "path": ["v1", "internal", "battle-settlements"] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_battle_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/internal/battle-settlements",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "internal", "battle-settlements"]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"winner_id\": \"{{bob_id}}\",\n  \"loser_id\": \"{{carol_id}}\"\n}",
@@ -1104,11 +1369,19 @@
           "name": "Battle settlement 404s for an unknown user",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{user_management_base_url}}/v1/internal/battle-settlements", "host": ["{{user_management_base_url}}"], "path": ["v1", "internal", "battle-settlements"] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{um_battle_credential}}" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/internal/battle-settlements",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "internal", "battle-settlements"]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"winner_id\": \"{{unknown_user_id}}\",\n  \"loser_id\": \"{{carol_id}}\"\n}",
+              "raw": "{\n  \"battle_id\": \"{{unknown_battle_id}}\",\n  \"winner_id\": \"{{unknown_user_id}}\",\n  \"loser_id\": \"{{carol_id}}\"\n}",
               "options": { "raw": { "language": "json" } }
             }
           },
@@ -1137,7 +1410,11 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{user_management_base_url}}/v1/users/me", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "me"] }
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/me",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "me"]
+            }
           },
           "event": [
             {
@@ -1162,7 +1439,11 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "register"]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"alice_{{run_suffix}}\",\n  \"email\": \"alice_{{run_suffix}}@example.com\",\n  \"password\": \"AnotherPassword123!\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
@@ -1193,7 +1474,11 @@
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{user_management_base_url}}/v1/users/register", "host": ["{{user_management_base_url}}"], "path": ["v1", "users", "register"] },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/users/register",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "users", "register"]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"shortpw_{{run_suffix}}\",\n  \"email\": \"shortpw_{{run_suffix}}@example.com\",\n  \"password\": \"short\",\n  \"package_id\": \"{{pkg1_id}}\"\n}",
@@ -1219,7 +1504,9 @@
           "name": "Accessing someone else's wallet is forbidden",
           "request": {
             "method": "GET",
-            "header": [{ "key": "X-User-Id", "value": "{{alice_id}}" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{bob_id}}/currency/global",
               "host": ["{{user_management_base_url}}"],
@@ -1245,7 +1532,9 @@
           "name": "An unknown user profile 404s",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" }
+            ],
             "url": {
               "raw": "{{user_management_base_url}}/v1/users/{{unknown_user_id}}",
               "host": ["{{user_management_base_url}}"],
@@ -1272,11 +1561,15 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-User-Id", "value": "{{alice_id}}" },
+              { "key": "Authorization", "value": "Bearer {{alice_credential}}" },
               { "key": "Idempotency-Key", "value": "{{idempotency_key}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{user_management_base_url}}/v1/friend-requests", "host": ["{{user_management_base_url}}"], "path": ["v1", "friend-requests"] },
+            "url": {
+              "raw": "{{user_management_base_url}}/v1/friend-requests",
+              "host": ["{{user_management_base_url}}"],
+              "path": ["v1", "friend-requests"]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"to_user_id\": \"{{alice_id}}\"\n}",

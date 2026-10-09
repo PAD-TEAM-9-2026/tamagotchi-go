@@ -256,4 +256,3 @@ BEGIN
     END IF;
 END $EF$;
 COMMIT;
-
