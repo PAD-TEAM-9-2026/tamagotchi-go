@@ -285,6 +285,8 @@ from ServiceTokenRequest.audience, not a URL or Gateway path prefix.
 | `reverse_relationship` | friend / enemy / stranger | yes |
 | `version` | integer [1..2147483647] | yes |
 
+Two users with no relationship are `stranger` both ways at `version` 1, never 0: there is no row yet, and a first row is created at version 1.
+
 ### RelationshipItem
 
 | Field | Type / constraint | Required |
