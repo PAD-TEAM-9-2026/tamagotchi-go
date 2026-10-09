@@ -1326,7 +1326,7 @@ one account per publishing or consuming service (see below).
 
 | Service | Image | Digest | Host port |
 |---|---|---|---|
-| Gateway | `victoriamutruc/gateway:2.0.2` | `sha256:7724cff304f693193833a6d2db702f35587a95e4d5a200c571e28391e42f1333` | 3000 |
+| Gateway | `victoriamutruc/gateway:2.0.3` | `sha256:c383e53c3f75682f200df7cad2926801b2d1af8a5f558312d9c0fe548703bc81` | 3000 |
 | User Management | `patriciamoraru/user-management:2.0.2` | `sha256:b3e5da413ac443522b9a039310667c4a7d3d586663f46935fdaf1993114b3df6` | 3001 |
 | Tamagotchi | `victoriamutruc/tamagotchi:2.0.4` | `sha256:cc5a3b8cd9cbd61927090c60ca2775ff0b8f54cb989bef0c17cacfc3240c99dd` | 3002 |
 | Battle | `patriciamoraru/battle:2.0.1` | `sha256:4cc5ee7d1206e459832ce2d48f421729f7bb2d546bc24490c4a1d7849a3d1aec` | 3003 |
