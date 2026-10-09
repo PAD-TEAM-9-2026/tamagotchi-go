@@ -192,7 +192,7 @@ services:
       retries: 10
 
   map:
-    image: sergedbs/map:1.0.0
+    image: sergedbs/map:2.0.0
     pull_policy: always
     depends_on:
       database:
@@ -222,7 +222,7 @@ services:
       retries: 10
 
   monster-raid:
-    image: sergedbs/monster-raid:1.0.0
+    image: sergedbs/monster-raid:2.0.0
     pull_policy: always
     depends_on:
       database:
