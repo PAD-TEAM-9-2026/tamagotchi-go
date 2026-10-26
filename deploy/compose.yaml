@@ -80,7 +80,7 @@ services:
       retries: 10
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:2.0.4
+    image: victoriamutruc/tamagotchi:2.0.5
     pull_policy: always
     depends_on:
       database:
@@ -259,7 +259,7 @@ services:
       retries: 10
 
   notification:
-    image: victoriamutruc/notification:2.0.3
+    image: victoriamutruc/notification:2.0.4
     pull_policy: always
     depends_on:
       database:
