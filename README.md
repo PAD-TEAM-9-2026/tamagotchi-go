@@ -1373,6 +1373,53 @@ name the variable without credentials. Gateway and database credentials are
 separate. Validate outage/recovery, redelivery, poison-message retries/DLQ,
 consumer restart and unroutable publication before claiming real delivery.
 
+## Shared kits
+
+Code every service of one language needs for the Lab 3 contracts lives here once and is
+copied into each service. It is not built in this repository: each service runs the
+kit's tests in its own CI after copying.
+
+### TypeScript discovery kit
+
+[`kits/typescript/discovery/`](kits/typescript/discovery/) implements the
+[status endpoint](#status-endpoint) and registration with Service Discovery. Its folders
+mirror a service's own, so copy `src/discovery/` and `tests/discovery/` into the service
+root as they are. It needs `express`, `uuid`, a logger at `src/lib/logger.ts` with
+`debug`, `info`, `warn` and `error(message, fields)`, and `vitest` with `supertest` for the
+tests.
+
+| File | Holds |
+|---|---|
+| `instance.ts` | `instance_id` (UUIDv7, once per process), version from `package.json`, start time |
+| `load.ts` | `countLoad()` middleware and the 60 second load counters, probes left out |
+| `status.ts` | `createStatusRouter({ serviceName, isDown, isDegraded })` for `GET /status` |
+| `registration.ts` | `createRegistration({ serviceName, url, host, port })` with `start()` and `stop()` |
+| `config.ts` | `readDiscoveryConfig()`: `SERVICE_DISCOVERY_ENABLED` (default `true`), `SERVICE_DISCOVERY_URL` (default `http://service-discovery:3009`), `INSTANCE_HOST` (default the container hostname) |
+| `log.ts` | Re-exports the service logger, the only file to adjust if the logger lives elsewhere |
+
+Wiring:
+
+```ts
+app.use(countLoad());
+app.use(createStatusRouter({ serviceName: config.serviceName, isDown, isDegraded }));
+
+const registration =
+  config.discovery &&
+  createRegistration({ ...config.discovery, serviceName: config.serviceName, port: config.port });
+registration?.start();
+await registration?.stop();
+```
+
+Mount the status router before admission control and authentication, start registration
+once the server listens, and stop it first on `SIGINT` or `SIGTERM`. Registration checks
+itself with `GET /v1/instances/{id}` every 30 seconds and registers again only on a 404,
+because registering an existing id resets its health. Its log lines are `service registered`,
+`service re-registered`, `registration failed`, `registration check failed`,
+`service deregistered` and `deregistration failed`.
+
+Tamagotchi and Notification run this kit. Change the kit here first, then copy it into
+every service that uses it.
+
 ## Image publication
 
 Release, code, package and image versions use `X.Y.Z`: integration milestone,
