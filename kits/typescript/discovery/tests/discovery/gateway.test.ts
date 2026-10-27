@@ -133,7 +133,13 @@ describe('createGatewayClient', () => {
     await expect(client.request('GET', '/')).rejects.toBeInstanceOf(BreakerOpenError);
 
     const [tripped] = logs().filter((line) => line.message === 'circuit breaker tripped');
-    expect(tripped).toMatchObject({ level: 'error', url: 'http://gateway:3000', failures: 3 });
+    expect(tripped).toMatchObject({
+      level: 'error',
+      target: 'http://gateway:3000',
+      failures_in_window: 3,
+      threshold: 3,
+      window_seconds: 17.5,
+    });
   });
 
   it('trips the breaker after threshold DOMException (timeout) failures', async () => {
@@ -185,7 +191,7 @@ describe('createGatewayClient', () => {
     expect(response2.status).toBe(200);
 
     const [closed] = logs().filter((line) => line.message === 'circuit breaker closed');
-    expect(closed).toMatchObject({ level: 'info', url: 'http://gateway:3000' });
+    expect(closed).toMatchObject({ level: 'info', target: 'http://gateway:3000' });
   });
 
   it('returns to open when the half-open trial fails', async () => {

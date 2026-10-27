@@ -63,10 +63,16 @@ export function createGatewayClient(
     config.breaker,
     {
       onTrip(count, reason) {
-        logger.error('circuit breaker tripped', { url: base, failures: count, reason });
+        logger.error('circuit breaker tripped', {
+          target: base,
+          failures_in_window: count,
+          threshold: config.breaker.threshold,
+          window_seconds: config.breaker.windowMs / 1000,
+          last_reason: reason,
+        });
       },
       onClose() {
-        logger.info('circuit breaker closed', { url: base });
+        logger.info('circuit breaker closed', { target: base });
       },
     },
     now,
