@@ -172,8 +172,8 @@ removes failing instances. Developer alerts use an optional Discord webhook.
 The implementation and API are documented in [its README](https://github.com/PatriciaMoraru/service-discovery#readme).
 
 The deployment candidate is `patriciamoraru/service-discovery:3.0.0`. It must be
-published and validated before this wiring is released. The submodule currently
-pins the merged baseline; alert and publication PRs are pending review. Service
+published and validated before this wiring is released. The submodule pins merged source with alerts and publication safeguards. The
+Docker Hub image is still pending publication and runtime validation. Service
 registration, Gateway discovery routing and scaled domain instances are separate
 integration work and are not established by adding this container.
 
