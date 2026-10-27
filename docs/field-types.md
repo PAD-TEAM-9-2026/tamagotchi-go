@@ -50,6 +50,26 @@ absolute URI. Existing status codes and other Problem fields are unchanged.
 |---|---|---|
 | `status` | READY / NOT_READY | yes |
 
+### Status
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `service` | string [1..63], the registered service name, e.g. `tamagotchi` | yes |
+| `instance_id` | uuid (v7), the id the instance registered with | yes |
+| `status` | UP / DEGRADED / DOWN | yes |
+| `version` | string, `X.Y.Z` | yes |
+| `uptime_seconds` | integer [0..] | yes |
+| `load` | StatusLoad | no |
+| `time` | timestamp (ISO 8601 UTC, milliseconds) | yes |
+
+### StatusLoad
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `in_flight_requests` | integer [0..], requests being handled now | no |
+| `requests_last_minute` | integer [0..], requests finished in the last 60 seconds | no |
+| `avg_response_ms_last_minute` | number [0..], average duration of those requests in milliseconds | no |
+
 ### VersionReceipt
 
 | Field | Type / constraint | Required |
