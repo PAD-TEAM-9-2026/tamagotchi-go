@@ -98,11 +98,8 @@ export function createGatewayClient(
         breaker.recordSuccess();
         return response;
       } catch (error) {
-        // Only timeout and connection errors trip the breaker; 5xx responses do not.
-        if (
-          error instanceof DOMException ||
-          (error instanceof TypeError && !(error instanceof RangeError))
-        ) {
+        // Only timeout (DOMException) and connection errors (TypeError) trip the breaker; 5xx does not.
+        if (error instanceof DOMException || error instanceof TypeError) {
           breaker.recordFailure(error.name);
         }
         throw error;
