@@ -1416,3 +1416,42 @@ the published image set still requires an update and runtime validation.
 | Field | Type / constraint | Required |
 |---|---|---|
 | `read` | true | yes |
+
+## Service Discovery
+
+### InstanceRegistration
+
+Sent by each service on startup to `POST /v1/instances`.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `instance_id` | uuid (v7) | yes |
+| `service_name` | string [1..63] | yes |
+| `host` | string [1..253] | yes |
+| `port` | integer [1..65535] | yes |
+| `status_path` | string [1..255], default `/status` | no |
+| `version` | string `X.Y.Z` | no |
+
+### FailureReport
+
+Sent by the Gateway (or any caller) to `POST /v1/instances/{instance_id}/failures`.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `reporter` | string [1..63], e.g. `gateway`, `health-checker` | yes |
+| `reason` | `timeout` / `connection_error` / `server_error` / `health_check_failed` | yes |
+| `endpoint` | string [1..255], e.g. `GET /v1/battles/{id}` | no |
+
+### FailureResult
+
+Response to `POST /v1/instances/{instance_id}/failures`.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `instance_id` | uuid (v7) | yes |
+| `failures_in_window` | integer [1..] | yes |
+| `threshold` | integer [1..], default 3 | yes |
+| `window_seconds` | number [0..], default 17.5 | yes |
+| `removed` | boolean — true when the threshold was reached and the instance was removed | yes |
+
+**Removal rule**: `failures_in_window >= threshold` within a sliding window of `TASK_TIMEOUT_MS / 1000 × FAILURE_WINDOW_MULTIPLIER` seconds (default 5000 ms × 3.5 = **17.5 s**). The health checker reports `health_check_failed` after each failed poll, so an unreachable instance is removed after three consecutive polls (~10–15 s at the default 5 s interval). A removed instance that keeps running can come back by calling `POST /v1/instances` again.
