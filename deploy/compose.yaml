@@ -46,7 +46,7 @@ services:
       retries: 20
 
   user-management:
-    image: patriciamoraru/user-management:2.0.2
+    image: patriciamoraru/user-management:2.0.3
     pull_policy: always
     depends_on:
       database:
@@ -163,7 +163,7 @@ services:
       retries: 10
 
   battle:
-    image: patriciamoraru/battle:2.0.1
+    image: patriciamoraru/battle:2.0.2
     pull_policy: always
     depends_on:
       database:
