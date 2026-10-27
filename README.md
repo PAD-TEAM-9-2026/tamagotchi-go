@@ -201,6 +201,14 @@ What it deliberately does not do: it never retries a request, so a write cannot 
 
 Lab 2 added the Gateway as its own service: a separate repository linked here as a submodule, an image on Docker Hub (`victoriamutruc/gateway:2.0.3`, published by CI on every merge to `main`), all REST traffic routed through it, the WebSocket negotiation, the task timeout and concurrency limits, and authorization at the Gateway.
 
+### Service Discovery
+
+Service Discovery ([PatriciaMoraru/service-discovery](https://github.com/PatriciaMoraru/service-discovery)) is a shared Python 3.13 / FastAPI service that maintains the live registry of running instances. Each domain service registers itself on startup with `POST /v1/instances` and deregisters on graceful shutdown with `DELETE /v1/instances/{instance_id}`. Service Discovery health-checks every registered instance on an interval; the health checker also reports each failed check as a failure.
+
+Any service or the Gateway can report a failure for an instance with `POST /v1/instances/{instance_id}/failures`. Three failures within a 17.5-second sliding window (configurable) removes the instance automatically and raises a `CRITICAL` alert. Voluntary deregistration and every new registration clear the failure history for that instance, so a recovered instance that re-registers starts with a clean slate. `GET /v1/failures` lists every instance with at least one in-window failure.
+
+Instance registration, failure report and failure result shapes are in [docs/field-types.md](docs/field-types.md) under **Service Discovery**.
+
 ## Technologies
 
 | Service | Stack | Database | Why |
