@@ -169,7 +169,7 @@ Service Discovery is an internal control-plane service. Its registry and failure
 windows are in memory; it has no database or broker queues. It exposes registration,
 instance listing and failure-report APIs, polls registered status endpoints and
 removes failing instances. Developer alerts use an optional Discord webhook.
-The implementation and API are documented in [its README](services/service-discovery/README.md).
+The implementation and API are documented in [its README](https://github.com/PatriciaMoraru/service-discovery#readme).
 
 The deployment candidate is `patriciamoraru/service-discovery:3.0.0`. It must be
 published and validated before this wiring is released. The submodule currently
