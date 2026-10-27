@@ -330,7 +330,7 @@ failure tracking. A healthy answer that reaches a critical load limit raises a
 | `in_flight_requests` | `load.in_flight_requests` | 20 |
 | `requests_last_minute` | `load.requests_last_minute` | 600 |
 | `avg_response_ms_last_minute` | `load.avg_response_ms_last_minute` | 2500 |
-| `status_call_ms` | duration of the `/status` call | 2000 |
+| `status_call_ms` | duration of the `/status` call | 1500 |
 | `status` | `DEGRADED` | none |
 
 The limits are Service Discovery settings, listed in its README.
