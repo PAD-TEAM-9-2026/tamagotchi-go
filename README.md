@@ -303,6 +303,38 @@ shape is listed field by field, with types and which fields are required, in
 
 Every service also exposes `GET /health` and `GET /ready`, returning 200 or 503.
 
+<a id="status-endpoint"></a>
+
+### Status endpoint
+
+Every service, Gateway and Service Discovery included, also exposes `GET /status`
+for Service Discovery. Service Discovery calls it directly on the instance's
+registered address, not through Gateway.
+
+| Method and path | Request | Response | Access |
+|---|---|---|---|
+| `GET /status` | none | 200 Status, or 503 Status when `DOWN` | direct, Service Discovery |
+
+`status` is `UP` when the instance works, `DEGRADED` when it works with a problem it
+reports itself, and `DOWN` when it cannot serve requests. Every `load` field is
+optional: a rule whose field is missing is skipped, so a minimal answer still works.
+
+Service Discovery calls every registered instance every 5 seconds with a 2 second
+timeout. A timeout, connection error, 5xx, `DOWN` or a body without a known `status`
+marks the instance unhealthy: it stops being routable and the failure is reported to
+failure tracking. A healthy answer that reaches a critical load limit raises a
+`load_critical` alert for each broken rule.
+
+| Rule | Value | Default limit |
+|---|---|---|
+| `in_flight_requests` | `load.in_flight_requests` | 20 |
+| `requests_last_minute` | `load.requests_last_minute` | 600 |
+| `avg_response_ms_last_minute` | `load.avg_response_ms_last_minute` | 2500 |
+| `status_call_ms` | duration of the `/status` call | 1500 |
+| `status` | `DEGRADED` | none |
+
+The limits are Service Discovery settings, listed in its README.
+
 <a id="gateway-routing-and-negotiation-proposal"></a>
 
 ### Gateway routing and negotiation
@@ -541,7 +573,7 @@ allowlist, `service-token-policy.json`, and each owner adds their own lines to i
 Public routes are exactly those marked public in the endpoint tables, plus
 Gateway health/readiness. If Authorization is supplied even on a public route,
 validate it; an invalid token does not become an anonymous request. The direct
-User Management JWKS bootstrap and service health/readiness probes are explicit
+User Management JWKS bootstrap and service health, readiness and status probes are explicit
 exceptions to downstream assertion enforcement. Other direct domain calls must
 fail without a valid Gateway assertion.
 
@@ -553,7 +585,7 @@ fail without a valid Gateway assertion.
 | 403 | `not_self` | a user asked for another user's resource on a route limited to its owner |
 | 503 | `gateway_keys_unavailable` | the service cannot read the Gateway's public keys, so it cannot verify any assertion |
 
-Every route except `GET /health`, `GET /ready` and the User Management `GET /v1/jwks`
+Every route except `GET /health`, `GET /ready`, `GET /status` and the User Management `GET /v1/jwks`
 needs an assertion, public routes included, which carry an anonymous one.
 
 Gateway removes `X-User-Id`, `X-User-Roles` and `X-Service-Name` from every request.
@@ -592,8 +624,8 @@ uncommitted work and retain any committed receipt/effect progress. Release a
 slot only when its actual work and cleanup finish, not merely when the client
 has received a timeout. No detached work may escape the capacity accounting.
 
-Health/readiness probes use a separate bounded three-second check and no domain
-slot. Startup initialization remains governed by shutdown cancellation.
+Health, readiness and status probes use a separate bounded three-second check and
+no domain slot. Startup initialization remains governed by shutdown cancellation.
 Established Guild sockets do not occupy Gateway HTTP slots; negotiation and
 message handling are bounded tasks. Guild owns its separate socket lifetime and
 connection policy. A worker batch uses a service slot and local deadline; leave
