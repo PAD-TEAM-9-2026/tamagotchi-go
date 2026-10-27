@@ -1,6 +1,6 @@
 # Field types
 
-Every request and response shape used by the eight services, grouped by the
+Every request and response shape used by the eight domain services and Gateway, grouped by the
 service that uses it, then alphabetically. Referenced from the contract section
 of the [README](../README.md).
 
@@ -32,13 +32,17 @@ database.
 
 | Field | Type / constraint | Required |
 |---|---|---|
-| `type` | "about:blank" | yes |
+| `type` | `about:blank` or an absolute problem-type URI | yes |
 | `title` | string [1..128] | yes |
 | `status` | integer [400..599] | yes |
 | `detail` | string [1..1024] | yes |
 | `instance` | string [1..2048] | yes |
 | `code` | string [1..64] | yes |
 | `correlation_id` | uuid (v7) | yes |
+
+The `code` is the stable application error identifier. Clients must not require
+`type` to equal `about:blank`; a service may identify its problem type with an
+absolute URI. Existing status codes and other Problem fields are unchanged.
 
 ### Readiness
 
@@ -52,7 +56,62 @@ database.
 |---|---|---|
 | `version` | integer [1..2147483647] | yes |
 
-## User Management
+## Gateway
+
+These shapes define Guild chat negotiation. Gateway forwards ticket issuance to
+Guild and returns a direct browser URL; Guild owns ticket validation and sockets.
+Source and image compatibility require runtime validation.
+
+### WsNegotiateInput
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `resource` | guild.chat | yes |
+| `resource_id` | uuid (v7), guild id | yes |
+
+### WsTicket
+
+Returned by `POST /gateway/v1/ws-negotiate`. The `ticket` is the id Guild issued in
+`ChatTicket`; the claims behind it are Guild's record of user, guild, issue time and
+expiry, and are never sent to the browser.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `url` | string [1..2048], browser-reachable ws/wss URL, ends in `/v1/guilds/{guildId}/chat` | yes |
+| `ticket` | uuid (v7), single-use, valid 30 seconds | yes |
+| `expires_at` | timestamp (ISO 8601 UTC, milliseconds) | yes |
+
+### ChatTicket
+
+Returned by `POST /v1/guilds/{guildId}/chat-tickets` (user access).
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `ticket` | uuid (v7), single-use, valid 30 seconds | yes |
+| `guild_id` | uuid (v7) | yes |
+| `expires_at` | timestamp (ISO 8601 UTC, milliseconds) | yes |
+
+### GatewayAssertion
+
+Proposed JWT claims carried in X-Gateway-Assertion. The JWT header requires
+alg=RS256, typ=gateway-assertion+jwt and a configured kid. This is not a JSON
+request body. Anonymous has no permissions; service roles are empty and service
+scope comes from its access token. Every destination is a canonical service name
+from ServiceTokenRequest.audience, not a URL or Gateway path prefix.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `iss` | tamagotchi-go-gateway | yes |
+| `aud` | canonical destination service name | yes |
+| `principal_kind` | anonymous / user / service | yes |
+| `sub` | anonymous, UUIDv7 user id, or service:name matching principal_kind | yes |
+| `roles` | array<string [1..64]> [0..20], empty for anonymous/service | yes |
+| `scope` | space-separated granted scopes, empty for anonymous/user | yes |
+| `jti` | uuid (v7), unique per assertion | yes |
+| `correlation_id` | uuid (v7) | yes |
+| `iat` | integer, NumericDate seconds | yes |
+| `exp` | integer, NumericDate seconds, greater than iat, at most iat + 30 | yes |
+| `deadline_unix_ms` | integer, inherited root deadline in Unix milliseconds | yes |
 
 ### BattleSettlement
 
@@ -112,7 +171,7 @@ database.
 | Field | Type / constraint | Required |
 |---|---|---|
 | `amount` | integer [0..1000000] | yes |
-| `reason` | RAID_WIN / BATTLE_ACCESS_CAP | yes |
+| `reason` | RAID_WIN / RAID_DEFEAT / BATTLE_ACCESS_CAP | yes |
 | `reference_id` | uuid (v7) | yes |
 
 ### CreditReceipt
@@ -187,13 +246,6 @@ database.
 | `password` | string [1..128] | yes |
 | `package_id` | uuid (v7) | yes |
 
-### MembershipPage
-
-| Field | Type / constraint | Required |
-|---|---|---|
-| `items` | array<MembershipSnapshot> [0..100] | yes |
-| `next_cursor` | string [1..2048] or null | yes |
-
 ### MembershipSnapshot
 
 | Field | Type / constraint | Required |
@@ -233,6 +285,8 @@ database.
 | `reverse_relationship` | friend / enemy / stranger | yes |
 | `version` | integer [1..2147483647] | yes |
 
+Two users with no relationship are `stranger` both ways at `version` 1, never 0: there is no row yet, and a first row is created at version 1.
+
 ### RelationshipItem
 
 | Field | Type / constraint | Required |
@@ -257,8 +311,13 @@ database.
 
 ### ServiceTokenRequest
 
+The caller proves who it is with the `X-Service-Secret` header, or as an admin user. The
+header is not part of the body. A scope has no whitespace, because the token carries the
+scopes as one space-separated string.
+
 | Field | Type / constraint | Required |
 |---|---|---|
+| `service_name` | user-management / tamagotchi / battle / guild / package-registry / map / monster-raid / notification | yes |
 | `audience` | user-management / tamagotchi / battle / guild / package-registry / map / monster-raid / notification | yes |
 | `scopes` | array<string [1..64]> [0..20] | yes |
 
@@ -290,7 +349,7 @@ database.
 | `occurred_at` | timestamp (ISO 8601 UTC) | yes |
 | `producer` | "user-management" | yes |
 | `correlation_id` | uuid (v7) | yes |
-| `data` | object {request_id: uuid (v7), from_user_id: uuid (v7), to_user_id: uuid (v7), expires_at: date-time} | yes |
+| `data` | object {request_id: uuid (v7), from_user_id: uuid (v7), from_username: string [3..32], to_user_id: uuid (v7), expires_at: date-time} | yes |
 
 ### UserPackageJoinedEvent
 
@@ -373,7 +432,7 @@ database.
 | Field | Type / constraint | Required |
 |---|---|---|
 | `source` | BATTLE / RAID | yes |
-| `reference_id` | uuid (v7) | yes |
+| `reference_id` | uuid (v7), unique per engagement: the battle id for BATTLE, a per-participant id for RAID | yes |
 | `lineups` | array<Lineup> [1..2] | yes |
 | `ttl_seconds` | integer [30..3600] | yes |
 
@@ -594,7 +653,7 @@ database.
 | `occurred_at` | timestamp (ISO 8601 UTC) | yes |
 | `producer` | "battle" | yes |
 | `correlation_id` | uuid (v7) | yes |
-| `data` | object {battle_id: uuid (v7), challenger_id: uuid (v7), opponent_id: uuid (v7), expires_at: date-time} | yes |
+| `data` | object {battle_id: uuid (v7), challenger_id: uuid (v7), challenger_username: string [3..32], opponent_id: uuid (v7), expires_at: date-time} | yes |
 
 ### BattleSide
 
@@ -748,10 +807,13 @@ database.
 
 ### WsAuth
 
+The first frame on a chat connection. The ticket is redeemed once, and membership is
+checked again at that point.
+
 | Field | Type / constraint | Required |
 |---|---|---|
 | `type` | "auth" | yes |
-| `access_token` | string [1..8192] | yes |
+| `ticket` | uuid (v7), from `ChatTicket` | yes |
 
 ### WsError
 
@@ -845,6 +907,17 @@ database.
 | `duration_seconds` | integer [1..3600] | yes |
 | `max_participants` | integer [1..100] | yes |
 | `rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} | yes |
+| `defeat_rewards` | object {global_currency: integer [0..1000000], xp: integer [0..1000000]} or null | yes |
+
+`defeat_rewards` gives the currency and XP amounts per admitted participant when
+the raid ends without the boss being defeated (timeout or wipe). `null` means no
+defeat payout. Monster Raid currently implements timeout, not a wipe mechanism.
+Pending admissions and cancelled raids receive no rewards. XP goes to the
+participant's contributed creature; existing raids retain their pinned amounts.
+Both reward objects are restricted to the two currencies every Tamagotchi has
+regardless of package — global currency and XP — never a package-defined stat
+key, so a reward never references an attribute a participant's package does
+not define.
 
 ### BossPage
 
@@ -904,6 +977,9 @@ database.
 | `available_until` | timestamp (ISO 8601 UTC) | yes |
 | `status` | scheduled / active / inactive / cancelled | yes |
 | `version` | integer [1..2147483647] | yes |
+
+Reward amounts are not repeated on the occurrence: `boss_version` already
+pins which boss config, `rewards`/`defeat_rewards` included, a raid uses.
 
 ### OccurrenceInput
 
@@ -1074,6 +1150,9 @@ The latest accepted location for one user.
 
 ### LocationInput
 
+The verified user must match `user_id`. Raw location and nearby paths likewise
+require the caller's own user ID.
+
 | Field | Type / constraint | Required |
 |---|---|---|
 | `user_id` | uuid (v7) | yes |
@@ -1117,6 +1196,11 @@ The latest accepted location for one user.
 
 ### Nearby
 
+next_cursor semantics: opaque HMAC-signed position after distance_m and
+user_id, bound to caller, filters, page size and the full viewer observation.
+Expires after five minutes. Results remain subject to current freshness and
+visibility; this is not a snapshot. See the README replay/pagination rules.
+
 | Field | Type / constraint | Required |
 |---|---|---|
 | `user_id` | uuid (v7) | yes |
@@ -1129,6 +1213,11 @@ The latest accepted location for one user.
 ## Monster Raid
 
 ### Leaderboard
+
+next_cursor semantics: damage_dealt descending, joined_at ascending,
+user_id ascending, bound to caller, raid_id, page size and raid_version. A changed
+version returns `409 cursor_stale`. Integration branches implement these rules;
+the published image set still requires an update and runtime validation.
 
 | Field | Type / constraint | Required |
 |---|---|---|
@@ -1207,6 +1296,10 @@ The latest accepted location for one user.
 | `occurrence_id` | uuid (v7) | yes |
 
 ### RaidPage
+
+next_cursor semantics: started_at and raid_id descending, bound to caller,
+guild_id filter and page size. Integration branches implement these rules;
+the published image set still requires an update and runtime validation.
 
 | Field | Type / constraint | Required |
 |---|---|---|

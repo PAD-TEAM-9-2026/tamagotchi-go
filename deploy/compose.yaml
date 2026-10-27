@@ -46,15 +46,31 @@ services:
       retries: 20
 
   user-management:
-    image: patriciamoraru/user-management:1.2.0
-    platform: linux/amd64
+    image: patriciamoraru/user-management:2.0.3
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
     environment:
       PORT: 3001
+      LOG_LEVEL: ${USER_MANAGEMENT_LOG_LEVEL:-info}
       ConnectionStrings__UserManagementDb: Host=database;Port=5432;Database=${USER_MANAGEMENT_DB_NAME:-user_management};Username=${USER_MANAGEMENT_DB_USER:-user_management};Password=${USER_MANAGEMENT_DB_PASSWORD}
+      ACCESS_TOKEN_PRIVATE_KEY_PATH: /run/secrets/access-token.pem
+      ACCESS_TOKEN_KEY_ID: ${USER_MANAGEMENT_ACCESS_TOKEN_KEY_ID:-user-management-access-1}
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      CURSOR_SIGNING_KEY: ${USER_MANAGEMENT_CURSOR_SIGNING_KEY:?set USER_MANAGEMENT_CURSOR_SIGNING_KEY in .env (openssl rand -base64 32)}
+      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      RABBITMQ_URL: amqp://user-management:${USER_MANAGEMENT_RABBITMQ_PASSWORD:?set USER_MANAGEMENT_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      SERVICE_CLIENT_SECRET: ${USER_MANAGEMENT_SERVICE_CLIENT_SECRET:?set USER_MANAGEMENT_SERVICE_CLIENT_SECRET in .env}
+      SERVICE_CLIENT_SECRET_USER_MANAGEMENT: ${USER_MANAGEMENT_SERVICE_CLIENT_SECRET}
+      SERVICE_CLIENT_SECRET_TAMAGOTCHI: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET}
+      SERVICE_CLIENT_SECRET_BATTLE: ${BATTLE_SERVICE_CLIENT_SECRET}
+      SERVICE_CLIENT_SECRET_GUILD: ${GUILD_SERVICE_CLIENT_SECRET}
+      SERVICE_CLIENT_SECRET_MAP: ${MAP_SERVICE_CLIENT_SECRET}
+      SERVICE_CLIENT_SECRET_MONSTER_RAID: ${MONSTER_RAID_SERVICE_CLIENT_SECRET}
+    volumes:
+      - ./secrets/access-token.pem:/run/secrets/access-token.pem:ro
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3001:3001"
     healthcheck:
@@ -64,16 +80,25 @@ services:
       retries: 10
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:1.0.0
+    image: victoriamutruc/tamagotchi:2.0.5
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 3000
+      LOG_LEVEL: ${TAMAGOTCHI_LOG_LEVEL:-info}
       STORAGE: postgres
       DATABASE_URL: postgres://${TAMAGOTCHI_DB_USER:-tamagotchi}:${TAMAGOTCHI_DB_PASSWORD}@database:5432/${TAMAGOTCHI_DB_NAME:-tamagotchi}
-      AUTH_MODE: dev
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      SERVICE_CLIENT_SECRET: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET:?set TAMAGOTCHI_SERVICE_CLIENT_SECRET in .env}
+      USER_MANAGEMENT_URL: http://gateway:3000/users
+      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      RABBITMQ_URL: amqp://tamagotchi:${TAMAGOTCHI_RABBITMQ_PASSWORD:?set TAMAGOTCHI_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3002:3000"
     healthcheck:
@@ -83,7 +108,7 @@ services:
       retries: 10
 
   guild:
-    image: mihaelacatan/guild-service:0.2.0
+    image: mihaelacatan/guild-service:2.0.4
     pull_policy: always
     depends_on:
       database:
@@ -95,7 +120,13 @@ services:
       POSTGRES_USER: ${GUILD_DB_USER:-guild}
       POSTGRES_PASSWORD: ${GUILD_DB_PASSWORD:?set GUILD_DB_PASSWORD in .env}
       POSTGRES_DB: ${GUILD_DB_NAME:-guild}
-      AUTH_MODE: dev
+      USER_MANAGEMENT_URL: http://gateway:3000/users
+      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      RABBITMQ_URL: amqp://guild:${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      SERVICE_CLIENT_SECRET: ${GUILD_SERVICE_CLIENT_SECRET:?set GUILD_SERVICE_CLIENT_SECRET in .env}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3004:3000"
     healthcheck:
@@ -105,11 +136,13 @@ services:
       retries: 10
 
   registry:
-    image: mihaelacatan/package-registry-service:0.2.0
+    image: mihaelacatan/package-registry-service:2.0.4
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 3000
       DB_HOST: database
@@ -117,8 +150,10 @@ services:
       POSTGRES_USER: ${REGISTRY_DB_USER:-registry}
       POSTGRES_PASSWORD: ${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD in .env}
       POSTGRES_DB: ${REGISTRY_DB_NAME:-registry}
-      AUTH_MODE: dev
-      ADMIN_USER_IDS: ${REGISTRY_ADMIN_USER_IDS:-}
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      RABBITMQ_URL: amqp://registry:${REGISTRY_RABBITMQ_PASSWORD:?set REGISTRY_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3005:3000"
     healthcheck:
@@ -128,15 +163,26 @@ services:
       retries: 10
 
   battle:
-    image: patriciamoraru/battle:1.2.0
-    platform: linux/amd64
+    image: patriciamoraru/battle:2.0.2
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 3003
+      LOG_LEVEL: ${BATTLE_LOG_LEVEL:-info}
       ConnectionStrings__BattleDb: Host=database;Port=5432;Database=${BATTLE_DB_NAME:-battle};Username=${BATTLE_DB_USER:-battle};Password=${BATTLE_DB_PASSWORD}
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      CURSOR_SIGNING_KEY: ${BATTLE_CURSOR_SIGNING_KEY:?set BATTLE_CURSOR_SIGNING_KEY in .env (openssl rand -base64 32)}
+      USER_MANAGEMENT_URL: http://gateway:3000/users
+      TAMAGOTCHI_URL: http://gateway:3000/tamagotchi
+      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      RABBITMQ_URL: amqp://battle:${BATTLE_RABBITMQ_PASSWORD:?set BATTLE_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      SERVICE_CLIENT_SECRET: ${BATTLE_SERVICE_CLIENT_SECRET:?set BATTLE_SERVICE_CLIENT_SECRET in .env}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3003:3003"
     healthcheck:
@@ -146,16 +192,27 @@ services:
       retries: 10
 
   map:
-    image: sergedbs/map:1.0.0
+    image: sergedbs/map:2.0.0
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 8080
+      Logging__LogLevel__Default: ${MAP_LOG_LEVEL:-Information}
       LOCATION_FRESHNESS_SECONDS: 60
       PROXIMITY_THRESHOLD_METRES: 6
-      ConnectionStrings__Default: Host=database;Port=5432;Database=${MAP_DB_NAME:-map};Username=${MAP_DB_USER:-map};Password=${MAP_DB_PASSWORD}
+      ConnectionStrings__Default: Host=database;Port=5432;Database=${MAP_DB_NAME:-map};Username=${MAP_DB_USER:-map};Password=${MAP_DB_PASSWORD};GSS Encryption Mode=Disable;Maximum Pool Size=10
+      SERVICE_CLIENT_SECRET: ${MAP_SERVICE_CLIENT_SECRET:?set MAP_SERVICE_CLIENT_SECRET in .env}
+      GATEWAY_BASE_URL: http://gateway:3000
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      CURSOR_SIGNING_KEY: ${MAP_CURSOR_SIGNING_KEY:?set MAP_CURSOR_SIGNING_KEY in .env}
+      RABBITMQ_URL: amqp://map:${MAP_RABBITMQ_PASSWORD:?set MAP_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      USERS_RELATIONSHIP_SCOPES: ${MAP_USERS_RELATIONSHIP_SCOPES:-users:read-relationships}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3006:8080"
     healthcheck:
@@ -165,14 +222,34 @@ services:
       retries: 10
 
   monster-raid:
-    image: sergedbs/monster-raid:1.0.0
+    image: sergedbs/monster-raid:2.0.0
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 8080
-      ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD}
+      Logging__LogLevel__Default: ${MONSTER_RAID_LOG_LEVEL:-Information}
+      ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD};GSS Encryption Mode=Disable;Maximum Pool Size=10
+      SERVICE_CLIENT_SECRET: ${MONSTER_RAID_SERVICE_CLIENT_SECRET:?set MONSTER_RAID_SERVICE_CLIENT_SECRET in .env}
+      GATEWAY_BASE_URL: http://gateway:3000
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      CURSOR_SIGNING_KEY: ${MONSTER_RAID_CURSOR_SIGNING_KEY:?set MONSTER_RAID_CURSOR_SIGNING_KEY in .env}
+      RABBITMQ_URL: amqp://monster-raid:${MONSTER_RAID_RABBITMQ_PASSWORD:?set MONSTER_RAID_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      GUILD_READ_SCOPES: ${MONSTER_RAID_GUILD_READ_SCOPES:-guild:read}
+      REGISTRY_OCCURRENCE_SCOPES: ${MONSTER_RAID_REGISTRY_OCCURRENCE_SCOPES:-registry:read-occurrences}
+      REGISTRY_BOSS_SCOPES: ${MONSTER_RAID_REGISTRY_BOSS_SCOPES:-registry:read-bosses}
+      REGISTRY_CONFIG_SCOPES: ${MONSTER_RAID_REGISTRY_CONFIG_SCOPES:-registry:read-config}
+      TAMAGOTCHI_COLLECTION_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_COLLECTION_SCOPES:-tamagotchi:read-collection}
+      TAMAGOTCHI_RESERVE_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_RESERVE_SCOPES:-tamagotchi:reserve-engagement}
+      TAMAGOTCHI_READ_ENGAGEMENT_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_READ_ENGAGEMENT_SCOPES:-tamagotchi:read-engagement}
+      TAMAGOTCHI_RELEASE_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_RELEASE_SCOPES:-tamagotchi:release-engagement}
+      TAMAGOTCHI_XP_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_XP_SCOPES:-tamagotchi:award-xp}
+      USERS_CREDIT_SCOPES: ${MONSTER_RAID_USERS_CREDIT_SCOPES:-users:credit-global}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3007:8080"
     healthcheck:
@@ -182,16 +259,24 @@ services:
       retries: 10
 
   notification:
-    image: victoriamutruc/notification:1.0.0
+    image: victoriamutruc/notification:2.0.4
     pull_policy: always
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
       PORT: 3000
+      LOG_LEVEL: ${NOTIFICATION_LOG_LEVEL:-info}
       STORAGE: postgres
       DATABASE_URL: postgres://${NOTIFICATION_DB_USER:-notification}:${NOTIFICATION_DB_PASSWORD}@database:5432/${NOTIFICATION_DB_NAME:-notification}
-      AUTH_MODE: dev
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      PUSH_PROVIDER: ${NOTIFICATION_PUSH_PROVIDER:-stub}
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
+      RABBITMQ_URL: amqp://notification:${NOTIFICATION_RABBITMQ_PASSWORD:?set NOTIFICATION_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     ports:
       - "3008:3000"
     healthcheck:
@@ -200,5 +285,81 @@ services:
       timeout: 3s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?set RABBITMQ_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - shared-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  rabbitmq-provision:
+    image: python:3.13-alpine
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_USER: ${RABBITMQ_USER:?set RABBITMQ_USER in .env}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
+      GUILD_RABBITMQ_PASSWORD: ${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}
+      REGISTRY_RABBITMQ_PASSWORD: ${REGISTRY_RABBITMQ_PASSWORD:?set REGISTRY_RABBITMQ_PASSWORD in .env}
+      USER_MANAGEMENT_RABBITMQ_PASSWORD: ${USER_MANAGEMENT_RABBITMQ_PASSWORD:?set USER_MANAGEMENT_RABBITMQ_PASSWORD in .env}
+      TAMAGOTCHI_RABBITMQ_PASSWORD: ${TAMAGOTCHI_RABBITMQ_PASSWORD:?set TAMAGOTCHI_RABBITMQ_PASSWORD in .env}
+      BATTLE_RABBITMQ_PASSWORD: ${BATTLE_RABBITMQ_PASSWORD:?set BATTLE_RABBITMQ_PASSWORD in .env}
+      MAP_RABBITMQ_PASSWORD: ${MAP_RABBITMQ_PASSWORD:?set MAP_RABBITMQ_PASSWORD in .env}
+      MONSTER_RAID_RABBITMQ_PASSWORD: ${MONSTER_RAID_RABBITMQ_PASSWORD:?set MONSTER_RAID_RABBITMQ_PASSWORD in .env}
+      NOTIFICATION_RABBITMQ_PASSWORD: ${NOTIFICATION_RABBITMQ_PASSWORD:?set NOTIFICATION_RABBITMQ_PASSWORD in .env}
+    volumes:
+      - ./rabbitmq/provision.sh:/provision.sh:ro
+      - ./rabbitmq/provision.py:/provision.py:ro
+    entrypoint: ["sh", "/provision.sh"]
+    restart: "no"
+
+  gateway:
+    image: victoriamutruc/gateway:2.0.3
+    pull_policy: always
+    depends_on:
+      user-management:
+        condition: service_healthy
+      tamagotchi:
+        condition: service_healthy
+      guild:
+        condition: service_healthy
+      registry:
+        condition: service_healthy
+      battle:
+        condition: service_healthy
+      map:
+        condition: service_healthy
+      monster-raid:
+        condition: service_healthy
+      notification:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      LOG_LEVEL: ${GATEWAY_LOG_LEVEL:-info}
+      GATEWAY_ASSERTION_PRIVATE_KEY_PATH: /run/secrets/gateway-assertion.pem
+      GATEWAY_ASSERTION_KEY_ID: ${GATEWAY_ASSERTION_KEY_ID:?set GATEWAY_ASSERTION_KEY_ID in .env (run deploy/gateway/generate-keys.sh)}
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+    volumes:
+      - ./secrets/gateway-assertion.pem:/run/secrets/gateway-assertion.pem:ro
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request as r; r.urlopen('http://127.0.0.1:3000/ready', timeout=2)\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   shared-postgres-data:
+  shared-rabbitmq-data:

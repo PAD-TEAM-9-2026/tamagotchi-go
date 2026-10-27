@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Map",
-    "description": "Each request is independently runnable against Map. GET and DELETE requests create their own location first.",
+    "description": "Gateway-authenticated Map checks. Configure two real test users and matching bearer credentials. Location requests prepare only those users; probes are direct. See postman/README.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -20,8 +20,9 @@
           "  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');",
           "  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');",
           "}",
-          "pm.variables.set('map_user_id', uuidv7());",
-          "pm.variables.set('map_timestamp', new Date().toISOString());"
+          "pm.variables.set('command_key', uuidv7());",
+          "pm.variables.set('map_timestamp', new Date().toISOString());",
+          "if (!['Health', 'Readiness', 'Missing authentication', 'Direct impersonation'].includes(pm.info.requestName) && !pm.environment.get('map_credential')) throw new Error('Configure the real test user credential before running domain requests.');"
         ]
       }
     }
@@ -36,13 +37,16 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{map_base_url}}/health",
+              "raw": "{{map_probe_url}}/health",
               "host": [
-                "{{map_base_url}}"
+                "{{map_probe_url}}"
               ],
               "path": [
                 "health"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "event": [
@@ -64,13 +68,16 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{map_base_url}}/ready",
+              "raw": "{{map_probe_url}}/ready",
               "host": [
-                "{{map_base_url}}"
+                "{{map_probe_url}}"
               ],
               "path": [
                 "ready"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "event": [
@@ -99,6 +106,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{command_key}}"
               }
             ],
             "url": {
@@ -153,28 +164,27 @@
           },
           "event": [
             {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.sendRequest({",
-                  "  url: pm.environment.get('map_base_url') + '/v1/location',",
-                  "  method: 'POST',",
-                  "  header: {'Content-Type': 'application/json'},",
-                  "  body: {mode: 'raw', raw: \"{\\\"user_id\\\":\\\"{{map_user_id}}\\\",\\\"lat\\\":47.0105,\\\"lng\\\":28.8638,\\\"timestamp\\\":\\\"{{map_timestamp}}\\\",\\\"accuracy_m\\\":5}\".replace('{{map_user_id}}', pm.variables.get('map_user_id')).replace('{{map_timestamp}}', pm.variables.get('map_timestamp'))}",
-                  "}, (error, response) => {",
-                  "  if (error || response.code !== 200) throw new Error('Map fixture creation failed');",
-                  "});"
-                ]
-              }
-            },
-            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
                   "pm.test(\"matching user\", () => { pm.expect(pm.response.json().user_id).to.eql(pm.variables.get('map_user_id')) });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const user = pm.environment.get('map_user_id');",
+                  "const token = pm.environment.get('map_credential');",
+                  "if (!user || !token) throw new Error('Configure map_user_id and map_credential.');",
+                  "const body = {user_id: user, lat: 47.0105, lng: 28.8638, timestamp: pm.variables.get('map_timestamp'), accuracy_m: 5};",
+                  "pm.sendRequest({url: pm.environment.get('map_base_url') + '/v1/location', method: 'POST', header: {'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'Idempotency-Key': pm.variables.get('command_key') + '-setup'}, body: {mode: 'raw', raw: JSON.stringify(body)}}, (error, response) => {",
+                  "  if (error || response.code !== 200) throw new Error('Authenticated Map setup failed.');",
+                  "});"
                 ]
               }
             }
@@ -194,29 +204,17 @@
                 "v1",
                 "location",
                 "nearby",
-                "{{map_user_id}}?limit=10"
+                "{{map_user_id}}"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
             }
           },
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.variables.set('map_neighbor_id', pm.variables.get('map_user_id').slice(0, -2) + '04');",
-                  "const url = pm.environment.get('map_base_url') + '/v1/location';",
-                  "const timestamp = pm.variables.get('map_timestamp');",
-                  "const viewer = {user_id: pm.variables.get('map_user_id'), lat: 47.0105, lng: 28.8638, timestamp, accuracy_m: 5};",
-                  "const neighbor = {user_id: pm.variables.get('map_neighbor_id'), lat: 47.01051, lng: 28.8638, timestamp, accuracy_m: 5};",
-                  "const send = (body, next) => pm.sendRequest({url, method: 'POST', header: {'Content-Type': 'application/json'}, body: {mode: 'raw', raw: JSON.stringify(body)}}, (error, response) => {",
-                  "  if (error || response.code !== 200) throw new Error('Map nearby fixture creation failed');",
-                  "  next();",
-                  "});",
-                  "send(viewer, () => send(neighbor, () => {}));"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -225,6 +223,24 @@
                   "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
                   "pm.test(\"nearby list\", () => { pm.expect(pm.response.json().nearby).to.be.an('array') });",
                   "pm.test('nearby stranger is visible', () => pm.expect(pm.response.json().nearby.map(x => x.user_id)).to.include(pm.variables.get('map_neighbor_id')));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const user = pm.environment.get('map_user_id');",
+                  "const neighbor = pm.environment.get('map_neighbor_id');",
+                  "const token = pm.environment.get('map_credential');",
+                  "const neighborToken = pm.environment.get('map_neighbor_credential');",
+                  "if (!user || !neighbor || user === neighbor || !token || !neighborToken) throw new Error('Configure two distinct real Map test users and matching credentials.');",
+                  "const send = (id, bearer, lat, suffix, next) => pm.sendRequest({url: pm.environment.get('map_base_url') + '/v1/location', method: 'POST', header: {'Content-Type': 'application/json', Authorization: 'Bearer ' + bearer, 'Idempotency-Key': pm.variables.get('command_key') + suffix}, body: {mode: 'raw', raw: JSON.stringify({user_id: id, lat, lng: 28.8638, timestamp: pm.variables.get('map_timestamp'), accuracy_m: 5})}}, (error, response) => {",
+                  "  if (error || response.code !== 200) throw new Error('Authenticated nearby setup failed.');",
+                  "  next();",
+                  "});",
+                  "send(user, token, 47.0105, '-viewer', () => send(neighbor, neighborToken, 47.01051, '-neighbor', () => {}));"
                 ]
               }
             }
@@ -249,17 +265,75 @@
           },
           "event": [
             {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            },
+            {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.sendRequest({",
-                  "  url: pm.environment.get('map_base_url') + '/v1/location',",
-                  "  method: 'POST',",
-                  "  header: {'Content-Type': 'application/json'},",
-                  "  body: {mode: 'raw', raw: \"{\\\"user_id\\\":\\\"{{map_user_id}}\\\",\\\"lat\\\":47.0105,\\\"lng\\\":28.8638,\\\"timestamp\\\":\\\"{{map_timestamp}}\\\",\\\"accuracy_m\\\":5}\".replace('{{map_user_id}}', pm.variables.get('map_user_id')).replace('{{map_timestamp}}', pm.variables.get('map_timestamp'))}",
-                  "}, (error, response) => {",
-                  "  if (error || response.code !== 200) throw new Error('Map fixture creation failed');",
+                  "const user = pm.environment.get('map_user_id');",
+                  "const token = pm.environment.get('map_credential');",
+                  "if (!user || !token) throw new Error('Configure map_user_id and map_credential.');",
+                  "const body = {user_id: user, lat: 47.0105, lng: 28.8638, timestamp: pm.variables.get('map_timestamp'), accuracy_m: 5};",
+                  "pm.sendRequest({url: pm.environment.get('map_base_url') + '/v1/location', method: 'POST', header: {'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'Idempotency-Key': pm.variables.get('command_key') + '-setup'}, body: {mode: 'raw', raw: JSON.stringify(body)}}, (error, response) => {",
+                  "  if (error || response.code !== 200) throw new Error('Authenticated Map setup failed.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replay location command",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{command_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\":\"{{map_user_id}}\",\"lat\":47.0105,\"lng\":28.8638,\"timestamp\":\"{{map_timestamp}}\",\"accuracy_m\":5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.variables.replaceIn(pm.request.body.raw);",
+                  "pm.sendRequest({url: pm.environment.get('map_base_url') + '/v1/location', method: 'POST', header: {'Content-Type': 'application/json', Authorization: 'Bearer ' + pm.environment.get('map_credential'), 'Idempotency-Key': pm.variables.get('command_key')}, body: {mode: 'raw', raw: body}}, (error, response) => {",
+                  "  if (error || response.code !== 200) throw new Error('Replay setup failed.');",
+                  "  pm.variables.set('recorded_receipt', response.text());",
                   "});"
                 ]
               }
@@ -269,7 +343,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('identical receipt', () => pm.expect(pm.response.text()).to.eql(pm.variables.get('recorded_receipt')));"
                 ]
               }
             }
@@ -337,6 +412,17 @@
                   "pm.test(\"problem code\", () => { pm.expect(pm.response.json().code).to.eql('location_not_found') });"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({url: pm.environment.get('map_base_url') + '/v1/location/' + pm.environment.get('map_user_id'), method: 'DELETE', header: {Authorization: 'Bearer ' + pm.environment.get('map_credential')}}, (error, response) => {",
+                  "  if (error || ![204, 404].includes(response.code)) throw new Error('Location absence setup failed.');",
+                  "});"
+                ]
+              }
             }
           ]
         },
@@ -348,6 +434,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{command_key}}"
               }
             ],
             "url": {
@@ -381,8 +471,173 @@
               }
             }
           ]
+        },
+        {
+          "name": "Missing command key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\":\"{{map_user_id}}\",\"lat\":47.0105,\"lng\":28.8638,\"timestamp\":\"{{map_timestamp}}\",\"accuracy_m\":5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('key required', () => pm.expect(pm.response.json().code).to.eql('invalid_idempotency_key'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing authentication",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location/{{map_user_id}}",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location",
+                "{{map_user_id}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "pm.test('problem code', () => pm.expect(pm.response.json().code).to.eql('unauthorized'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forged plain identity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{map_neighbor_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{map_base_url}}/v1/location/{{map_neighbor_id}}",
+              "host": [
+                "{{map_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "location",
+                "{{map_neighbor_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test('problem code', () => pm.expect(pm.response.json().code).to.eql('not_self'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Direct impersonation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{map_user_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{map_probe_url}}/v1/location/{{map_user_id}}",
+              "host": [
+                "{{map_probe_url}}"
+              ],
+              "path": [
+                "v1",
+                "location",
+                "{{map_user_id}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "pm.test('problem code', () => pm.expect(pm.response.json().code).to.eql('invalid_gateway_assertion'));"
+                ]
+              }
+            }
+          ]
         }
       ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{map_credential}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "command_key",
+      "value": ""
     }
   ]
 }

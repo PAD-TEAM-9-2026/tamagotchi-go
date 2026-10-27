@@ -82,11 +82,20 @@
           "",
           "pm.collectionVariables.set('idempotency_key', uuidv7());",
           "",
-          "seed('developer_id', uuidv7());",
-          "seed('moderator_id', uuidv7());",
-          "seed('outsider_id', uuidv7());",
+          "function fixture(key) {",
+          "  const value = pm.environment.get(key) || pm.collectionVariables.get(key);",
+          "  if (!value) throw new Error('Supply a real fixture ID and matching credential for ' + key);",
+          "  pm.collectionVariables.set(key, value);",
+          "}",
+          "",
+          "fixture('developer_id');",
+          "fixture('moderator_id');",
+          "fixture('outsider_id');",
           "seed('run_suffix', Date.now().toString());",
-          ""
+          "",
+          "",
+          "pm.variables.set('occurrence_available_from', new Date(Date.now() - 60000).toISOString());",
+          "pm.variables.set('occurrence_available_until', new Date(Date.now() + 7200000).toISOString());"
         ]
       }
     }
@@ -101,9 +110,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{registry_base_url}}/health",
+              "raw": "{{registry_probe_url}}/health",
               "host": [
-                "{{registry_base_url}}"
+                "{{registry_probe_url}}"
               ],
               "path": [
                 "health"
@@ -128,9 +137,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{registry_base_url}}/ready",
+              "raw": "{{registry_probe_url}}/ready",
               "host": [
-                "{{registry_base_url}}"
+                "{{registry_probe_url}}"
               ],
               "path": [
                 "ready"
@@ -160,8 +169,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -283,8 +293,9 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{moderator_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{moderator_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -343,8 +354,9 @@
             "method": "PUT",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{moderator_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{moderator_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -398,8 +410,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "battle"
+                "key": "Authorization",
+                "value": "Bearer {{monster_raid_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -436,8 +449,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "battle"
+                "key": "Authorization",
+                "value": "Bearer {{monster_raid_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -471,8 +485,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "battle"
+                "key": "Authorization",
+                "value": "Bearer {{monster_raid_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -506,8 +521,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "tamagotchi"
+                "key": "Authorization",
+                "value": "Bearer {{tamagotchi_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -571,8 +587,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "guild"
+                "key": "Authorization",
+                "value": "Bearer {{guild_service_credential}}",
+                "type": "text"
               },
               {
                 "key": "Content-Type",
@@ -628,8 +645,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -652,7 +670,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"spooky\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 100000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  }\n}",
+              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"spooky\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 100000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  },\n  \"defeat_rewards\": {\n    \"global_currency\": 50,\n    \"xp\": 20\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -683,8 +701,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -720,8 +739,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -759,8 +779,9 @@
             "method": "PUT",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -788,7 +809,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"even spookier\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 200000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  }\n}",
+              "raw": "{\n  \"name\": \"Postman Pumpkin King\",\n  \"description\": \"even spookier\",\n  \"sprite_ref\": \"boss/pumpkin\",\n  \"combat_type\": \"SHADOW\",\n  \"max_hp\": 200000,\n  \"defense\": 500,\n  \"weaknesses\": [\n    \"FLAME\"\n  ],\n  \"resistances\": [\n    \"SHADOW\"\n  ],\n  \"special_properties\": {},\n  \"duration_seconds\": 600,\n  \"max_participants\": 20,\n  \"rewards\": {\n    \"global_currency\": 500,\n    \"xp\": 200\n  },\n  \"defeat_rewards\": {\n    \"global_currency\": 50,\n    \"xp\": 20\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -825,8 +846,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -849,7 +871,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": {{boss_version}},\n  \"available_from\": \"2026-01-01T00:00:00.000Z\",\n  \"available_until\": \"2026-01-01T01:00:00.000Z\"\n}",
+              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": {{boss_version}},\n  \"available_from\": \"{{occurrence_available_from}}\",\n  \"available_until\": \"{{occurrence_available_until}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -880,8 +902,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -917,8 +940,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-Service-Name",
-                "value": "monster-raid"
+                "key": "Authorization",
+                "value": "Bearer {{monster_raid_service_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -951,8 +975,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -995,8 +1020,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1034,8 +1060,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1108,8 +1135,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1158,8 +1186,9 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1213,8 +1242,9 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{moderator_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{moderator_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1264,8 +1294,9 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{moderator_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{moderator_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1348,8 +1379,9 @@
             "method": "GET",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{outsider_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{outsider_credential}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -1383,8 +1415,9 @@
             "method": "POST",
             "header": [
               {
-                "key": "X-User-Id",
-                "value": "{{admin_id}}"
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}",
+                "type": "text"
               },
               {
                 "key": "Idempotency-Key",
@@ -1407,7 +1440,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": 999,\n  \"available_from\": \"2026-01-01T00:00:00.000Z\",\n  \"available_until\": \"2026-01-01T01:00:00.000Z\"\n}",
+              "raw": "{\n  \"boss_id\": \"{{boss_id}}\",\n  \"boss_version\": 999,\n  \"available_from\": \"{{occurrence_available_from}}\",\n  \"available_until\": \"{{occurrence_available_until}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

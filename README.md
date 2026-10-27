@@ -1,7 +1,7 @@
 # Tamagotchi Go
 
 Shared backend for virtual pet apps. Different frontend packages ship their own
-creatures, art and care rules, and all of them run on these eight services.
+creatures, art and care rules, backed by eight domain services and a Python Gateway.
 
 
 ## Team
@@ -12,6 +12,7 @@ creatures, art and care rules, and all of them run on these eight services.
 | Victoria | Tamagotchi, Notification | TypeScript, Node.js |
 | Mihaela | Guild, Package Registry | TypeScript, Node.js |
 | Sergiu | Map, Monster Raid | C#, ASP.NET Core |
+| All four | Gateway | Python, FastAPI |
 
 
 ## Repository
@@ -28,6 +29,7 @@ Each service has its own private repository. They are linked here as submodules.
 | Package Registry | `services/package-registry` | Mihaela |
 | Map | `services/map` | Sergiu |
 | Monster Raid | `services/monster-raid` | Sergiu |
+| Gateway | `services/gateway` | Shared by the team |
 
 ## Service boundaries
 
@@ -44,6 +46,7 @@ service's tables.
 | Map | Latest locations, freshness, who is nearby | Friend lists, battles |
 | Monster Raid | Live raids, boss HP, attacks, damage per player, rewards | Boss definitions, guild membership |
 | Notification | Devices, push tokens, delivery, history, mute settings | Every domain decision, message text |
+| Gateway | REST routing, caller validation, correlation and negotiation | Game rules, domain data, databases, events |
 
 Two rules keep the boundaries honest. Battle decides, Tamagotchi applies.
 Package Registry holds configuration, the runtime services hold state.
@@ -93,7 +96,42 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
-![Tamagotchi Go architecture with 8 microservices, PostgreSQL per service, and RabbitMQ](docs/img/architecture_diagram.png)
+This section describes the target architecture. Gateway source implements
+routing and authorization; Map and Monster Raid integration source uses real
+HTTP adapters and durable broker delivery. Published image versions may predate
+these changes. Validate the selected image set against real dependencies before
+claiming deployment compatibility. The diagram distinguishes transport paths from domain ownership.
+
+```mermaid
+flowchart TB
+    Client[Application / Postman] -->|REST and socket negotiation| Gateway[Python Gateway]
+    Gateway --> Users[User Management]
+    Gateway --> Pets[Tamagotchi]
+    Gateway --> Battle[Battle]
+    Gateway --> Guild[Guild]
+    Gateway --> Registry[Package Registry]
+    Gateway --> Map[Map]
+    Gateway --> Raid[Monster Raid]
+    Gateway --> Notification[Notification]
+    Services[Service REST callers] -->|service bearer and signed context| Gateway
+    Client -->|negotiated ticket / direct WebSocket| Guild
+    Publishers[Users / Pets / Battle / Guild / Registry / Map / Raid] -->|committed facts| Broker[RabbitMQ]
+    Broker -->|package membership| Pets
+    Broker -->|package membership| Registry
+    Broker -->|occurrence lifecycle| Raid
+    Broker -->|notification events| Notification
+    Notification -->|configured push provider| Firebase[Firebase]
+    Domain[Each domain service] -->|own credentials / own schema| Data[Eight separate PostgreSQL databases]
+```
+
+Service REST dependencies traverse Gateway: Map reads User Management;
+Raid reads Guild, Registry and Tamagotchi and delivers rewards to User Management
+and Tamagotchi. Battle uses User Management, Registry and Tamagotchi. Guild uses
+User Management and Registry. User Management and Tamagotchi read Registry
+configuration. Notification consumes events rather than making domain REST calls.
+Direct probes, Gateway's JWKS bootstrap, broker traffic and provider assets are
+explicit exceptions. Registry has no membership-rebuild REST call to User
+Management; its projection is updated by committed membership events.
 
 Every client goes through the HTTP Gateway. It routes by path prefix to the eight
 services, so a frontend package never learns where a service lives or how many
@@ -116,9 +154,52 @@ delivery fan-out and pushes to phones through Firebase Cloud Messaging, without
 any publisher knowing it exists. Registry also keeps a membership projection
 from User Management events, so package eligibility checks stay local.
 
-The one edge drawn in red is the exception to the usual flow: the membership
-projection rebuild between User Management and Registry, used to repair that
-copy when it drifts.
+Registry builds that projection from the events alone and never reads from User
+Management, so no route lists every user's memberships. User Management only
+answers `GET /v1/internal/users/{userId}/membership` for one user at a time.
+
+### Gateway
+
+![Gateway architecture: clients reach the eight services only through the Gateway, which verifies them, signs their identity and routes by prefix; Guild chat sockets go directly to Guild](docs/img/gateway_architecture_diagram.png)
+
+The Gateway is the only public entry point for REST. Every client call and every service-to-service call goes through it, so a service never sees a caller it did not get from the Gateway. It holds no domain state: no database and no events. What it needs comes from configuration, User Management's public keys and its own signing key.
+
+How one request is handled, in the order the code does it:
+
+1. **Correlation.** A valid UUIDv7 `X-Correlation-Id` is kept, anything else is replaced by a new one. It is forwarded to the service and returned to the caller.
+2. **Admission.** The request takes one of 128 slots or gets `503 too_many_tasks` with `Retry-After: 1`. A five-second deadline starts for the whole request.
+3. **Routing.** The first path segment names the service. An unknown prefix, or a path that does not continue with `/v1/`, gets `404 unknown_route`.
+4. **Credential limit.** Login, register and refresh are refused with `429 too_many_attempts` after 10 failed attempts from one address in 60 seconds.
+5. **Authentication.** A bearer token is verified against User Management's JWKS: signature, expiry, audience and claims. An invalid one gets `401`. A request without `Authorization` goes on as anonymous, and the service decides.
+6. **Forwarding pool.** User traffic and service traffic each have 64 slots, so one cannot starve the other.
+7. **Signed identity.** `Authorization` and any client-sent identity headers are removed. The Gateway signs `X-Gateway-Assertion` for the destination service, carrying the verified caller, the correlation ID and the deadline.
+8. **Forwarding.** The prefix is stripped once, and the service's answer comes back unchanged. Bodies are capped at 10 MiB in both directions. An unreachable service gets `502 upstream_unavailable` and a passed deadline `504 task_timeout`.
+
+**Service-to-service calls** use the same path. The calling service sends its own service token and, when it acts for a user, the assertion it received as `X-Gateway-Context`. The Gateway verifies that assertion with its own key, keeps the correlation ID and the earlier deadline, and names the user as the actor in the new assertion. A chain of calls therefore shares one ID and one five-second budget.
+
+**WebSockets** are negotiated, not proxied. A signed-in user calls `POST /gateway/v1/ws-negotiate` for `guild.chat`. The Gateway verifies the user, asks Guild for a ticket and returns the socket URL with a single-use ticket that expires within 30 seconds. The browser then connects straight to Guild and sends the ticket in the first frame. The Gateway holds no socket, so chat traffic never uses its slots.
+
+**Observability.** Every completed request is logged as JSON with method, path, status, duration, correlation ID and target service. Prometheus metrics are served on a separate port, 9090, which Compose does not publish.
+
+Patterns the Gateway applies:
+
+| Pattern | In the Gateway |
+|---|---|
+| API Gateway, Gateway Routing | One entry point; the path prefix picks one of eight services |
+| Gateway Offloading | Authentication, rate limiting, timeouts and request logging happen once here, not in every service |
+| Identity propagation | The client's token stops at the Gateway; services receive a short-lived assertion signed for them alone |
+| Valet Key | The chat ticket is a short-lived, single-use key for direct access to Guild |
+| Bulkhead | Separate pools for user requests, service requests, authentication and health probes |
+| Fail fast | A full pool answers `503` with `Retry-After` at once instead of queueing |
+| Timeout and deadline propagation | One five-second deadline per root request, carried into every nested call |
+| Rate Limiting | Failed credential attempts are counted per address over a sliding window |
+| Cache-Aside | User Management's keys are cached for 300 seconds and refreshed once for an unknown key ID |
+| Correlation Identifier | One ID across the client call, every nested call and the logs |
+| Health Endpoint Monitoring | `/health` for the process; `/ready` checks that both key sets are usable |
+
+What it deliberately does not do: it never retries a request, so a write cannot run twice. It has no circuit breaker, load balancer or service discovery; the eight addresses are fixed in configuration. It caches no responses, and it does not stream, so Server-Sent Events would not pass through it.
+
+Lab 2 added the Gateway as its own service: a separate repository linked here as a submodule, an image on Docker Hub (`victoriamutruc/gateway:2.0.3`, published by CI on every merge to `main`), all REST traffic routed through it, the WebSocket negotiation, the task timeout and concurrency limits, and authorization at the Gateway.
 
 ## Technologies
 
@@ -132,10 +213,10 @@ copy when it drifts.
 | Package Registry | TypeScript, Node.js, Express| PostgreSQL | Config documents differ per package |
 | Map | C#, ASP.NET Core, EF Core | PostgreSQL with PostGIS | Distance queries need a spatial index |
 | Monster Raid | C#, ASP.NET Core, EF Core | PostgreSQL | Counters under concurrent attacks |
+| Gateway | Python 3.13, FastAPI, Uvicorn, HTTPX, uv | None | Asynchronous REST dispatch without domain state |
 
-The services use two languages. TypeScript for the four services that mostly
-move JSON around, C# for the four that hold money, turns, counters and
-coordinates.
+The domain services use TypeScript and C#. Gateway uses Python with uv 0.12.23
+and a checked dependency lock. It has no database or event publisher.
 
 Trade-offs we accepted:
 
@@ -162,7 +243,7 @@ Named patterns we use:
 
 | Pattern | Where |
 |---|---|
-| API Gateway | One entry point, routes by service prefix, handles auth and correlation IDs |
+| API Gateway | One entry point, routes by service prefix, verifies callers, signs their identity and carries correlation IDs; see [Gateway](#gateway) |
 | Database per Service | Eight databases, separate credentials |
 | Transactional Outbox | Every publisher, so a state change and its event commit together |
 | Idempotent Consumer | Every consumer, dedupe on `event_id` |
@@ -195,6 +276,11 @@ mechanisms carry it:
 
 ## Communication contract
 
+The endpoint tables and specifications below define the integration target.
+They do not establish runtime completion: each owner must validate their source
+and deployed image against this contract. Record incompatible behavior before
+changing a shared definition.
+
 ### Conventions
 
 | Concern | Rule |
@@ -203,7 +289,7 @@ mechanisms carry it:
 | Payload | JSON, UTF-8, snake_case |
 | IDs | UUID v7, string encoded |
 | Timestamps | ISO 8601, UTC, milliseconds |
-| Errors | RFC 9457, `application/problem+json` |
+| Errors | RFC 9457, `application/problem+json`; `type` is `about:blank` or an absolute problem-type URI, `code` identifies the application error |
 | Pagination | Opaque cursor, never an offset |
 | Concurrency | `ETag` on reads, `If-Match` on writes, 412 on mismatch |
 | Idempotency | `Idempotency-Key` header on non-repeatable commands |
@@ -216,6 +302,367 @@ shape is listed field by field, with types and which fields are required, in
 [field-types.md](docs/field-types.md).
 
 Every service also exposes `GET /health` and `GET /ready`, returning 200 or 503.
+
+<a id="gateway-routing-and-negotiation-proposal"></a>
+
+### Gateway routing and negotiation
+
+Browser/local clients use `http://localhost:3000`; containers use
+`http://gateway:3000`. These are local deployment addresses, not production URLs.
+
+| Prefix | Service | Container upstream |
+|---|---|---|
+| `/users` | User Management | `http://user-management:3001` |
+| `/tamagotchi` | Tamagotchi | `http://tamagotchi:3000` |
+| `/battle` | Battle | `http://battle:3003` |
+| `/guild` | Guild | `http://guild:3000` |
+| `/registry` | Package Registry | `http://registry:3000` |
+| `/map` | Map | `http://map:8080` |
+| `/raid` | Monster Raid | `http://monster-raid:8080` |
+| `/notification` | Notification | `http://notification:3000` |
+
+Client and service REST calls traverse Gateway. Strip the prefix exactly once;
+preserve method, path/query, body, upstream status and end-to-end headers,
+including replay, conditional-request and correlation headers. Remove hop-by-hop
+headers and the caller's Authorization before dispatch. For example,
+`GET /map/v1/location/{userId}` reaches Map as `GET /v1/location/{userId}`.
+Unknown prefixes return `404 unknown_route`; connection/protocol failures return
+`502 upstream_unavailable`. Valid upstream error responses remain unchanged.
+
+Direct health/readiness probes, Gateway's configured bootstrap JWKS lookup,
+database/broker connections, provider assets and negotiated Guild sockets are
+explicit exceptions. Gateway is not an arbitrary external proxy.
+
+| Method and path | Request | Response | Access |
+|---|---|---|---|
+| `ANY /{service}/v1/...` | downstream request | downstream response | per endpoint |
+| `POST /gateway/v1/ws-negotiate` | WsNegotiateInput | 200 WsTicket | user |
+| `GET /health` | none | 200 Health | public |
+| `GET /ready` | none | 200 Readiness or 503 Problem | public |
+
+Gateway also serves Prometheus metrics at `GET /metrics` on a separate monitoring
+port, `METRICS_PORT` (default 9090), from the first image after `2.0.2`. It is not part
+of the public route table above: it carries request counts, latencies and work-pool
+usage, no domain data, and needs no assertion. Deployments publish it only to the
+monitoring network, never to clients. The shared Compose file does not publish or
+scrape it yet. The Gateway README lists the metric names.
+
+Only `guild.chat` is supported. Gateway forwards negotiation
+to Guild; the exact internal negotiation endpoint must be agreed with Mihaela
+before implementation. Guild issues and validates a single-use 30-second ticket.
+The browser connects directly to Guild, using a configured browser-reachable
+URL, not container DNS. Gateway does not hold the socket open.
+
+| Status | Negotiation code | Condition |
+|---|---|---|
+| 400 | `invalid_ws_resource` | resource is not guild.chat |
+| 400 | `invalid_resource_id` | resource_id is not UUIDv7 |
+| 401 | `unauthenticated` | missing or invalid caller token |
+| 403 | `guild_membership_required` | caller is not an eligible guild member |
+| 404 | `guild_not_found` | guild does not exist |
+
+
+<a id="verified-identity-proposal"></a>
+
+### Verified identity
+
+The Gateway implements this behaviour. User Management must issue the tokens and
+services must verify the assertion before the identity is relied on.
+
+Gateway verifies each bearer token in Authorization, then removes the header before
+dispatch. It removes `X-User-Id`, `X-User-Roles`, `X-Service-Name` and any client copy
+of `X-Gateway-Assertion`, then sends its own `X-Gateway-Assertion`.
+Downstream services use the verified claims in `X-Gateway-Assertion` for identity;
+plain headers alone grant no access. Existing endpoint Access columns remain
+authoritative. Anonymous assertions carry no user or service permissions.
+
+| Token | Issuer | Audience | Subject | Lifetime |
+|---|---|---|---|---|
+| User access | tamagotchi-go-users | tamagotchi-go | UUIDv7 user id | 900 seconds |
+| Service access | tamagotchi-go-users | canonical destination service | service:name | 300 seconds |
+| Gateway assertion | tamagotchi-go-gateway | canonical destination service | verified caller or anonymous | at most 30 seconds |
+
+Access tokens use `typ=at+jwt`; assertions use `typ=gateway-assertion+jwt`.
+
+Roles come from User Management. It reads them from its table when it issues a
+user access token at login, as a `roles` claim: an array of 0 to 20 strings of 1 to
+64 characters, `[]` for an ordinary user. Gateway checks that shape and copies the
+verified roles into the assertion. Service access tokens carry `scope` only and no
+roles, so service assertions have empty roles. `admin` is the only role in use.
+Allow only RS256 with RSA keys of at least 2048 bits. Verify signature, type,
+issuer, audience, subject, issuance and expiry; never choose algorithms or key
+URLs from untrusted claims. Allow five seconds of token clock tolerance, but
+none for request deadlines. See [JWT validation guidance](https://www.rfc-editor.org/rfc/rfc8725.html).
+JWT time claims use NumericDate seconds; the signed request deadline uses Unix
+milliseconds. Application timestamps remain ISO 8601 UTC with milliseconds.
+
+Gateway alone holds its assertion private key. Services load the public JWKS
+from a mounted file. Use `GATEWAY_ASSERTION_PRIVATE_KEY_PATH`,
+`GATEWAY_ASSERTION_KEY_ID` and `GATEWAY_ASSERTION_JWKS_PATH` for configuration;
+services and Gateway load the public set. Gateway uses it to verify nested
+service context and to check key readiness.
+Paths and key ids are configuration, never private key values in documentation.
+Deploy a new public key first, switch Gateway's signing kid, then remove the old
+key after its assertions and five-second tolerance expire. Keep access-token
+and assertion key sets separate.
+
+Gateway fetches User Management keys asynchronously from the configured direct
+`GET /v1/jwks` bootstrap URL, with a 300-second cache. An unknown kid triggers
+one refresh shared by concurrent requests. Valid cached keys remain usable
+within the cache lifetime; never accept unknown keys or an expired cache because
+refresh failed. Invalid tokens return `401 unauthenticated`. Refresh failure
+without a usable key returns `503 auth_keys_unavailable`.
+
+**Service tokens.** A service that calls another service asks User Management for a
+token with `POST /v1/service-tokens`, body `{service_name, audience, scopes}`. The token
+has `sub=service:<service_name>`, `aud` the one destination service, a `scope` claim
+that is a single space-separated string, and lasts 300 seconds. It carries no roles.
+Clients keep one token per destination and scope set, and renew it about 30 seconds
+before it expires.
+
+The route is public at the Gateway, because a service has no token before its first one.
+The caller proves who it is in one of two ways, and a wrong credential never falls back
+to the other:
+
+- Its own client secret, in the header `X-Service-Secret`. The Gateway forwards that
+  header unchanged and does not treat it as a bearer token. Each service that calls another
+  service holds its own secret as `SERVICE_CLIENT_SECRET` and never sends it anywhere else.
+  User Management verifies it against the secret configured for `service_name`. Registry
+  and Notification call no other service and have none.
+- An admin user, with no secret.
+
+The issuer checks a configured allowlist of destinations and scopes for that service.
+Requesting a scope does not grant it: if any scope asked for is not on the allowlist,
+nothing is issued. The caller is authenticated before the allowlist is consulted. Gateway
+checks the service token audience against the routed destination; downstream services
+enforce the required permissions from the signed assertion.
+
+| Status | Code | Condition |
+|---|---|---|
+| 400 | `validation_error` | unknown `service_name` or `audience`, more than 20 scopes, or a scope that is empty, over 64 characters or contains whitespace |
+| 401 | `invalid_client` | wrong, missing or repeated secret, or a service with no secret. One answer for all of them, so none can be told apart from outside |
+| 403 | `admin_required` | no secret, and the caller is a user who is not an admin or is another service |
+| 403 | `audience_not_allowed` | the service may not call that destination |
+| 403 | `scope_not_allowed` | at least one scope asked for is not allowed, and the detail names only those |
+| 503 | `signing_key_unavailable` | User Management has no usable signing key |
+
+A scope is `<prefix>:<action>` in lower case, where the prefix is the Gateway prefix of the
+service being called: `users`, `tamagotchi`, `battle`, `guild`, `registry`, `map`, `raid`
+or `notification`. Each owner names the scopes on their own service. User Management's are:
+
+| Scope | Route |
+|---|---|
+| `users:read-profile` | `GET /v1/users/{userId}`, user or service |
+| `users:read-relationships` | `GET /v1/users/{userId}/relationships`, user or service |
+| `users:check-relationship` | `GET /v1/users/{userId}/relationship/{otherId}` |
+| `users:read-wallet` | `GET /v1/users/{userId}/currency/global`, user or service |
+| `users:credit-global` | `POST /v1/users/{userId}/currency/global/add` |
+| `users:credit-local` | `POST /v1/users/{userId}/currency/local/add` |
+| `users:settle-battle` | `POST /v1/internal/battle-settlements` |
+| `users:consume-boost` | `POST /v1/internal/boost-consumptions` |
+| `users:read-membership` | `GET /v1/internal/users/{userId}/membership` |
+
+Battle is the caller of `users:read-profile` (opponent check and `challenger_username`),
+`users:settle-battle` and `users:consume-boost`, and also of `users:credit-global` for the
+`BATTLE_ACCESS_CAP` credit it pays when a holder grant returns `CAP_REACHED`. Monster Raid is
+the other caller of `users:credit-global`.
+
+Tamagotchi's are:
+
+| Scope | Route | Caller |
+|---|---|---|
+| `tamagotchi:read-creature` | `GET /v1/tamagotchis/{id}`, user or service | |
+| `tamagotchi:award-xp` | `POST /v1/tamagotchis/{id}/xp` | Battle and Monster Raid, at settlement |
+| `tamagotchi:grant-access` | `POST /v1/tamagotchis/{id}/holders` | Battle, at settlement |
+| `tamagotchi:read-holders` | `GET /v1/tamagotchis/{id}/holders`, user or service | Battle, to check who may field a creature |
+| `tamagotchi:read-collection` | `GET /v1/users/{userId}/collection`, user or service | Monster Raid |
+| `tamagotchi:reserve-engagement` | `POST /v1/internal/engagements` | Battle, Monster Raid |
+| `tamagotchi:read-engagement` | `GET /v1/internal/engagements/{referenceId}` | Battle, Monster Raid |
+| `tamagotchi:release-engagement` | `POST /v1/internal/engagements/{referenceId}/release` | Battle, Monster Raid |
+| `tamagotchi:mint` | `POST /v1/tamagotchis` | none yet |
+
+`tamagotchi:mint` is named for completeness. A creature is minted from
+`user.package_joined.v1`, which Tamagotchi consumes itself, so no service calls
+that route today and nothing should be allowlisted for it until one does.
+
+Notification has no scopes. All eight of its routes are user access, it publishes
+nothing and no service calls it, which is also why it holds no
+`SERVICE_CLIENT_SECRET`.
+
+Guild's is:
+
+| Scope | Route | Caller |
+|---|---|---|
+| `guild:read` | `GET /v1/guilds/{guildId}` and `GET /v1/guilds/{guildId}/members`, both user or service | Monster Raid |
+
+Monster Raid calls both Guild routes through Gateway for leader and membership
+checks. Its `guild:read` grant belongs to caller `monster-raid`.
+
+Registry's are:
+
+| Scope | Route | Caller |
+|---|---|---|
+| `registry:read-config` | `GET /v1/packages/{packageId}/stat-definitions`, `stat-bonuses`, `currency-rules` and `starter-pet` | Tamagotchi for package configuration; User Management for currency rules; Monster Raid and Battle for stat bonuses and stat definitions |
+| `registry:check-eligibility` | `POST /v1/packages/eligibility-check` | Guild |
+| `registry:read-bosses` | `GET /v1/bosses/{bossId}`, user or service | Monster Raid |
+| `registry:read-occurrences` | `GET /v1/raid-occurrences/{id}`, user or service | Monster Raid |
+| `registry:read-members` | `GET /v1/packages/{packageId}/users` | none yet |
+
+`registry:read-members` is named for completeness; no service calls it today,
+so nothing should be allowlisted for it until one does.
+
+Registry calls no other service, so it holds no `SERVICE_CLIENT_SECRET` either.
+
+Map, Monster Raid and Battle request these issuer allowlist entries. Each row is a
+caller service, a single destination audience and its permitted scope set:
+
+| `service_name` | `audience` | Scopes |
+|---|---|---|
+| `battle` | `user-management` | `users:read-profile`, `users:settle-battle`, `users:consume-boost`, `users:credit-global` |
+| `battle` | `package-registry` | `registry:read-config` |
+| `battle` | `tamagotchi` | `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp`, `tamagotchi:grant-access`, `tamagotchi:read-holders` |
+| `map` | `user-management` | `users:read-relationships` |
+| `monster-raid` | `user-management` | `users:credit-global` |
+| `monster-raid` | `guild` | `guild:read` |
+| `monster-raid` | `package-registry` | `registry:read-config`, `registry:read-bosses`, `registry:read-occurrences` |
+| `monster-raid` | `tamagotchi` | `tamagotchi:read-collection`, `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp` |
+
+Raid and Battle request one operation scope per token; the table describes the allowed
+set, not a combined token for all destinations. The older proposal names
+`tamagotchi:engage` and `tamagotchi:grant-xp` are superseded. `raid:read` protects
+service reads of a raid and its leaderboard, but has no current service caller;
+do not add a speculative issuer grant. These caller requirements do not establish
+that the User Management policy or deployed images already implement them.
+
+A user needs no scope on the routes marked user or service. A service without the scope
+gets `403 insufficient_scope`. Which service may have which scope is the User Management
+allowlist, `service-token-policy.json`, and each owner adds their own lines to it by pull request.
+
+Public routes are exactly those marked public in the endpoint tables, plus
+Gateway health/readiness. If Authorization is supplied even on a public route,
+validate it; an invalid token does not become an anonymous request. The direct
+User Management JWKS bootstrap and service health/readiness probes are explicit
+exceptions to downstream assertion enforcement. Other direct domain calls must
+fail without a valid Gateway assertion.
+
+| Downstream status | Code | Condition |
+|---|---|---|
+| 401 | `invalid_gateway_assertion` | missing, repeated, forged, expired, wrong-type or wrong-audience assertion, or invalid claims |
+| 401 | `unauthorized` | valid assertion, but anonymous on a route that needs a caller |
+| 403 | `insufficient_scope` | valid assertion lacks required permissions, including the wrong kind of caller (a service on a user route, a user on a service route) |
+| 403 | `not_self` | a user asked for another user's resource on a route limited to its owner |
+| 503 | `gateway_keys_unavailable` | the service cannot read the Gateway's public keys, so it cannot verify any assertion |
+
+Every route except `GET /health`, `GET /ready` and the User Management `GET /v1/jwks`
+needs an assertion, public routes included, which carry an anonymous one.
+
+Gateway removes `X-User-Id`, `X-User-Roles` and `X-Service-Name` from every request.
+Services take identity only from the verified assertion.
+Never log bearer tokens, assertions, key material or refresh credentials.
+
+<a id="work-limits-proposal"></a>
+
+### Work limits
+
+Gateway, Map and
+Monster Raid integration source enforces admission, deadlines and cancellation.
+The values below are initial policy defaults, not measured throughput. Other
+service implementations and the selected deployed images need their own
+acceptance evidence.
+
+| Component | Local timeout | Per-process admission |
+|---|---|---|
+| Gateway | 5000 ms | 64 client/public requests and 64 authenticated service requests |
+| Each domain service | 3000 ms | 64 tasks shared by domain requests, message processing and worker batches |
+
+Only a verified service access token enters Gateway's service pool. A caller
+cannot select it with headers. There is no admission waiting queue: a full pool
+returns `503 too_many_tasks` with `Retry-After: 1`. An expired deadline returns
+`504 task_timeout`. Even the reserved service pool may saturate; calls fail promptly rather than
+waiting while holding another slot. Gateway performs
+no automatic retries of HTTP mutations.
+
+A new Gateway root gets deadline `now + 5000 ms`, carried in the assertion as
+`deadline_unix_ms`. Each service's effective deadline is the earlier of the root
+deadline and `now + 3000 ms`. Convert the remaining budget to a local monotonic
+timer; never restart a full timeout for each dependency or attempt.
+
+Request aborts, deadlines and shutdown cancel HTTP/SQL operations. Roll back
+uncommitted work and retain any committed receipt/effect progress. Release a
+slot only when its actual work and cleanup finish, not merely when the client
+has received a timeout. No detached work may escape the capacity accounting.
+
+Health/readiness probes use a separate bounded three-second check and no domain
+slot. Startup initialization remains governed by shutdown cancellation.
+Established Guild sockets do not occupy Gateway HTTP slots; negotiation and
+message handling are bounded tasks. Guild owns its separate socket lifetime and
+connection policy. A worker batch uses a service slot and local deadline; leave
+durable work pending and retry on its normal schedule if no slot is available.
+
+Required evidence: rejection under saturation, inherited deadline budgets,
+deadline/abort/shutdown cancellation, rollback, worker recovery and slot reuse.
+HTTP failure does not prove that an external side effect did not commit; command
+replay and durable reward effects handle uncertain outcomes.
+
+<a id="command-replay-and-pagination-proposal"></a>
+
+### Command replay and pagination
+
+Map/Raid integration branches implement command replay and cursors. The pinned
+published images predate this work. Affected-owner compatibility review and real
+deployment validation remain required; successful response shapes stay unchanged.
+
+Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
+`POST /raid/v1/raids/{raidId}/attack`, the nine User Management commands
+named under its implementation notes, and the five Battle commands (create,
+accept, reject, attack and forfeit) named under its implementation notes. Require an Idempotency-Key of 1 to 128
+printable ASCII characters after HTTP header whitespace normalization; absence
+or invalid values return `400 invalid_idempotency_key`. Keys are case-sensitive.
+Scope is the verified caller, HTTP operation and resource path. Fingerprint the
+validated request model with deterministic field order, normalized UUIDs and
+UTC timestamps; JSON property order alone must not create a conflict.
+
+Retain completed receipts for 24 hours from completion. Identical retries return
+the stored status/body and applicable response headers, with the current request's
+correlation header. Do not replay transport, authentication or correlation
+headers from the old request. Changed input returns `409 idempotency_conflict`;
+concurrent pending work returns `409 command_in_progress`.
+Authenticate/authorize before lookup, including every replay. Malformed input
+and authentication failures do not reserve a key. Persist successful and final
+domain-error receipts with their local state transition. Do not freeze transient
+dependency, capacity or timeout errors as completed receipts. Durable pending
+work must recover uncertain external effects before completing the receipt.
+Persist local effects and receipts atomically; reward/reservation effect keys
+and progress remain independent of receipt expiry. Receipt expiry does not
+permit awarding the same completed raid twice.
+
+Pagination uses versioned HMAC-signed opaque cursors with five-minute expiry,
+bound to verified caller, endpoint, filters and page size. Store signing keys
+in service-owned configuration, never in a cursor or committed file. Reject
+tampering, unsupported versions, expiry and context mismatch with
+`400 invalid_cursor`; limit defaults to 100 and must be 1 to 100. Keep limit and
+filters unchanged while following a cursor. Continue strictly after its last
+sort tuple and return next_cursor=null when no further results remain.
+
+| Endpoint | Sort tuple | Context invalidation |
+|---|---|---|
+| Map nearby | distance_m ascending, user_id ascending | changed viewer observation returns 409 cursor_stale |
+| Raid list | started_at descending, raid_id descending | caller/filter mismatch returns 400 invalid_cursor |
+| Raid leaderboard | damage_dealt descending, joined_at ascending, user_id ascending | changed raid_version returns 409 cursor_stale |
+| User Management friend requests | expires_at descending, request_id descending | caller or page size mismatch returns 400 invalid_cursor |
+| User Management relationships | other_user_id ascending | caller, listed user or page size mismatch returns 400 invalid_cursor |
+| User Management boosts | boost_id ascending | caller or page size mismatch returns 400 invalid_cursor |
+| Battle list | battle_id descending | caller or page size mismatch returns 400 invalid_cursor |
+
+Bind Map's cursor to the full viewer observation, including coordinates, since
+equal-timestamp location changes remain valid. Freshness and current visibility
+are checked on every page; a missing/expired viewer still returns
+`409 viewer_location_unavailable`. Filters include guild_id or raidId where
+applicable. These are live queries, not stored result snapshots: movement and
+relationship changes can move a nearby player across a page boundary, causing
+omissions or repeats between pages. Clients replace markers by user_id rather
+than accumulating duplicates. A stale-context response requires restarting
+pagination. Raid list creation/deletion can likewise change the live result set.
 
 ### Example shapes
 
@@ -273,15 +720,14 @@ Every service also exposes `GET /health` and `GET /ready`, returning 200 or 503.
 | `POST /v1/users/login` | Login | 200 Tokens | public |
 | `POST /v1/auth/refresh` | Refresh | 200 Tokens | public |
 | `POST /v1/auth/logout` | Refresh | 204 | public |
-| `POST /v1/service-tokens` | ServiceTokenRequest | 200 ServiceToken | admin |
+| `POST /v1/service-tokens` | ServiceTokenRequest, X-Service-Secret | 200 ServiceToken | service client secret or admin |
 | `GET /v1/jwks` | none | 200 Jwks | public |
 | `GET /v1/users/me` | none | 200 User | user |
 | `GET /v1/users/{userId}` | none | 200 UserProfile | user or service |
 | `POST /v1/users/me/packages` | JoinPackage, Idempotency-Key | 200 User | user |
-| `GET /v1/internal/memberships` | query limit, cursor | 200 MembershipPage | service |
 | `GET /v1/internal/users/{userId}/membership` | none | 200 MembershipSnapshot | service |
 | `GET /v1/users/{userId}/relationships` | query limit, cursor | 200 RelationshipPage | user or service |
-| `GET /v1/users/{userId}/relationship/{otherId}` | none | 200 Relationship | service |
+| `GET /v1/users/{userId}/relationship/{otherId}` | none | 200 Relationship (two users with no relationship are `stranger` both ways at `version` 1) | service |
 | `POST /v1/friend-requests` | FriendRequestInput, Idempotency-Key | 201 FriendRequest | user |
 | `GET /v1/friend-requests` | query limit, cursor | 200 FriendRequestPage | user |
 | `POST /v1/friend-requests/{id}/accept` | Idempotency-Key | 200 FriendRequest | user |
@@ -297,6 +743,67 @@ Every service also exposes `GET /health` and `GET /ready`, returning 200 or 503.
 | `GET /v1/users/me/boosts` | query limit, cursor | 200 BoostPage | user |
 | `POST /v1/internal/boost-consumptions` | ConsumeBoost, Idempotency-Key | 200 BoostReceipt | service |
 
+**Implementation notes.** Decisions the authentication routes needed that the tables
+above did not spell out, as implemented by User Management:
+
+- Error codes added beyond the shared `Problem` shape: `invalid_credentials` (login, 401,
+  the same answer for an unknown email and a wrong password), `package_membership_required`
+  (login, 403, the password is right but the user has not joined `package_id`),
+  `invalid_refresh_token` (refresh, 401, unknown, revoked, expired or reused),
+  `signing_key_unavailable` (login, refresh and `GET /v1/jwks`, 503, no usable
+  access-token key).
+- Nothing about the package goes into the access token. Membership of `package_id` is
+  checked at login only.
+- Refresh tokens are opaque, stored hashed, rotate on every use and last 30 days. A token
+  that was already used is refused, except for a 10 second grace window from its first use,
+  so a client that lost the response can retry once. The window does not slide.
+- `POST /v1/auth/logout` revokes the refresh token it is given. It answers 204 for any
+  well-formed body, known token or not, so it reveals nothing and is safe to repeat.
+- `GET /v1/jwks` sends `Cache-Control: public, max-age=300`, matching the Gateway's cache.
+  Token responses send `Cache-Control: no-store`.
+- Key rotation: publish the new public key in the JWKS first, then switch the signing
+  `kid`, then remove the old key once its tokens have expired.
+- Callers are identified only by the verified Gateway assertion. The answers for a missing
+  or wrong caller are in the downstream failure table of the verified identity contract.
+
+**Command replay.** The nine commands above marked `Idempotency-Key` (register, join a package,
+create, accept and reject a friend request, both currency credits, battle settlement and boost
+consumption) follow the replay rules under "Command replay and pagination": a key of 1 to 128 printable ASCII characters, scope of verified caller, HTTP operation
+and resource path, and receipts kept 24 hours. The anonymous caller of register is scoped by the
+route alone. Beyond those rules, as implemented by User Management:
+
+- A request without a valid key is `400 invalid_idempotency_key`, before anything else is done.
+  Authentication and scope are checked first, on every replay.
+- The same key with a changed request is `409 idempotency_conflict`.
+- A retry that arrives while the first request is still running waits for it and then gets the
+  same answer. If the first has not finished after 5 seconds the retry is
+  `409 command_in_progress`.
+- A successful result and a final domain error (for example `409 already_joined` or
+  `422 unknown_package`) are stored and replayed. A failure that may pass, such as
+  `502 upstream_unavailable`, `503` or `504`, is not stored, so the retry runs again.
+- The effect and its receipt are saved together or not at all. A stored response never
+  contains a password or a token.
+
+**Pagination.** The three lists above that take `limit` and `cursor` (friend requests, relationships and
+boosts) follow the cursor rules under "Command replay and pagination", with the
+sort tuples in its table. There is no membership list any more, so there is no fourth. As implemented by
+User Management:
+
+- `limit` defaults to 100. A value below 1 or above 100, or one that is not a whole number, is
+  `400 validation_error`, not a silently clamped page.
+- The sort tuple is unique for relationships (`other_user_id`) and boosts (`boost_id`), because each is
+  unique for the listed user. Friend requests break ties between equal `expires_at` by `request_id`, so
+  no request is skipped or repeated.
+- A cursor is bound to the verified caller, the endpoint, the listed user (relationships) and the page
+  size. A different caller, endpoint, listed user or `limit` is `400 invalid_cursor`, as are a tampered,
+  malformed, expired or unsupported-version cursor. Every page returns a new cursor, valid for five
+  minutes from the moment it was issued.
+- The lists are live queries, not snapshots. A row added or removed between two pages is seen or not
+  according to where it sorts relative to the cursor: one that sorts before the last tuple is not shown
+  and one that sorts after it is. `next_cursor` is `null` on the last page, including when the last page
+  is exactly full.
+- The signing key is service configuration (`CURSOR_SIGNING_KEY`), never part of a cursor or committed.
+
 Joining a package grants that package's starter once per user per package, and
 that is the only path by which a creature is minted for a player. There is no
 rejoin path, no starter regrant and no cooldown: since a battle never empties a
@@ -308,6 +815,22 @@ never told which creature was staked.
 
 A win against a creature that has already reached the holder cap is compensated
 here instead, as a global currency credit with reason `BATTLE_ACCESS_CAP`.
+
+**Effects that happen once.** A command receipt covers a retry for 24 hours, and a caller may retry much later (a lost reply, a
+restart) or under a new `Idempotency-Key`. So the effects that must not repeat are also recorded for good, in the same transaction as the
+change, and a repeat is answered from that record whatever its key and however old the first request is. As implemented by User
+Management:
+
+| Effect | One per | A repeat | A conflicting repeat |
+|---|---|---|---|
+| Global credit (`RAID_WIN`, `RAID_DEFEAT`, `BATTLE_ACCESS_CAP`) | user, reason and `reference_id` | the first receipt, with the balance it showed then | the same reference with another amount: `409 reference_conflict` |
+| Battle settlement | `battle_id` | the first settlement, with its balances | another winner or loser: `409 battle_already_settled` |
+| Boost consumption | battle, user and boost | the first receipt, with the charges it left | none |
+
+Callers therefore send a `reference_id` that is the same for the same reward every time (Battle uses the battle id, Monster Raid its
+own stable id per reward). Concurrent requests for one wallet, one reward, one battle or one user's boosts are served one at a time, so
+they cannot both pass the check and two credits to one wallet cannot lose each other's update. These records are never deleted by
+retention.
 
 ### Tamagotchi, `/tamagotchi`
 
@@ -328,8 +851,8 @@ here instead, as a global currency credit with reason `BATTLE_ACCESS_CAP`.
 | `GET /v1/types` | none | 200 TypeList | public |
 | `GET /v1/types/matrix` | none | 200 TypeMatrix | public |
 | `POST /v1/internal/engagements` | EngagementInput, Idempotency-Key | 201 Engagement | service |
-| `GET /v1/internal/engagements/{battleId}` | none | 200 Engagement | service |
-| `POST /v1/internal/engagements/{battleId}/release` | Idempotency-Key | 200 Engagement | service |
+| `GET /v1/internal/engagements/{referenceId}` | none | 200 Engagement | service |
+| `POST /v1/internal/engagements/{referenceId}/release` | Idempotency-Key | 200 Engagement | service |
 
 `package_stats` is stored as it arrives and returned as stored. This service
 never reads inside it. Package Registry owns what the fields mean.
@@ -366,7 +889,13 @@ released by the owner even if Battle never called `/release`, so a crashed battl
 cannot strand a shared creature.
 
 Monster Raid takes the same lock for a primary contributed to a raid, which is
-why a creature cannot be in a raid and a battle at the same time.
+why a creature cannot be in a raid and a battle at the same time. A raid sends
+one engagement per admitted participant, each with its own `reference_id`
+(a fresh UUIDv7 that Raid stores against the raid and the user), so that
+`reference_id` stays unique and reserve and release can be retried independently.
+Lookup and release use that `reference_id`, which is the `{referenceId}` path
+parameter. A raid-wide `reference_id` is not allowed, since a second participant
+would collide with the first.
 
 ### Battle, `/battle`
 
@@ -387,6 +916,56 @@ they hold, including one they won from someone else. A creature is not refused
 for being shared with the opponent already, but a grant to a user who is already
 a holder is a no-op, so nothing is gained by fighting for one twice.
 
+**Who may field a creature, as implemented by Battle.** Battle does not trust the request: it reads the
+holder set of the primary and of the secondary from Tamagotchi (`GET /v1/tamagotchis/{id}/holders`, scope
+`tamagotchi:read-holders`) and refuses the call unless the caller is in it. The check is made when a
+challenge is created, and again for both lineups when it is accepted, because a holder can drop a creature
+in between. Nothing is reserved or stored by a call that fails it.
+
+- `422 duplicate_creature`: `primary_id` and `secondary_id` name the same creature. One creature cannot fill
+  both places.
+- `404 unknown_creature`: Tamagotchi has no creature with that id.
+- `422 not_a_holder`: the caller does not hold the creature. The detail names the creature.
+- `409 creature_engaged`: at creation, the caller already has a pending challenge that fields this creature, as
+  primary or as secondary. This is the rule that stops one holder from queuing challenges to occupy a
+  shared creature. A challenge that has passed its 2 minutes no longer counts. The same code is used when
+  Tamagotchi refuses a reservation at accept because a creature is in another battle or a raid.
+- `502 upstream_unavailable`: Tamagotchi could not be asked. An unreadable answer is the same, never a
+  guess that the caller may or may not hold the creature.
+
+A race between two creations of the same player can still let a second pending challenge through; the
+lock at accept is what keeps a creature in at most one battle.
+
+**Command replay.** The five commands above marked `Idempotency-Key` (create, accept, reject, attack
+and forfeit) follow the replay rules under "Command replay and pagination": a key of 1 to 128 printable
+ASCII characters, scope of verified caller, HTTP operation and resource path, and receipts kept 24 hours.
+`GET` routes carry no key. Beyond those rules, as implemented by Battle:
+
+- A request without a valid key is `400 invalid_idempotency_key`, before anything else is done. Authentication
+  is checked first, on every replay. A request the use case rejects as malformed (`400 validation_error`)
+  reserves no key, so the corrected request can reuse it.
+- The same key with a changed request is `409 idempotency_conflict`. A changed boost list or another creature is a
+  changed request. A retry that arrives while the first is still running waits for it and gets the same answer,
+  or is `409 command_in_progress` after 5 seconds.
+- A replay returns the stored answer with the status the route defines: `201` for a create, `202` for an
+  accept.
+- A success and a final domain error about Battle's own data (`404 battle_not_found`, `409 not_pending`,
+  `409 not_ongoing`, `410 challenge_expired`, `422 self_challenge`) are stored and replayed. A failure that may
+  pass is not stored, so the retry runs again: `502 upstream_unavailable`, `503`, `504`, and an answer that
+  depends on the state of another service at that moment, such as `409 creature_engaged`,
+  `404 unknown_opponent`, `404 unknown_creature` or `422 not_a_holder`. A creature that was engaged a minute
+  ago may be free now, and a player who has since won a creature now holds it. `422 duplicate_creature`
+  depends only on the request, so it is stored and replayed.
+- The effect and its receipt are saved together or not at all.
+- **A forfeit whose settlement could not be completed is stored with `settlement_status` or
+  `access_grant_status` as `NEEDS_ATTENTION`.** The battle is over, so a retry never pays again. Retrying the
+  failed half is a separate step that does not depend on the caller's key.
+- **Keys for the calls Battle makes.** Each outbound command carries its own `Idempotency-Key`, so a retry is
+  replayed by the other service. One that happens once per battle (a boost consumption, the settlement, an XP
+  award, the access grant) is keyed by the battle. A reservation is keyed by the attempt, that is the caller's own
+  key, and a release by the engagement it lets go of: a creature lock that was reserved, released and reserved
+  again must not be answered with the stored first reservation, which is no longer held.
+
 **Settlement is three calls and one event.** Battle credits the winner and debits
 the loser through User Management, writes the XP split through Tamagotchi at
 60/40 between primary and secondary, and calls `POST /tamagotchis/{id}/holders`
@@ -399,6 +978,52 @@ two halves separately, since either can be retried alone.
 and an accepted battle whose turn timer runs out is auto-forfeited. Both exist to
 release the engagement lock, and both are enforced here rather than in Tamagotchi
 because Battle owns the turn state.
+
+As implemented by Battle, a background pass of a few seconds takes up to 5 battles of each kind at a time:
+
+- A `PENDING_ACCEPT` challenge past its 2 minutes becomes `EXPIRED`. Nothing was reserved at that point, so there is no lock to release,
+  and no event is published. Accepting it, before or after the pass reaches it, is `410 challenge_expired`.
+- An `ONGOING` battle whose `turn_expires_at` has passed is forfeited by the player whose turn it was, and is paid out exactly as for a
+  forfeit: the creatures are released, the currency settled, the XP awarded, the access granted, and `battle.completed.v1` published.
+- A `COMPLETED` battle with a settlement half in `NEEDS_ATTENTION` has only that half tried again, with the keys of the first try, after
+  a wait that starts at 10 seconds and doubles to at most 10 minutes. The two halves stay independent: a currency settlement that
+  fails never undoes a granted creature.
+- When the creature already has the most holders, the winner is credited 50 global currency with reason `BATTLE_ACCESS_CAP` and
+  `reference_id` the battle's id, and `access_grant_status` becomes `CAP_COMPENSATED` only once the credit is made. The contract names the
+  reason and not the amount, so 50 is Battle's choice, the same as a win itself.
+- Commands on one battle (`accept`, `reject`, `attack`, `forfeit`) and the pass take the battle's lock and read it again once they hold
+  it, so a battle is finished once and a request that lost the race is `409 not_ongoing` without having told any other service anything.
+
+**Combat.** The creatures and rules a battle is fought with are read once, when it starts, and an attack calls no
+other service. As implemented by Battle:
+
+- At `accept` the reservation answer's `pets` give the four creatures as they are at that moment (level, combat type,
+  package, config version and stats). Battle also reads the type matrix from Tamagotchi and, for each package and config
+  version those creatures are pinned to, the bonus rules from Registry. Registry's `registry:read-config` is the scope
+  for the rules; Tamagotchi's `tamagotchi:read-creature` is not needed, because the snapshot comes with the reservation.
+- Each side gets its HP and its base damage from the levels of its two creatures. The contract fixes the ranges
+  (HP 1 to 1500, one hit 1 to 1500) and the modifiers, but no base number, so Battle chooses them:
+  HP is `100 + 10 * primary level + 4 * secondary level`, and base damage is
+  `(12 + 2 * primary level + secondary level) / 2`, rounded down.
+- A bonus rule is evaluated as written: the creature's stat named by `stat_key` is compared with `threshold` using
+  `operator`. A creature without that stat, or whose stat is not a number, does not match. The `value_bps` of every
+  matching `ATTACK_BPS` rule of either creature of a side, plus the boost, is added to the side's attack. The
+  `DEFENSE_BPS` rules are added up the same way and lower the hits the side takes.
+- The type multiplier is the matrix value of the side's primary creature's type against the other side's primary's.
+- A hit is `base damage * (1 + attack) * type multiplier * (1 - the other side's defense)`, in basis points, in whole
+  numbers, rounded down, never below 1 or above 1500. The order follows the damage rules of Monster Raid, further down. There is no
+  randomness. A boost adds the `attack_bps` User Management reports (1000 for `ATTACK_10`) to every hit of the
+  side that paid for it. Both players' boosts are paid at `accept`, the accepting player's first.
+- The challenger attacks first and each attack passes the turn. A turn lasts 30 seconds (`turn_expires_at`). A hit that
+  leaves no HP ends the battle, the attacker wins, and the winner is paid out exactly as for a forfeit.
+- `attack` answers `400 validation_error` (no `user_id`), `403 not_self` (`user_id` is not the caller),
+  `403 not_participant`, `404 battle_not_found`, `409 not_ongoing`, `409 not_your_turn`, `409 battle_changed` (another
+  request changed the battle at the same moment), `409 legacy_snapshot_unavailable` (the battle started before attacks
+  existed) and `410 turn_expired`. `not_your_turn` and `battle_changed` depend on the moment and are not stored under an
+  `Idempotency-Key`.
+- Whatever Registry or Tamagotchi answers while a battle is being prepared, the player asked for neither, so it is
+  `502 upstream_unavailable`. If anything fails after the creatures were reserved, they are released and the battle
+  stays pending. User Management has no way to give a boost back, so one spent before a later failure is not refunded.
 
 ### Guild, `/guild`
 
@@ -418,10 +1043,20 @@ because Battle owns the turn state.
 | `POST /v1/guilds/{guildId}/leadership` | LeaderInput, Idempotency-Key | 200 Guild | user |
 | `DELETE /v1/guilds/{guildId}` | none | 204 | user |
 | `GET /v1/guilds/{guildId}/messages` | query limit, cursor | 200 ChatPage | user |
-| `GET /v1/guilds/{guildId}/chat` | WebSocket upgrade | 101 | user |
+| `POST /v1/guilds/{guildId}/chat-tickets` | none | 201 ChatTicket | user |
+| `GET /v1/guilds/{guildId}/chat` | WebSocket upgrade | 101 | ticket in the first frame |
 
-Chat token goes in the handshake header, never the query string. The `Ws`
-shapes in [field-types.md](docs/field-types.md) are the frames sent over the socket.
+A chat ticket is issued to a current member for one connection. It is valid for 30
+seconds and can be used once. Membership is checked when the ticket is issued and
+again when it is used. The browser never sends a token in the URL or the handshake:
+it opens the socket without credentials and sends `{"type":"auth","ticket":"..."}`
+as its first frame within 5 seconds. A bad ticket closes with 4401 (`invalid_ticket`),
+a member who has left closes with 4403. The `Ws` shapes in
+[field-types.md](docs/field-types.md) are the frames sent over the socket.
+
+The Gateway's `ws-negotiate` (`POST /gateway/v1/ws-negotiate`) is the entry point
+for browsers: it verifies the caller, asks Guild for a ticket, and returns the
+browser URL with the ticket.
 
 Guild calls User Management for user identity and relationships, and Package
 Registry only for package eligibility. The topic text points at Registry Service
@@ -468,7 +1103,7 @@ contract above did not spell out:
 | `POST /v1/packages/eligibility-check` | EligibilityInput | 200 Eligibility | service |
 | `POST /v1/bosses` | BossInput, Idempotency-Key | 201 Boss | admin |
 | `GET /v1/bosses` | query limit, cursor | 200 BossPage | admin |
-| `GET /v1/bosses/{bossId}` | query config_version | 200 Boss | admin or service |
+| `GET /v1/bosses/{bossId}` | query config_version | 200 Boss | user or service |
 | `PUT /v1/bosses/{bossId}` | BossInput, If-Match | 200 Boss | admin |
 | `POST /v1/raid-occurrences` | OccurrenceInput, Idempotency-Key | 201 Occurrence | admin |
 | `GET /v1/raid-occurrences` | query limit, cursor | 200 OccurrencePage | user |
@@ -522,6 +1157,21 @@ model.
 Friends and enemies are visible while their location is fresh. Strangers appear
 within 6 metres, which is configurable.
 
+Every location write, deletion, raw read and nearby query requires a verified
+user matching `user_id` or the path's `userId`. Nearby is the interface for
+viewing other players. Plain identity headers grant no access.
+
+Map fetches the complete relationships list through Gateway. If any page fails,
+it discards classification and returns only fresh six-metre strangers, with
+`partial=true` and `partial_reason=RELATIONSHIPS_UNAVAILABLE`. Reads publish no
+events. Accepted observations persist encounter transitions and outbox facts;
+an encounter emits once per episode and ends on deletion, expiry or separation.
+Unavailable relationship classification produces no proximity event.
+
+The public `GET`/`HEAD /map/demo/` assets display nearby markers with MapLibre
+and OpenFreeMap. Their application API calls remain authenticated through
+Gateway; provider assets and tiles are the documented external exception.
+
 ### Monster Raid, `/raid`
 
 | Method and path | Request | Response | Access |
@@ -533,11 +1183,40 @@ within 6 metres, which is configurable.
 | `GET /v1/raids/{raidId}/leaderboard` | query limit, cursor | 200 Leaderboard | user or service |
 | `DELETE /v1/raids/{raidId}` | none | 204 | user |
 
-The current Monster Raid implementation accepts `X-User-Id` with a UUID v7 on domain requests while mock identity is enabled. This local header does not replace gateway authentication in the target contract.
+Creation and cancellation require the Guild leader. Attacks require membership
+and a verified user matching `user_id`. Global listing requires a user; a guild
+filter requires membership. User detail/leaderboard reads require membership;
+verified service reads require `raid:read`. Plain identity headers grant no access.
 
-The shared contract requires Tamagotchi engagement reservation when a member
-contributes a primary creature. Mock integration mode does not acquire the
-cross-service lock.
+Creation requires an active occurrence inside its availability window. Raid
+expiry is the earlier of configured duration and `available_until`. Boss
+configuration and participant creature/bonus snapshots remain immutable.
+Admission persists its engagement reference before reserving through Tamagotchi;
+pending admissions count toward capacity. External calls run outside mutation
+locks, followed by transactional invariant and one-second cooldown checks.
+
+Damage starts at `10 * level`, applies matching `ATTACK_BPS` bonuses, then
+weakness `*1.5` or resistance `*0.75`, and subtracts boss defense. Weakness takes
+precedence. Floor the result with minimum one; credit at most remaining boss HP.
+No boost consumption is included.
+
+Victory global currency and XP are total reward pools, allocated in proportion
+to credited damage. Rounding remainders use fractional remainder descending,
+then user UUID ascending. XP targets the contributed creature. Terminal state,
+entitlements, engagement cleanup and lifecycle outbox facts commit together;
+HTTP effects use stable keys and durable progress outside mutation locks.
+Permanent delivery failures become `NEEDS_ATTENTION`.
+
+Expiry fails active raids once. When the pinned boss has non-null defeat rewards,
+each admitted participant receives the configured global currency and XP amounts;
+XP targets the contributed creature. Pending admissions earn nothing. Null
+configuration or no participants produces no payout. Existing raids keep their
+original snapshots. Currency credits use RAID_WIN or RAID_DEFEAT; XP uses RAID.
+Registry deactivation or
+cancellation cancels matching active raids and releases engagements without
+rewards. Older occurrence versions are ignored. Existing legacy mocked snapshots
+remain readable/cancellable but production attacks return
+`409 legacy_snapshot_unavailable`.
 
 ### Notification, `/notification`
 
@@ -577,11 +1256,11 @@ nothing. Each event payload is an `...Event` shape in
 | Routing key | Publisher | Consumer | Purpose |
 |---|---|---|---|
 | `user.package_joined.v1` | User Management | Tamagotchi, Package Registry | Grant the package starter if the user has none for it. Update the membership projection |
-| `user.friend_request_created.v1` | User Management | Notification | FRIEND_REQUEST |
+| `user.friend_request_created.v1` | User Management | Notification | FRIEND_REQUEST, carries `from_username` |
 | `tamagotchi.created.v1` | Tamagotchi | audit | A creature was minted |
 | `tamagotchi.access_granted.v1` | Tamagotchi | Notification | TAMAGOTCHI_SHARED, sent to every holder the creature already had |
 | `tamagotchi.leveled_up.v1` | Tamagotchi | audit | Level threshold crossed |
-| `battle.request_created.v1` | Battle | Notification | BATTLE_REQUEST |
+| `battle.request_created.v1` | Battle | Notification | BATTLE_REQUEST, carries `challenger_username` |
 | `battle.completed.v1` | Battle | audit | Battle resolved |
 | `guild.invitation_created.v1` | Guild | Notification | GUILD_INVITATION |
 | `guild.member_joined.v1` | Guild | audit | Invitation accepted |
@@ -591,29 +1270,125 @@ nothing. Each event payload is an `...Event` shape in
 | `raid.started.v1` | Monster Raid | Notification | RAID_STARTED, recipients carried in the event |
 | `raid.completed.v1` | Monster Raid | audit | Boss died or the timer ran out |
 
-Each consumer has a work queue, two retry queues at 5 s and 30 s, and a dead
-letter queue. Three attempts, then the message parks in the DLQ and the owner
-replays it with the same event ID.
+<a id="broker-delivery-proposal"></a>
+
+#### Broker delivery
+
+Shared provisioning owns queue, exchange and binding declarations. Services
+check existing topology before consuming instead of redeclaring it with their
+own arguments; they wait for `rabbitmq-provision` where startup requires queues.
+Missing topology fails startup/readiness clearly. Preserve existing broker data.
+Sergiu coordinates topology; Mihaela owns broker deployment. Provisioning does
+not prove consumer effects or all services' runtime compatibility.
+
+| Publisher | Durable topic exchange |
+|---|---|
+| User Management | `user-management.events` |
+| Tamagotchi | `tamagotchi.events` |
+| Battle | `battle.events` |
+| Guild | `guild.events` |
+| Package Registry | `package-registry.events` |
+| Map | `map.events` |
+| Monster Raid | `monster-raid.events` |
+
+Use each event's existing routing key and envelope; no event payload changes.
+Bindings follow the Events table above, with exact keys rather than wildcards.
+
+| Consumer | Work queue | Subscriptions |
+|---|---|---|
+| Tamagotchi | `tamagotchi.work` | user.package_joined.v1 |
+| Package Registry | `package-registry.work` | user.package_joined.v1 |
+| Monster Raid | `monster-raid.work` | registry.occurrence_changed.v1 |
+| Notification | `notification.work` | the six Notification events in the table above |
+| Passive audit destination | `audit.work` | all events marked audit above |
+
+Map has no consumer/inbox under this contract. Notification publishes nothing.
+The passive audit queue retains events for broker-coordinator inspection; it
+does not introduce an audit service or a processing consumer.
+
+Each active consumer has `<consumer>.work`, `<consumer>.retry.5s`,
+`<consumer>.retry.30s` and `<consumer>.dlq`. Use durable quorum queues and
+persistent messages (`delivery_mode=2`, content type application/json).
+Retry queues use queue TTLs of 5000/30000 ms and dead-letter to the default
+exchange with routing key `<consumer>.work`. Configure at-least-once
+dead-lettering and reject-publish overflow on the retry queues; verify support
+in the deployed RabbitMQ version before implementation. No work-queue TTL is
+applied.
+
+Producers set `x-attempt=1`. A failed first delivery publishes to the consumer's
+five-second retry queue with x-attempt=2; a failed second delivery publishes to
+its thirty-second queue with x-attempt=3. A failed third delivery publishes to
+its DLQ. Publish retries directly through the default exchange, addressed to
+that queue, so other subscribers do not receive the retry. Preserve event_id,
+correlation, body and `x-original-routing-key`; never reset the attempt on
+redelivery. Owner-driven DLQ replay resets x-attempt=1 and retains event_id.
+
+Commit domain state and an outbox row together. Publish after commit with
+publisher confirms and mandatory routing; an unroutable return or missing
+confirmation leaves delivery pending. Record outbox delivery only after a
+positive confirmation with no return. Consumers persist event_id deduplication
+with their effects, then acknowledge. Duplicate deliveries cause no new effect.
+For retry/DLQ transfer, confirm the new persistent message before acknowledging
+the original. If transfer fails, retain/requeue the original without a busy
+retry loop. Crash recovery may redeliver; deduplication must tolerate it.
+Publisher confirms do not establish that a consumer processed the message.
+See [acknowledgements](https://www.rabbitmq.com/docs/confirms) and
+[dead-lettering](https://www.rabbitmq.com/docs/dlx).
+
+Use `RABBITMQ_URL` with service-specific credentials and least-privilege broker
+permissions. Keep its value in untracked configuration or secrets; examples
+name the variable without credentials. Gateway and database credentials are
+separate. Validate outage/recovery, redelivery, poison-message retries/DLQ,
+consumer restart and unroutable publication before claiming real delivery.
+
+## Image publication
+
+Release, code, package and image versions use `X.Y.Z`: integration milestone,
+release revision and patch.
+Start each release line at Z=0. Existing tags and releases remain unchanged.
+
+Each service's workflow must publish after CI passes on a tested merge into
+`main`. One build produces the numeric version and `latest` for `linux/amd64`
+and `linux/arm64`. Choose an unused version in the service's release metadata;
+serialize publication, reject existing numeric tags and stop if registry checks fail.
+
+Repository owners configure `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` as Actions
+secrets and approve publication activation. Workflows with a publication gate
+remain disabled until that approval.
+
+Shared publishes no image. It pins tested numeric image versions in Compose and
+records them in release notes. Only Shared receives an annotated `vX.Y.Z` tag
+and GitHub Release on its tested `main` merge. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Deployment
 
-`deploy/compose.yaml` pulls eight versioned images under the `tamagotchi-go`
+`deploy/compose.yaml` pulls nine versioned images under the `tamagotchi-go`
 Compose project. Each service has its own credentials and database in one
-PostGIS-enabled PostgreSQL container.
+PostGIS-enabled PostgreSQL container. A RabbitMQ broker runs alongside it, with
+one account per publishing or consuming service (see below).
 
-| Service | Image | Host port |
-|---|---|---|
-| User Management | `patriciamoraru/user-management:1.2.0` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:1.0.0` | 3002 |
-| Battle | `patriciamoraru/battle:1.2.0` | 3003 |
-| Guild | `mihaelacatan/guild-service:0.2.0` | 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:0.2.0` | 3005 |
-| Map | `sergedbs/map:1.0.0` | 3006 |
-| Monster Raid | `sergedbs/monster-raid:1.0.0` | 3007 |
-| Notification | `victoriamutruc/notification:1.0.0` | 3008 |
+| Service | Image | Digest | Host port |
+|---|---|---|---|
+| Gateway | `victoriamutruc/gateway:2.0.3` | `sha256:c383e53c3f75682f200df7cad2926801b2d1af8a5f558312d9c0fe548703bc81` | 3000 |
+| User Management | `patriciamoraru/user-management:2.0.3` | `sha256:aee3d2700abafa42650cdc08ab3f7a1085354b4129e0da758d337bb588be9ead` | 3001 |
+| Tamagotchi | `victoriamutruc/tamagotchi:2.0.5` | `sha256:815dc4082a65b3fa71c403f5f4aed9c3c554ebabb194986d65c614ee8cc4f4fc` | 3002 |
+| Battle | `patriciamoraru/battle:2.0.2` | `sha256:bdb67b53a34d37022d9e028ce5bf06f70278440d6b10f2a711a240b03794680c` | 3003 |
+| Guild | `mihaelacatan/guild-service:2.0.4` | `sha256:9fb1f1cce8665b022462a1072ef692791587470570eca60a04985baeb31f4049` | 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:2.0.4` | `sha256:802dc3c77621b502e6b43b67a031c3e3cbd7b8558ae974b520dcd65ad1f8b607` | 3005 |
+| Map | `sergedbs/map:2.0.0` | `sha256:b9928555973e65aacf2df3d2826b39093628c999ccb4a69c8884c05831e9faf1` | 3006 |
+| Monster Raid | `sergedbs/monster-raid:2.0.0` | `sha256:50d1424235f9638aa1d3436ca1f7d789e1293b2f0d28fe935bdfe91d5cdcd2aa` | 3007 |
+| Notification | `victoriamutruc/notification:2.0.4` | `sha256:061f439601a47b2c5aa10d73dba16e7711d48d32aa72b47b9174931559641953` | 3008 |
 
-Requires Docker with Compose v2 and free host ports 3001 through 3008 and
-5432. PostgreSQL listens on `127.0.0.1:5432` for local administration. Use
+To test unpublished source, use a local Compose override that builds Map, Monster Raid
+and Gateway from their standalone checkouts, with distinct local image names
+and `pull_policy: never`. Keep the override outside Git. Replace canonical pins
+only after the corresponding numeric images are published and validated.
+
+Requires Docker with Compose v2 and free host ports 3000 through 3008 and
+5432. The Gateway starts last, after all eight services report healthy, so a
+healthy Gateway only proves its registered checks passed; it does not establish
+routing, authentication or continuing downstream availability. PostgreSQL listens on
+`127.0.0.1:5432` for local administration. Use
 `postgres` as the admin user and database, with `DATABASE_ADMIN_PASSWORD` from
 `deploy/.env`.
 
@@ -622,11 +1397,75 @@ If `deploy/.env` already exists, keep it. Otherwise, create it before startup:
 ```bash
 cd deploy
 test -f .env || cp .env.example .env
-# Set every database password and any Registry admin IDs in .env.
+# Set every database password, the RabbitMQ passwords and the other values marked in .env.example.
+./gateway/generate-keys.sh   # once: creates secrets/ for the Gateway signing keys
+./user-management/generate-keys.sh   # once: creates the key User Management signs access tokens with
 docker compose --env-file .env up -d --wait
 ```
 
-Use distinct URL-safe passwords in the untracked `.env`. On first start, the
+Use distinct URL-safe passwords in the untracked `.env`.
+
+### Broker and accounts
+
+`rabbitmq` runs with the management plugin, bound to `127.0.0.1` (AMQP `5672`,
+management `15672`). `rabbitmq-provision` runs once after the broker is healthy:
+it merges service accounts, all seven exchanges, exact subscription bindings
+and quorum work/retry/DLQ queues through `deploy/rabbitmq/provision.py`.
+It includes User Management's publisher account and preserves existing broker
+data and Guild/Registry account names. Retry queues
+use five-/thirty-second message TTLs and an at-least-once dead-letter policy.
+The passive audit queue has no processing service.
+
+The provisioning step uses the admin account. Publishers can write only their
+exchange; consumers can read their subscribed exchanges/queues and transfer
+retries through the default exchange. Set every broker password named in
+`deploy/.env.example`; no credentials are committed. Provisioning does not
+prove consumer delivery. Runtime validation
+against RabbitMQ 4.1 remains required before deployment acceptance.
+
+Gateway signing keys: `deploy/gateway/generate-keys.sh` creates the Gateway's
+private signing key and the public key set in `deploy/secrets/`, which Git ignores.
+The Gateway mounts both files; Guild, Registry, Map and Monster Raid mount the
+public key set. Usable keys are required for authenticated requests. Run the
+script once before the first start, and keep the private key on your machine.
+
+User Management keys: `deploy/user-management/generate-keys.sh` creates the
+private key it signs access tokens with, `deploy/secrets/access-token.pem`,
+which Git ignores and which is never overwritten. Its public key is published at
+`GET /users/v1/jwks`. The service also mounts the Gateway's public key set to
+verify `X-Gateway-Assertion`. Set `USER_MANAGEMENT_CURSOR_SIGNING_KEY`
+(`openssl rand -base64 32`) in `.env`: it signs the page cursors, so every
+instance must share it. User Management writes its events to an outbox and
+publishes them when the broker is reachable, so it does not wait for the broker
+in Compose either.
+
+### Service tokens
+
+A service that calls another service fetches its own token from
+`POST /users/v1/service-tokens`, with `X-Service-Secret: <its secret>`. Set
+`USER_MANAGEMENT_SERVICE_CLIENT_SECRET`, `TAMAGOTCHI_SERVICE_CLIENT_SECRET`,
+`BATTLE_SERVICE_CLIENT_SECRET`, `GUILD_SERVICE_CLIENT_SECRET`,
+`MAP_SERVICE_CLIENT_SECRET` and `MONSTER_RAID_SERVICE_CLIENT_SECRET` in `.env`.
+Registry and Notification call no other service, so they have no secret.
+
+Compose registers each caller secret with User Management using the same local
+variable. For a fresh local setup, choose distinct values; preserve existing
+credentials when updating it. Matching secrets authenticate the client but do
+not grant scopes: the issuer allowlist must permit each requested destination
+and scope.
+
+Map and Monster Raid call `http://gateway:3000`. Configure their distinct
+base64 cursor keys and broker credentials from `.env.example`; Raid's broker
+account is `monster-raid`. Both wait for broker provisioning before startup.
+Scope overrides must match the issuer policy; their defaults are requested
+grants, not evidence of permission. Existing database volumes are preserved.
+
+Tamagotchi calls User Management and Package Registry through
+`http://gateway:3000` with its own service tokens. Tamagotchi and Notification
+use the broker accounts `tamagotchi` and `notification` and wait for broker
+provisioning before startup.
+
+On first start, the
 database initializer creates eight databases and roles, applies the User
 Management and Battle SQL, and enables PostGIS for Map. The remaining services
 create their own schema at startup. The shared volume is separate from each
@@ -641,19 +1480,50 @@ docker compose exec guild node dist/db/seed.js
 docker compose exec registry node dist/db/seed.js
 docker compose exec tamagotchi node dist/db/seed.js
 docker compose exec notification node dist/db/seed.js
-docker compose exec user-management dotnet UserManagement.dll seed
+docker compose exec user-management dotnet UserManagement.Api.dll seed
 docker compose exec battle dotnet Battle.dll seed
 ```
 
-Map and Monster Raid seed through their APIs. From their standalone repositories,
-run `scripts/seed.sh` with `MAP_BASE_URL=http://localhost:3006` or
-`MONSTER_RAID_BASE_URL=http://localhost:3007`, respectively.
+**Database schema.** User Management and Battle do not migrate their own databases at start. A fresh volume gets the schema from
+`deploy/db/user-management/001_init.sql` and `deploy/db/battle/001_init.sql`, which are generated from each service's migrations (every
+migration in order, with the `__EFMigrationsHistory` rows, so a later `dotnet ef database update` runs cleanly). A volume that already
+exists is brought up to the same schema with the `upgrade.sql` next to each of them, which applies only the migrations whose row is not
+in the history yet and so is safe to run again:
+
+```bash
+docker compose exec -T database sh -c 'psql -U "$USER_MANAGEMENT_DB_USER" -d "$USER_MANAGEMENT_DB_NAME" -v ON_ERROR_STOP=1' < db/user-management/upgrade.sql
+docker compose exec -T database sh -c 'psql -U "$BATTLE_DB_USER" -d "$BATTLE_DB_NAME" -v ON_ERROR_STOP=1' < db/battle/upgrade.sql
+```
+
+User Management 2.0.1 needs the three tables of its once-only ledgers (`CurrencyCredits`, `SettledBattles`, `ConsumedBoosts`), and Battle 2.0.1
+needs the outbox, the idempotency receipts, the combat snapshot columns and the settlement retry columns, so an old volume must be upgraded
+before the new images start. If a migration was applied by hand earlier, add its row to `__EFMigrationsHistory` first.
+
+Map and Monster Raid seed through Gateway using Python 3. From each standalone
+repository, run `scripts/seed.sh` after configuring real fixtures in your
+untracked environment:
+
+| Service | Required inputs | Default Gateway URL |
+|---|---|---|
+| Map | `MAP_USER_ID`, `MAP_USER_TOKEN` | `http://localhost:3000/map` |
+| Monster Raid | `RAID_GUILD_ID`, `RAID_OCCURRENCE_ID`, `RAID_LEADER_TOKEN` | `http://localhost:3000/raid` |
+
+Tokens must match the location owner or Guild leader. The occurrence must be
+active. Override `MAP_BASE_URL` or `MONSTER_RAID_BASE_URL` for another Gateway
+address. Existing matching records are preserved; auth/dependency failures stop
+seeding. Mutations carry command keys and are not automatically retried.
 
 ### API collections
 
 Import the eight collections in `postman/` and select
 `postman/tamagotchi-go.postman_environment.json`. The environment defines one
-base URL per service. Map and Monster Raid requests create their own fixtures.
+base URL per service, and all of them now point at the Gateway
+(`http://localhost:3000/<prefix>`). The Gateway and the services must be running
+first. Registry's admin-only requests need a caller whose token carries the
+`admin` role; otherwise they are refused. Map requests prepare locations for two
+supplied real accounts. Raid requests require a supplied real Guild, leader,
+active occurrence and eligible primary creature; they do not create those
+external prerequisites.
 Run the other service collections in order when a request depends on a previous
 response. See [Postman instructions](postman/README.md).
 
@@ -666,9 +1536,7 @@ conversations, and a passing `ci` check. New commits dismiss prior approvals.
 Squash work branches into `develop` and merge releases into `main` with a
 merge commit. Contract changes also need review from affected service owners.
 
-Versions use `X.Y` for milestone and revision. The shared release is tagged
-`vX.Y` on main and recorded as a GitHub Release. Service releases use the main
-merge; their published images retain explicit immutable versions.
+Versioning and publication follow [Image publication](#image-publication).
 
 Track work in the [team project](https://github.com/orgs/PAD-TEAM-9-2026/projects/1).
 See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
@@ -677,3 +1545,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, PR content, and releases.
 
 Each private repository README repeats its own endpoints, events and dependencies, so the
 service can be read on its own.
+
+### Runtime logging
+
+Map/Raid log each domain request once with method, path, status, duration and
+correlation ID. Routine SQL/framework messages and successful probes are quiet
+at the default level. Configure MAP_LOG_LEVEL and MONSTER_RAID_LOG_LEVEL using
+.NET levels such as Debug, Information, Warning or Error. GATEWAY_LOG_LEVEL uses
+debug, info, warn or error. Restart the affected service after changing its level.
+
+Gateway logs HTTP requests and Guild negotiation; direct WebSocket activity
+belongs to Guild. Its owner should log socket open/close, rejected upgrades,
+message outcomes and errors, without tickets or message contents. Never log
+Authorization, service secrets, assertions or query strings containing credentials.
+
+Map/Raid's supplied database pools are capped at 10 connections each, independently
+of their 64-task admission limits. Account for every service pool when sizing the
+shared PostgreSQL connection budget. Pool waits inherit request cancellation.
