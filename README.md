@@ -1444,7 +1444,7 @@ calls a service makes to the Gateway. Copy them alongside the discovery files.
 | Env var | Default | Meaning |
 |---|---|---|
 | `GATEWAY_URL` | `http://gateway:3000` | Base URL for the Gateway |
-| `TASK_TIMEOUT_MS` | `5000` | Per-request timeout in ms |
+| `GATEWAY_TIMEOUT_MS` | `5000` | Per-request timeout in ms |
 | `BREAKER_THRESHOLD` | `3` | Failures before opening |
 | `BREAKER_WINDOW_MULTIPLIER` | `3.5` | Window = timeout × multiplier (17 500 ms at defaults) |
 | `BREAKER_RESET_SECONDS` | `30` | Seconds open before allowing a trial call |
