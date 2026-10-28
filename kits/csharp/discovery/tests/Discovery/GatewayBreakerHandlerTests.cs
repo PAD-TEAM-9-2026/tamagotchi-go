@@ -20,8 +20,8 @@ public sealed class GatewayBreakerHandlerTests
         _breaker = GatewayBreakerHandler.CreateBreaker(Settings, _time, _logs);
     }
 
-    private HttpClient Client(StubHandler gateway) =>
-        new(new GatewayBreakerHandler(_breaker, Settings.Timeout) { InnerHandler = gateway })
+    private HttpClient Client(StubHandler gateway, TimeSpan? timeout = null) =>
+        new(new GatewayBreakerHandler(_breaker, timeout ?? Settings.Timeout) { InnerHandler = gateway })
         {
             BaseAddress = Settings.Url,
             Timeout = Timeout.InfiniteTimeSpan,
@@ -98,7 +98,8 @@ public sealed class GatewayBreakerHandlerTests
     [Fact]
     public async Task A_call_the_caller_cancelled_does_not_count()
     {
-        var client = Client(StubHandler.Hanging());
+        // A long timeout of its own, so on a busy machine the caller's 10 ms can never come after it.
+        var client = Client(StubHandler.Hanging(), TimeSpan.FromSeconds(30));
 
         for (var i = 0; i < 5; i++)
         {
