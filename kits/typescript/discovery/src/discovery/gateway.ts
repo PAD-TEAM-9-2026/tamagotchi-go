@@ -27,6 +27,7 @@ const BREAKER_RESET_SECONDS_DEFAULT = 30;
 
 function requireNumber(raw: string | undefined, name: string, fallback: number): number {
   if (raw === undefined) return fallback;
+  if (raw.trim() === '') throw new Error(`${name} must be a finite number, got: ${JSON.stringify(raw)}`);
   const n = Number(raw);
   if (!Number.isFinite(n)) throw new Error(`${name} must be a finite number, got: ${JSON.stringify(raw)}`);
   return n;
