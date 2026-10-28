@@ -139,6 +139,17 @@ describe('createGatewayClient', () => {
     });
   });
 
+  it('forwards headers without adding Content-Type when there is no body', async () => {
+    const { send, calls } = fakeFetch(() => 200);
+    const client = createGatewayClient(BASE_CONFIG, send, clock);
+
+    await client.request('GET', '/v1/items', {
+      headers: { Authorization: 'Bearer tok' },
+    });
+
+    expect(calls[0].headers).toEqual({ Authorization: 'Bearer tok' });
+  });
+
   it('returns the response for a successful call', async () => {
     const { send } = fakeFetch(() => 201);
     const client = createGatewayClient(BASE_CONFIG, send, clock);
