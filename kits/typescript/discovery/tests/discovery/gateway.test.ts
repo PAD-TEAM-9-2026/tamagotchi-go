@@ -5,7 +5,7 @@ import {
   createGatewayClient,
   readGatewayConfig,
 } from '../../src/discovery/gateway.js';
-import type { GatewayConfig, RequestOptions } from '../../src/discovery/gateway.js';
+import type { GatewayConfig } from '../../src/discovery/gateway.js';
 
 vi.hoisted(() => {
   process.env.LOG_LEVEL = 'debug';
@@ -197,11 +197,11 @@ describe('createGatewayClient', () => {
       await client.request('GET', '/').catch(() => null);
     }
 
-    // breaker must still be closed — next call goes through
-    const { send: send2 } = fakeFetch(() => 200);
-    const client2 = createGatewayClient(BASE_CONFIG, send2, clock);
-    const response = await client2.request('GET', '/');
-    expect(response.status).toBe(200);
+    // breaker must still be closed — the same client's 4th call must throw AbortError, not BreakerOpenError
+    const error = await client.request('GET', '/').catch((e) => e);
+    expect(error).toBeInstanceOf(DOMException);
+    expect((error as DOMException).name).toBe('AbortError');
+    expect(error).not.toBeInstanceOf(BreakerOpenError);
   });
 
   it('throws BreakerOpenError immediately when open without calling fetch', async () => {
