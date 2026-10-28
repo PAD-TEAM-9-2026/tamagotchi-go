@@ -1560,6 +1560,10 @@ file, in the web project's `.csproj`, so `/status`, the registration and the ima
 <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../VERSION').Trim())</Version>
 ```
 
+The version is read when the project is loaded, so the Dockerfile must copy `VERSION` to the same
+place relative to the web project, before `dotnet restore` (with `WORKDIR /src` and the projects
+copied to `/src/<Project>/`, that is `COPY VERSION /VERSION`).
+
 The log lines are `service registered` (info), `service re-registered` (debug),
 `registration failed` (warn, with `status` or `cause` and `retry_in_ms`),
 `registration check passed` (debug), `registration check failed` (warn),
