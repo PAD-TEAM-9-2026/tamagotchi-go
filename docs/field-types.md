@@ -1434,13 +1434,58 @@ Sent by each service on startup to `POST /v1/instances`.
 
 The kit generates `instance_id` as uuid v7. Any valid UUID is accepted by the service.
 
+### Instance
+
+Returned by `POST /v1/instances` and `GET /v1/instances/{instance_id}`, and listed in InstanceList.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `instance_id` | uuid, lowercase | yes |
+| `service_name` | string, as registered | yes |
+| `host` | string, as registered | yes |
+| `port` | integer [1..65535] | yes |
+| `base_url` | string, `http://{host}:{port}` | yes |
+| `status_path` | string, as registered | yes |
+| `version` | string, or null when not registered | yes |
+| `health` | `unknown` / `healthy` / `unhealthy` | yes |
+| `registered_at` | timestamp, first registration, kept when the id registers again | yes |
+| `last_checked_at` | timestamp, or null before the first health check | yes |
+| `last_load` | StatusLoad from the last healthy check, or null | yes |
+
+An instance is routable unless `health` is `unhealthy`.
+
+### InstanceList
+
+Response to `GET /v1/services/{service_name}/instances`.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `service_name` | string, as requested | yes |
+| `instances` | Instance[], oldest registration first, empty for an unknown service | yes |
+
+### ServiceList
+
+Response to `GET /v1/services`.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `services` | ServiceSummary[], sorted by `service_name` | yes |
+
+### ServiceSummary
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `service_name` | string | yes |
+| `instances` | integer [1..], registered instances | yes |
+| `routable_instances` | integer [0..], instances that are not `unhealthy` | yes |
+
 ### FailureReport
 
 Sent by the Gateway (or any caller) to `POST /v1/instances/{instance_id}/failures`.
 
 | Field | Type / constraint | Required |
 |---|---|---|
-| `reporter` | string, e.g. `gateway`, `health-checker` | yes |
+| `reporter` | string, e.g. `gateway`; the health checker reports as `service-discovery` | yes |
 | `reason` | `timeout` / `connection_error` / `server_error` / `health_check_failed` | yes |
 | `endpoint` | string, e.g. `GET /v1/battles/{id}` | no |
 
@@ -1457,3 +1502,20 @@ Response to `POST /v1/instances/{instance_id}/failures`.
 | `removed` | boolean — true when the threshold was reached and the instance was removed | yes |
 
 **Removal rule**: `failures_in_window >= threshold` within a sliding window of `TASK_TIMEOUT_MS / 1000 × FAILURE_WINDOW_MULTIPLIER` seconds (default 5000 ms × 3.5 = **17.5 s**). The health checker reports `health_check_failed` after each failed poll, so an unreachable instance is removed after three consecutive polls (~10–15 s at the default 5 s interval). A removed instance that keeps running can come back by calling `POST /v1/instances` again.
+
+### FailureWindow
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `instance_id` | uuid | yes |
+| `failures_in_window` | integer [1..] | yes |
+| `threshold` | integer [1..], default 3 | yes |
+| `window_seconds` | number [0..], default 17.5 | yes |
+
+### FailureWindowList
+
+Response to `GET /v1/failures`.
+
+| Field | Type / constraint | Required |
+|---|---|---|
+| `windows` | FailureWindow[], only instances with at least one failure in the window | yes |
