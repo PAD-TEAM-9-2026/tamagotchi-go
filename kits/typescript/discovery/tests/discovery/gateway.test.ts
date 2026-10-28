@@ -93,8 +93,12 @@ describe('readGatewayConfig', () => {
   it('throws when a numeric env var is not a finite number', () => {
     expect(() => readGatewayConfig({ GATEWAY_TIMEOUT_MS: 'abc' })).toThrow('GATEWAY_TIMEOUT_MS');
     expect(() => readGatewayConfig({ BREAKER_THRESHOLD: 'bad' })).toThrow('BREAKER_THRESHOLD');
-    expect(() => readGatewayConfig({ BREAKER_WINDOW_MULTIPLIER: '' })).toThrow('BREAKER_WINDOW_MULTIPLIER');
     expect(() => readGatewayConfig({ BREAKER_RESET_SECONDS: 'NaN' })).toThrow('BREAKER_RESET_SECONDS');
+  });
+
+  it('falls back to the default when a numeric env var is blank', () => {
+    const config = readGatewayConfig({ BREAKER_WINDOW_MULTIPLIER: '' });
+    expect(config.breaker.windowMs).toBe(5000 * 3.5);
   });
 });
 

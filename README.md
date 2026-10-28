@@ -1449,21 +1449,34 @@ calls a service makes to the Gateway. Copy them alongside the discovery files.
 | `BREAKER_WINDOW_MULTIPLIER` | `3.5` | Window = timeout × multiplier (17 500 ms at defaults) |
 | `BREAKER_RESET_SECONDS` | `30` | Seconds open before allowing a trial call |
 
-Only `DOMException` (AbortSignal timeout) and `TypeError` (connection error) trip the breaker.
-5xx responses count as successful calls. When the breaker is open every call throws
-`BreakerOpenError` immediately without touching the network. The breaker logs
-`circuit breaker tripped` at `error` and `circuit breaker closed` at `info`.
+Only `TypeError` (connection error) and `DOMException { name: 'TimeoutError' }` trip the breaker.
+`AbortError` (caller cancelled) does not count. 5xx responses count as successful calls.
+When the breaker is open every call throws `BreakerOpenError` immediately without touching
+the network. The breaker logs `circuit breaker tripped` at `error` and `circuit breaker closed`
+at `info`.
+
+`request()` accepts an optional options object: `{ body?, headers?, signal? }`. Pass service
+token headers (`Authorization`, `Idempotency-Key`) via `headers`. Pass the request deadline
+via `signal` — it is combined with the internal timeout via `AbortSignal.any` so whichever
+fires first wins. Blank env var values fall back to the default (same behaviour as the
+discovery kit).
 
 Wiring:
 
 ```ts
 import { readGatewayConfig, createGatewayClient } from './discovery/gateway.js';
 
-const gatewayConfig = readGatewayConfig();
-const gateway = createGatewayClient(gatewayConfig);
+// Call readGatewayConfig where the client is built (e.g. deps.ts), not from config.ts.
+// gateway.ts imports log.ts which imports logger.ts which may import config.ts, so
+// calling readGatewayConfig() from config.ts causes a circular import that fails at
+// runtime with "Cannot access ... before initialization".
+const gateway = createGatewayClient(readGatewayConfig());
 
 // later
-const response = await gateway.request('POST', '/v1/tasks', body);
+const response = await gateway.request('POST', '/v1/tasks', {
+  body,
+  headers: { Authorization: `Bearer ${serviceToken}` },
+});
 ```
 
 Guild and Package-registry use this kit. Copy it with the discovery files and wire it up in
