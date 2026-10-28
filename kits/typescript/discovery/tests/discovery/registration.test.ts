@@ -10,7 +10,7 @@ import {
 import { instance } from '../../src/discovery/instance.js';
 
 vi.hoisted(() => {
-  process.env.LOG_LEVEL = 'info';
+  process.env.LOG_LEVEL = 'debug';
 });
 
 const SETTINGS: DiscoverySettings = {

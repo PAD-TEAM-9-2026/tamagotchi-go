@@ -1421,9 +1421,9 @@ await registration?.stop();
 Mount the status router before admission control and authentication, start registration
 once the server listens, and stop it first on `SIGINT` or `SIGTERM`. Registration checks
 itself with `GET /v1/instances/{id}` every 30 seconds and registers again only on a 404,
-because registering an existing id resets its health. Its log lines are `service registered`,
-`service re-registered`, `registration failed`, `registration check failed`,
-`service deregistered` and `deregistration failed`.
+because registering an existing id resets its health. Its log lines are `service registered` (info),
+`service re-registered` (debug), `registration failed` (warn), `registration check failed` (warn),
+`service deregistered` (info) and `deregistration failed` (warn).
 
 Tamagotchi and Notification run this kit. Change the kit here first, then copy it into
 every service that uses it.
