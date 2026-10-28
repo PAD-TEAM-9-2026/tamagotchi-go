@@ -1428,6 +1428,47 @@ because registering an existing id resets its health. Its log lines are `service
 Tamagotchi and Notification run this kit. Change the kit here first, then copy it into
 every service that uses it.
 
+### TypeScript circuit breaker kit
+
+[`kits/typescript/discovery/src/discovery/breaker.ts`](kits/typescript/discovery/src/discovery/breaker.ts) and
+[`gateway.ts`](kits/typescript/discovery/src/discovery/gateway.ts) add a sliding-window circuit breaker for
+calls a service makes to the Gateway. Copy them alongside the discovery files.
+
+| File | Holds |
+|---|---|
+| `breaker.ts` | `SlidingWindowBreaker` — injectable clock, `isOpen()`, `recordSuccess()`, `recordFailure(reason)` |
+| `gateway.ts` | `readGatewayConfig()`, `createGatewayClient(config, send?, now?)`, `BreakerOpenError` |
+
+`readGatewayConfig()` reads:
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `GATEWAY_URL` | `http://gateway:3000` | Base URL for the Gateway |
+| `TASK_TIMEOUT_MS` | `5000` | Per-request timeout in ms |
+| `BREAKER_THRESHOLD` | `3` | Failures before opening |
+| `BREAKER_WINDOW_MULTIPLIER` | `3.5` | Window = timeout × multiplier (17 500 ms at defaults) |
+| `BREAKER_RESET_SECONDS` | `30` | Seconds open before allowing a trial call |
+
+Only `DOMException` (AbortSignal timeout) and `TypeError` (connection error) trip the breaker.
+5xx responses count as successful calls. When the breaker is open every call throws
+`BreakerOpenError` immediately without touching the network. The breaker logs
+`circuit breaker tripped` at `error` and `circuit breaker closed` at `info`.
+
+Wiring:
+
+```ts
+import { readGatewayConfig, createGatewayClient } from './discovery/gateway.js';
+
+const gatewayConfig = readGatewayConfig();
+const gateway = createGatewayClient(gatewayConfig);
+
+// later
+const response = await gateway.request('POST', '/v1/tasks', body);
+```
+
+Guild and Package-registry use this kit. Copy it with the discovery files and wire it up in
+the service's HTTP client layer.
+
 ## Image publication
 
 Release, code, package and image versions use `X.Y.Z`: integration milestone,
