@@ -328,7 +328,7 @@ reports itself, and `DOWN` when it cannot serve requests. Every `load` field is
 optional: a rule whose field is missing is skipped, so a minimal answer still works.
 
 Service Discovery calls every registered instance every 5 seconds with a 2 second
-timeout. A timeout, connection error, 5xx, `DOWN` or a body without a known `status`
+timeout. A timeout, connection error, non-200 response, `DOWN` or a body without a known `status`
 marks the instance unhealthy: it stops being routable and the failure is reported to
 failure tracking. A healthy answer that reaches a critical load limit raises a
 `load_critical` alert for each broken rule.

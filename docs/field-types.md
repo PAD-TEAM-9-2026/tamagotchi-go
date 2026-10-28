@@ -1450,7 +1450,7 @@ Response to `POST /v1/instances/{instance_id}/failures`.
 
 | Field | Type / constraint | Required |
 |---|---|---|
-| `instance_id` | uuid (v7) | yes |
+| `instance_id` | uuid (any version) | yes |
 | `failures_in_window` | integer [1..] | yes |
 | `threshold` | integer [1..], default 3 | yes |
 | `window_seconds` | number [0..], default 17.5 | yes |
