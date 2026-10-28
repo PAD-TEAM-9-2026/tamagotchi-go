@@ -205,7 +205,7 @@ Lab 2 added the Gateway as its own service: a separate repository linked here as
 
 Service Discovery ([PatriciaMoraru/service-discovery](https://github.com/PatriciaMoraru/service-discovery)) is a shared Python 3.13 / FastAPI service that maintains the live registry of running instances. Each domain service registers itself on startup with `POST /v1/instances` and deregisters on graceful shutdown with `DELETE /v1/instances/{instance_id}`. Service Discovery health-checks every registered instance on an interval; the health checker also reports each failed check as a failure.
 
-Any service or the Gateway can report a failure for an instance with `POST /v1/instances/{instance_id}/failures`. Three failures within a 17.5-second sliding window (configurable) removes the instance automatically and raises a `CRITICAL` alert. Voluntary deregistration and every new registration clear the failure history for that instance, so a recovered instance that re-registers starts with a clean slate. `GET /v1/failures` lists every instance with at least one in-window failure.
+Any service or the Gateway can report a failure for an instance with `POST /v1/instances/{instance_id}/failures`. Three failures within a 17.5-second sliding window (configurable) removes the instance automatically and raises a `CRITICAL` alert. Voluntary deregistration clears the failure history for that instance. Re-registration does not reset failures, so an instance cannot avoid removal by registering again. `GET /v1/failures` lists every instance with at least one in-window failure.
 
 Instance registration, failure report and failure result shapes are in [docs/field-types.md](docs/field-types.md) under **Service Discovery**.
 
@@ -328,7 +328,7 @@ reports itself, and `DOWN` when it cannot serve requests. Every `load` field is
 optional: a rule whose field is missing is skipped, so a minimal answer still works.
 
 Service Discovery calls every registered instance every 5 seconds with a 2 second
-timeout. A timeout, connection error, 5xx, `DOWN` or a body without a known `status`
+timeout. A timeout, connection error, non-200 response, `DOWN` or a body without a known `status`
 marks the instance unhealthy: it stops being routable and the failure is reported to
 failure tracking. A healthy answer that reaches a critical load limit raises a
 `load_critical` alert for each broken rule.
@@ -1421,9 +1421,9 @@ await registration?.stop();
 Mount the status router before admission control and authentication, start registration
 once the server listens, and stop it first on `SIGINT` or `SIGTERM`. Registration checks
 itself with `GET /v1/instances/{id}` every 30 seconds and registers again only on a 404,
-because registering an existing id resets its health. Its log lines are `service registered`,
-`service re-registered`, `registration failed`, `registration check failed`,
-`service deregistered` and `deregistration failed`.
+because registering an existing id resets its health. Its log lines are `service registered` (info),
+`service re-registered` (debug), `registration failed` (warn), `registration check failed` (warn),
+`service deregistered` (info) and `deregistration failed` (warn).
 
 Tamagotchi and Notification run this kit. Change the kit here first, then copy it into
 every service that uses it.

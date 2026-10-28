@@ -78,10 +78,12 @@ export function createRegistration(settings: DiscoverySettings, send: Fetch = fe
       if (status === 200 || status === 201) {
         isRegistered = true;
         failures = 0;
-        logger.info(lost ? 'service re-registered' : 'service registered', {
-          ...fields,
-          status: status === 201 ? 'created' : 'refreshed',
-        });
+        const logFields = { ...fields, status: status === 201 ? 'created' : 'refreshed' };
+        if (lost) {
+          logger.debug('service re-registered', logFields);
+        } else {
+          logger.info('service registered', logFields);
+        }
         lost = false;
         later(check, checkIntervalMs);
         return;
