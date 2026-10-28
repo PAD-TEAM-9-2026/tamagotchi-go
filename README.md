@@ -205,9 +205,9 @@ Lab 2 added the Gateway as its own service: a separate repository linked here as
 
 Service Discovery ([PatriciaMoraru/service-discovery](https://github.com/PatriciaMoraru/service-discovery)) is a shared Python 3.13 / FastAPI service that maintains the live registry of running instances. Each domain service registers itself on startup with `POST /v1/instances` and deregisters on graceful shutdown with `DELETE /v1/instances/{instance_id}`. Service Discovery health-checks every registered instance on an interval; the health checker also reports each failed check as a failure.
 
-Any service or the Gateway can report a failure for an instance with `POST /v1/instances/{instance_id}/failures`. Three failures within a 17.5-second sliding window (configurable) removes the instance automatically and raises a `CRITICAL` alert. Voluntary deregistration clears the failure history for that instance. Re-registration does not reset failures, so an instance cannot avoid removal by registering again. `GET /v1/failures` lists every instance with at least one in-window failure.
+Any service or the Gateway can report a failure for an instance with `POST /v1/instances/{instance_id}/failures`. Three failures within a 17.5-second sliding window (configurable) removes the instance automatically and raises a `CRITICAL` alert. Every removal (deregistration, removal at the threshold, or replacement by a new id on the same address) clears the failure history for that instance. Registering an id that is still registered does not reset failures, so an instance cannot avoid removal by registering again. `GET /v1/failures` lists every instance with at least one in-window failure.
 
-Instance registration, failure report and failure result shapes are in [docs/field-types.md](docs/field-types.md) under **Service Discovery**.
+The endpoints are in [Service Discovery, direct](#service-discovery-direct) and the shapes in [docs/field-types.md](docs/field-types.md) under **Service Discovery**.
 
 ## Technologies
 
@@ -1286,6 +1286,44 @@ frontend.
   "android": { "priority": "high" }
 }
 ```
+
+<a id="service-discovery-direct"></a>
+
+### Service Discovery, direct
+
+Service Discovery is not behind the Gateway. Instances and the Gateway call it
+directly at `SERVICE_DISCOVERY_URL` (`http://service-discovery:3009` in Compose).
+It has no authentication and is reachable only on the internal network.
+
+| Method and path | Request | Response | Access |
+|---|---|---|---|
+| `POST /v1/instances` | InstanceRegistration | 201 Instance, or 200 Instance when the id is already registered | direct, the instance itself |
+| `GET /v1/instances/{instance_id}` | none | 200 Instance | direct, the instance itself |
+| `DELETE /v1/instances/{instance_id}` | none | 204 | direct, the instance itself |
+| `GET /v1/services` | none | 200 ServiceList | direct, Gateway and developers |
+| `GET /v1/services/{service_name}/instances` | query routable | 200 InstanceList | direct, Gateway |
+| `POST /v1/instances/{instance_id}/failures` | FailureReport | 202 FailureResult | direct, Gateway |
+| `GET /v1/failures` | none | 200 FailureWindowList | direct, developers |
+
+Registration rules:
+
+1. A new id is added with `health` `unknown`.
+2. The same id again updates `host`, `port`, `status_path` and `version`, keeps
+   `registered_at`, and resets `health` to `unknown`. Its failure window is kept.
+3. The same id under another `service_name` is refused with `409 instance_conflict`.
+4. A new id on an address another instance holds (a restarted container) removes
+   the old instance as `replaced`.
+
+Because rule 2 resets health, an instance does not register again on a timer. It
+checks itself with `GET /v1/instances/{instance_id}` every 30 seconds and registers
+again only on a 404, which means it was removed while it kept running. On shutdown
+it deregisters. The shared kits do this.
+
+`?routable=true` leaves out `unhealthy` instances; a new `unknown` instance is
+routable. An unknown service gives an empty list, not a 404.
+
+Error codes: `invalid_request` (400, the detail names the invalid fields),
+`instance_not_found` (404), `instance_conflict` (409).
 
 ### Events
 
