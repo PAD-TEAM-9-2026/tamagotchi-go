@@ -20,26 +20,25 @@ export class BreakerOpenError extends Error {
 }
 
 const GATEWAY_URL_DEFAULT = 'http://gateway:3000';
-const TASK_TIMEOUT_MS_DEFAULT = 5000;
+const GATEWAY_TIMEOUT_MS_DEFAULT = 5000;
 const BREAKER_THRESHOLD_DEFAULT = 3;
 const BREAKER_WINDOW_MULTIPLIER_DEFAULT = 3.5;
 const BREAKER_RESET_SECONDS_DEFAULT = 30;
 
+function requireNumber(raw: string | undefined, name: string, fallback: number): number {
+  if (raw === undefined) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) throw new Error(`${name} must be a finite number, got: ${JSON.stringify(raw)}`);
+  return n;
+}
+
 export function readGatewayConfig(
   env: Record<string, string | undefined> = process.env,
 ): GatewayConfig {
-  const timeoutMs = env['TASK_TIMEOUT_MS']
-    ? Number(env['TASK_TIMEOUT_MS'])
-    : TASK_TIMEOUT_MS_DEFAULT;
-  const threshold = env['BREAKER_THRESHOLD']
-    ? Number(env['BREAKER_THRESHOLD'])
-    : BREAKER_THRESHOLD_DEFAULT;
-  const multiplier = env['BREAKER_WINDOW_MULTIPLIER']
-    ? Number(env['BREAKER_WINDOW_MULTIPLIER'])
-    : BREAKER_WINDOW_MULTIPLIER_DEFAULT;
-  const resetSeconds = env['BREAKER_RESET_SECONDS']
-    ? Number(env['BREAKER_RESET_SECONDS'])
-    : BREAKER_RESET_SECONDS_DEFAULT;
+  const timeoutMs = requireNumber(env['GATEWAY_TIMEOUT_MS'], 'GATEWAY_TIMEOUT_MS', GATEWAY_TIMEOUT_MS_DEFAULT);
+  const threshold = requireNumber(env['BREAKER_THRESHOLD'], 'BREAKER_THRESHOLD', BREAKER_THRESHOLD_DEFAULT);
+  const multiplier = requireNumber(env['BREAKER_WINDOW_MULTIPLIER'], 'BREAKER_WINDOW_MULTIPLIER', BREAKER_WINDOW_MULTIPLIER_DEFAULT);
+  const resetSeconds = requireNumber(env['BREAKER_RESET_SECONDS'], 'BREAKER_RESET_SECONDS', BREAKER_RESET_SECONDS_DEFAULT);
 
   return {
     url: env['GATEWAY_URL'] ?? GATEWAY_URL_DEFAULT,

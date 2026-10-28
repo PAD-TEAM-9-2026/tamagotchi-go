@@ -78,7 +78,7 @@ describe('readGatewayConfig', () => {
   it('reads all values from env', () => {
     const config = readGatewayConfig({
       GATEWAY_URL: 'http://gw:8080',
-      TASK_TIMEOUT_MS: '2000',
+      GATEWAY_TIMEOUT_MS: '2000',
       BREAKER_THRESHOLD: '5',
       BREAKER_WINDOW_MULTIPLIER: '4',
       BREAKER_RESET_SECONDS: '60',
@@ -88,6 +88,13 @@ describe('readGatewayConfig', () => {
       timeoutMs: 2000,
       breaker: { threshold: 5, windowMs: 8000, resetMs: 60_000 },
     });
+  });
+
+  it('throws when a numeric env var is not a finite number', () => {
+    expect(() => readGatewayConfig({ GATEWAY_TIMEOUT_MS: 'abc' })).toThrow('GATEWAY_TIMEOUT_MS');
+    expect(() => readGatewayConfig({ BREAKER_THRESHOLD: 'bad' })).toThrow('BREAKER_THRESHOLD');
+    expect(() => readGatewayConfig({ BREAKER_WINDOW_MULTIPLIER: '' })).toThrow('BREAKER_WINDOW_MULTIPLIER');
+    expect(() => readGatewayConfig({ BREAKER_RESET_SECONDS: 'NaN' })).toThrow('BREAKER_RESET_SECONDS');
   });
 });
 
