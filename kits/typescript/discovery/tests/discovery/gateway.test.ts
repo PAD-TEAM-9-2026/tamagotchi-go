@@ -5,7 +5,7 @@ import {
   createGatewayClient,
   readGatewayConfig,
 } from '../../src/discovery/gateway.js';
-import type { GatewayConfig, RequestOptions } from '../../src/discovery/gateway.js';
+import type { GatewayConfig } from '../../src/discovery/gateway.js';
 
 vi.hoisted(() => {
   process.env.LOG_LEVEL = 'debug';
@@ -17,7 +17,7 @@ const BASE_CONFIG: GatewayConfig = {
   breaker: { threshold: 3, windowMs: 17_500, resetMs: 30_000 },
 };
 
-type Call = { method: string; url: string; body?: unknown };
+type Call = { method: string; url: string; body?: unknown; headers?: Record<string, string> };
 type Answer = number | Error;
 
 function fakeFetch(answers: (call: Call) => Answer) {
@@ -27,6 +27,9 @@ function fakeFetch(answers: (call: Call) => Answer) {
       method: init?.method ?? 'GET',
       url: String(input),
       ...(typeof init?.body === 'string' ? { body: JSON.parse(init.body) } : {}),
+      ...(init?.headers && typeof init.headers === 'object' && !Array.isArray(init.headers)
+        ? { headers: init.headers as Record<string, string> }
+        : {}),
     };
     calls.push(call);
     const answer = answers(call);
@@ -100,6 +103,11 @@ describe('readGatewayConfig', () => {
     const config = readGatewayConfig({ BREAKER_WINDOW_MULTIPLIER: '' });
     expect(config.breaker.windowMs).toBe(5000 * 3.5);
   });
+
+  it('falls back to the default URL when GATEWAY_URL is blank', () => {
+    const config = readGatewayConfig({ GATEWAY_URL: '' });
+    expect(config.url).toBe('http://gateway:3000');
+  });
 });
 
 describe('createGatewayClient', () => {
@@ -109,9 +117,9 @@ describe('createGatewayClient', () => {
 
     await client.request('POST', '/v1/items', { body: { name: 'egg' } });
 
-    expect(calls).toEqual([
+    expect(calls[0]).toMatchObject(
       { method: 'POST', url: 'http://gateway:3000/v1/items', body: { name: 'egg' } },
-    ]);
+    );
   });
 
   it('forwards extra headers to fetch', async () => {
@@ -127,7 +135,19 @@ describe('createGatewayClient', () => {
       method: 'POST',
       url: 'http://gateway:3000/v1/items',
       body: { name: 'egg' },
+      headers: { Authorization: 'Bearer tok', 'Idempotency-Key': 'abc', 'Content-Type': 'application/json' },
     });
+  });
+
+  it('forwards headers without adding Content-Type when there is no body', async () => {
+    const { send, calls } = fakeFetch(() => 200);
+    const client = createGatewayClient(BASE_CONFIG, send, clock);
+
+    await client.request('GET', '/v1/items', {
+      headers: { Authorization: 'Bearer tok' },
+    });
+
+    expect(calls[0].headers).toEqual({ Authorization: 'Bearer tok' });
   });
 
   it('returns the response for a successful call', async () => {
@@ -188,11 +208,11 @@ describe('createGatewayClient', () => {
       await client.request('GET', '/').catch(() => null);
     }
 
-    // breaker must still be closed — next call goes through
-    const { send: send2 } = fakeFetch(() => 200);
-    const client2 = createGatewayClient(BASE_CONFIG, send2, clock);
-    const response = await client2.request('GET', '/');
-    expect(response.status).toBe(200);
+    // breaker must still be closed — the same client's 4th call must throw AbortError, not BreakerOpenError
+    const error = await client.request('GET', '/').catch((e) => e);
+    expect(error).toBeInstanceOf(DOMException);
+    expect((error as DOMException).name).toBe('AbortError');
+    expect(error).not.toBeInstanceOf(BreakerOpenError);
   });
 
   it('throws BreakerOpenError immediately when open without calling fetch', async () => {
