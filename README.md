@@ -205,7 +205,7 @@ Lab 2 added the Gateway as its own service: a separate repository linked here as
 
 Service Discovery ([PatriciaMoraru/service-discovery](https://github.com/PatriciaMoraru/service-discovery)) is a shared Python 3.13 / FastAPI service that maintains the live registry of running instances. Each domain service registers itself on startup with `POST /v1/instances` and deregisters on graceful shutdown with `DELETE /v1/instances/{instance_id}`. Service Discovery health-checks every registered instance on an interval; the health checker also reports each failed check as a failure.
 
-Any service or the Gateway can report a failure for an instance with `POST /v1/instances/{instance_id}/failures`. Three failures within a 17.5-second sliding window (configurable) removes the instance automatically and raises a `CRITICAL` alert. Voluntary deregistration and every new registration clear the failure history for that instance, so a recovered instance that re-registers starts with a clean slate. `GET /v1/failures` lists every instance with at least one in-window failure.
+Any service or the Gateway can report a failure for an instance with `POST /v1/instances/{instance_id}/failures`. Three failures within a 17.5-second sliding window (configurable) removes the instance automatically and raises a `CRITICAL` alert. Voluntary deregistration clears the failure history for that instance. Re-registration does not reset failures, so an instance cannot avoid removal by registering again. `GET /v1/failures` lists every instance with at least one in-window failure.
 
 Instance registration, failure report and failure result shapes are in [docs/field-types.md](docs/field-types.md) under **Service Discovery**.
 
