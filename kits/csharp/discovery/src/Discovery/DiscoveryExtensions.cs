@@ -36,6 +36,25 @@ public static class DiscoveryExtensions
         return services;
     }
 
+    /// <summary>
+    /// Puts the calls of this <see cref="HttpClient"/> to the Gateway through the shared Gateway breaker, bounded by
+    /// <c>GATEWAY_TIMEOUT_MS</c>. The handler owns the timeout, so the client's own timeout is switched off: a timeout
+    /// from <see cref="HttpClient.Timeout"/> would look like a cancelled call and never count. Every client that calls
+    /// the Gateway shares one breaker, because there is one Gateway.
+    /// </summary>
+    public static IHttpClientBuilder AddGatewayBreaker(this IHttpClientBuilder builder, GatewaySettings settings)
+    {
+        builder.Services.TryAddSingleton(TimeProvider.System);
+        builder.Services.TryAddSingleton(provider => GatewayBreakerHandler.CreateBreaker(
+            settings,
+            provider.GetRequiredService<TimeProvider>(),
+            provider.GetRequiredService<ILoggerFactory>().CreateLogger("Tamagotchi.Discovery.GatewayBreaker")));
+        builder.AddHttpMessageHandler(provider =>
+            new GatewayBreakerHandler(provider.GetRequiredService<SlidingWindowBreaker>(), settings.Timeout));
+        builder.ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan);
+        return builder;
+    }
+
     /// <summary>Counts requests for <c>/status</c>. Put it first, so it sees every request and its full duration.</summary>
     public static IApplicationBuilder UseLoadCounter(this IApplicationBuilder app) =>
         app.UseMiddleware<LoadCounterMiddleware>();
