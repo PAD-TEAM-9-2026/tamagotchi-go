@@ -1425,12 +1425,14 @@ Sent by each service on startup to `POST /v1/instances`.
 
 | Field | Type / constraint | Required |
 |---|---|---|
-| `instance_id` | uuid (v7) | yes |
-| `service_name` | string [1..63] | yes |
+| `instance_id` | uuid (any version) | yes |
+| `service_name` | string matching `^[a-z][a-z0-9-]{1,62}$` (2..63 chars, lowercase letter first) | yes |
 | `host` | string [1..253] | yes |
 | `port` | integer [1..65535] | yes |
-| `status_path` | string [1..255], default `/status` | no |
-| `version` | string `X.Y.Z` | no |
+| `status_path` | string starting with `/`, default `/status` | no |
+| `version` | string, e.g. `1.0.0` | no |
+
+The kit generates `instance_id` as uuid v7. Any valid UUID is accepted by the service.
 
 ### FailureReport
 
@@ -1438,9 +1440,9 @@ Sent by the Gateway (or any caller) to `POST /v1/instances/{instance_id}/failure
 
 | Field | Type / constraint | Required |
 |---|---|---|
-| `reporter` | string [1..63], e.g. `gateway`, `health-checker` | yes |
+| `reporter` | string, e.g. `gateway`, `health-checker` | yes |
 | `reason` | `timeout` / `connection_error` / `server_error` / `health_check_failed` | yes |
-| `endpoint` | string [1..255], e.g. `GET /v1/battles/{id}` | no |
+| `endpoint` | string, e.g. `GET /v1/battles/{id}` | no |
 
 ### FailureResult
 
