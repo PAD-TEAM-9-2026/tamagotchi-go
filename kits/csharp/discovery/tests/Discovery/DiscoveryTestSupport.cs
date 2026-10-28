@@ -51,6 +51,29 @@ public sealed class FakeHandler(Func<RecordedCall, HttpStatusCode> answer) : Htt
     }
 }
 
+/// <summary>A Gateway stand-in that answers, throws or hangs, as the test's function decides.</summary>
+public sealed class StubHandler(Func<CancellationToken, Task<HttpResponseMessage>> answer) : HttpMessageHandler
+{
+    public int Calls { get; private set; }
+
+    public static StubHandler Answering(HttpStatusCode status) => new(_ => Task.FromResult(new HttpResponseMessage(status)));
+
+    public static StubHandler Refusing() => new(_ => throw new HttpRequestException("Connection refused"));
+
+    /// <summary>Never answers; only ends when the call is cancelled.</summary>
+    public static StubHandler Hanging() => new(async token =>
+    {
+        await Task.Delay(Timeout.Infinite, token);
+        return new HttpResponseMessage(HttpStatusCode.OK);
+    });
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        Calls++;
+        return answer(cancellationToken);
+    }
+}
+
 public sealed record LogLine(LogLevel Level, string Message, IReadOnlyDictionary<string, object?> Fields);
 
 public sealed class RecordingLogger<T> : ILogger<T>

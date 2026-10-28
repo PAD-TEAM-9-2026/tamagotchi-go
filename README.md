@@ -1568,6 +1568,40 @@ The log lines are `service registered` (info), `service re-registered` (debug),
 
 Change the kit here first, then copy it into every service that uses it.
 
+### C# circuit breaker kit
+
+The same kit folder holds the breaker for calls a C# service makes to the Gateway, with the
+rules and settings of the TypeScript breaker kit.
+
+| File | Holds |
+|---|---|
+| `SlidingWindowBreaker.cs` | closed, open, half-open; `TryEnter()`, `RecordSuccess()`, `RecordFailure(reason)`, injectable clock |
+| `GatewaySettings.cs` | `GatewaySettings.FromEnvironment()`: `GATEWAY_URL` (default `http://gateway:3000`), `GATEWAY_TIMEOUT_MS` (5000), `BREAKER_THRESHOLD` (3), `BREAKER_WINDOW_MULTIPLIER` (3.5), `BREAKER_RESET_SECONDS` (30). Window = timeout × multiplier, 17.5 seconds by default. A blank value means the default, an invalid one stops the service |
+| `GatewayBreakerHandler.cs` | the `DelegatingHandler` and `BreakerOpenException` |
+
+Wiring, on every `HttpClient` that calls the Gateway:
+
+```csharp
+var gateway = GatewaySettings.FromEnvironment();
+builder.Services.AddHttpClient<HttpPackageRegistryClient>(client => client.BaseAddress = registryUrl)
+    .AddGatewayBreaker(gateway);
+```
+
+Only a timeout (`GATEWAY_TIMEOUT_MS`) and a connection error count as failures. Any answer
+counts as a success, 5xx included: it usually comes from the service behind the Gateway. A call
+the caller cancelled does not count. Three failures in the window trip the breaker and log
+`circuit breaker tripped` (error) with `target`, `failures_in_window`, `threshold`,
+`window_seconds` and `last_reason` (`timeout` or `connection_error`). While it is open every
+call throws `BreakerOpenException` at once, without a network call. After
+`BREAKER_RESET_SECONDS` one trial call at a time goes through; a success logs
+`circuit breaker closed` (info).
+
+`BreakerOpenException` is an `HttpRequestException`, so code that already turns an unreachable
+dependency into a 502 keeps working. The handler owns the timeout: `AddGatewayBreaker` switches
+`HttpClient.Timeout` off, because a timeout from there looks like a cancelled call and never
+counts. Every client that calls the Gateway shares one breaker, since there is one Gateway.
+The breaker only logs; removing instances is the Gateway's job.
+
 ## Image publication
 
 Release, code, package and image versions use `X.Y.Z`: integration milestone,
