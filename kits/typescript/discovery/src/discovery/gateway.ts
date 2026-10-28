@@ -8,8 +8,14 @@ export type GatewayConfig = {
   breaker: BreakerSettings;
 };
 
+export type RequestOptions = {
+  body?: unknown;
+  headers?: Record<string, string>;
+  signal?: AbortSignal;
+};
+
 export type GatewayClient = {
-  request(method: string, path: string, body?: unknown): Promise<Response>;
+  request(method: string, path: string, options?: RequestOptions): Promise<Response>;
 };
 
 export class BreakerOpenError extends Error {
@@ -20,29 +26,28 @@ export class BreakerOpenError extends Error {
 }
 
 const GATEWAY_URL_DEFAULT = 'http://gateway:3000';
-const TASK_TIMEOUT_MS_DEFAULT = 5000;
+const GATEWAY_TIMEOUT_MS_DEFAULT = 5000;
 const BREAKER_THRESHOLD_DEFAULT = 3;
 const BREAKER_WINDOW_MULTIPLIER_DEFAULT = 3.5;
 const BREAKER_RESET_SECONDS_DEFAULT = 30;
 
+function requireNumber(raw: string | undefined, name: string, fallback: number): number {
+  if (raw === undefined || raw.trim() === '') return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) throw new Error(`${name} must be a finite number, got: ${JSON.stringify(raw)}`);
+  return n;
+}
+
 export function readGatewayConfig(
   env: Record<string, string | undefined> = process.env,
 ): GatewayConfig {
-  const timeoutMs = env['TASK_TIMEOUT_MS']
-    ? Number(env['TASK_TIMEOUT_MS'])
-    : TASK_TIMEOUT_MS_DEFAULT;
-  const threshold = env['BREAKER_THRESHOLD']
-    ? Number(env['BREAKER_THRESHOLD'])
-    : BREAKER_THRESHOLD_DEFAULT;
-  const multiplier = env['BREAKER_WINDOW_MULTIPLIER']
-    ? Number(env['BREAKER_WINDOW_MULTIPLIER'])
-    : BREAKER_WINDOW_MULTIPLIER_DEFAULT;
-  const resetSeconds = env['BREAKER_RESET_SECONDS']
-    ? Number(env['BREAKER_RESET_SECONDS'])
-    : BREAKER_RESET_SECONDS_DEFAULT;
+  const timeoutMs = requireNumber(env['GATEWAY_TIMEOUT_MS'], 'GATEWAY_TIMEOUT_MS', GATEWAY_TIMEOUT_MS_DEFAULT);
+  const threshold = requireNumber(env['BREAKER_THRESHOLD'], 'BREAKER_THRESHOLD', BREAKER_THRESHOLD_DEFAULT);
+  const multiplier = requireNumber(env['BREAKER_WINDOW_MULTIPLIER'], 'BREAKER_WINDOW_MULTIPLIER', BREAKER_WINDOW_MULTIPLIER_DEFAULT);
+  const resetSeconds = requireNumber(env['BREAKER_RESET_SECONDS'], 'BREAKER_RESET_SECONDS', BREAKER_RESET_SECONDS_DEFAULT);
 
   return {
-    url: env['GATEWAY_URL'] ?? GATEWAY_URL_DEFAULT,
+    url: env['GATEWAY_URL']?.trim() || GATEWAY_URL_DEFAULT,
     timeoutMs,
     breaker: {
       threshold,
@@ -79,18 +84,24 @@ export function createGatewayClient(
   );
 
   return {
-    async request(method: string, path: string, body?: unknown): Promise<Response> {
+    async request(method: string, path: string, options?: RequestOptions): Promise<Response> {
       if (breaker.isOpen()) {
         throw new BreakerOpenError();
       }
 
+      const { body, headers, signal: callerSignal } = options ?? {};
+      const timeoutSignal = AbortSignal.timeout(config.timeoutMs);
+      const signal = callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal;
+
       const url = `${base}${path}`;
       const init: RequestInit = {
         method,
-        signal: AbortSignal.timeout(config.timeoutMs),
-        ...(body !== undefined
-          ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-          : {}),
+        signal,
+        headers: {
+          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...headers,
+        },
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
       };
 
       try {
@@ -98,8 +109,12 @@ export function createGatewayClient(
         breaker.recordSuccess();
         return response;
       } catch (error) {
-        // Only timeout (DOMException) and connection errors (TypeError) trip the breaker; 5xx does not.
-        if (error instanceof DOMException || error instanceof TypeError) {
+        // Only a gateway timeout (TimeoutError) or connection error (TypeError) trips the breaker.
+        // AbortError means the caller cancelled the request — that says nothing about the gateway.
+        if (
+          error instanceof TypeError ||
+          (error instanceof DOMException && error.name === 'TimeoutError')
+        ) {
           breaker.recordFailure(error.name);
         }
         throw error;

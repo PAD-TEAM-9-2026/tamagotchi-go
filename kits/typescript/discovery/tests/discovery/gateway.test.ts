@@ -17,7 +17,7 @@ const BASE_CONFIG: GatewayConfig = {
   breaker: { threshold: 3, windowMs: 17_500, resetMs: 30_000 },
 };
 
-type Call = { method: string; url: string; body?: unknown };
+type Call = { method: string; url: string; body?: unknown; headers?: Record<string, string> };
 type Answer = number | Error;
 
 function fakeFetch(answers: (call: Call) => Answer) {
@@ -27,6 +27,9 @@ function fakeFetch(answers: (call: Call) => Answer) {
       method: init?.method ?? 'GET',
       url: String(input),
       ...(typeof init?.body === 'string' ? { body: JSON.parse(init.body) } : {}),
+      ...(init?.headers && typeof init.headers === 'object' && !Array.isArray(init.headers)
+        ? { headers: init.headers as Record<string, string> }
+        : {}),
     };
     calls.push(call);
     const answer = answers(call);
@@ -78,7 +81,7 @@ describe('readGatewayConfig', () => {
   it('reads all values from env', () => {
     const config = readGatewayConfig({
       GATEWAY_URL: 'http://gw:8080',
-      TASK_TIMEOUT_MS: '2000',
+      GATEWAY_TIMEOUT_MS: '2000',
       BREAKER_THRESHOLD: '5',
       BREAKER_WINDOW_MULTIPLIER: '4',
       BREAKER_RESET_SECONDS: '60',
@@ -89,6 +92,22 @@ describe('readGatewayConfig', () => {
       breaker: { threshold: 5, windowMs: 8000, resetMs: 60_000 },
     });
   });
+
+  it('throws when a numeric env var is not a finite number', () => {
+    expect(() => readGatewayConfig({ GATEWAY_TIMEOUT_MS: 'abc' })).toThrow('GATEWAY_TIMEOUT_MS');
+    expect(() => readGatewayConfig({ BREAKER_THRESHOLD: 'bad' })).toThrow('BREAKER_THRESHOLD');
+    expect(() => readGatewayConfig({ BREAKER_RESET_SECONDS: 'NaN' })).toThrow('BREAKER_RESET_SECONDS');
+  });
+
+  it('falls back to the default when a numeric env var is blank', () => {
+    const config = readGatewayConfig({ BREAKER_WINDOW_MULTIPLIER: '' });
+    expect(config.breaker.windowMs).toBe(5000 * 3.5);
+  });
+
+  it('falls back to the default URL when GATEWAY_URL is blank', () => {
+    const config = readGatewayConfig({ GATEWAY_URL: '' });
+    expect(config.url).toBe('http://gateway:3000');
+  });
 });
 
 describe('createGatewayClient', () => {
@@ -96,11 +115,39 @@ describe('createGatewayClient', () => {
     const { send, calls } = fakeFetch(() => 200);
     const client = createGatewayClient(BASE_CONFIG, send, clock);
 
-    await client.request('POST', '/v1/items', { name: 'egg' });
+    await client.request('POST', '/v1/items', { body: { name: 'egg' } });
 
-    expect(calls).toEqual([
+    expect(calls[0]).toMatchObject(
       { method: 'POST', url: 'http://gateway:3000/v1/items', body: { name: 'egg' } },
-    ]);
+    );
+  });
+
+  it('forwards extra headers to fetch', async () => {
+    const { send, calls } = fakeFetch(() => 200);
+    const client = createGatewayClient(BASE_CONFIG, send, clock);
+
+    await client.request('POST', '/v1/items', {
+      body: { name: 'egg' },
+      headers: { Authorization: 'Bearer tok', 'Idempotency-Key': 'abc' },
+    });
+
+    expect(calls[0]).toMatchObject({
+      method: 'POST',
+      url: 'http://gateway:3000/v1/items',
+      body: { name: 'egg' },
+      headers: { Authorization: 'Bearer tok', 'Idempotency-Key': 'abc', 'Content-Type': 'application/json' },
+    });
+  });
+
+  it('forwards headers without adding Content-Type when there is no body', async () => {
+    const { send, calls } = fakeFetch(() => 200);
+    const client = createGatewayClient(BASE_CONFIG, send, clock);
+
+    await client.request('GET', '/v1/items', {
+      headers: { Authorization: 'Bearer tok' },
+    });
+
+    expect(calls[0].headers).toEqual({ Authorization: 'Bearer tok' });
   });
 
   it('returns the response for a successful call', async () => {
@@ -142,7 +189,7 @@ describe('createGatewayClient', () => {
     });
   });
 
-  it('trips the breaker after threshold DOMException (timeout) failures', async () => {
+  it('trips the breaker after threshold TimeoutError failures', async () => {
     const { send } = fakeFetch(() => new DOMException('timeout', 'TimeoutError'));
     const client = createGatewayClient(BASE_CONFIG, send, clock);
 
@@ -151,6 +198,21 @@ describe('createGatewayClient', () => {
     }
 
     await expect(client.request('GET', '/')).rejects.toBeInstanceOf(BreakerOpenError);
+  });
+
+  it('does not trip the breaker when the caller cancels with AbortError', async () => {
+    const { send } = fakeFetch(() => new DOMException('cancelled', 'AbortError'));
+    const client = createGatewayClient(BASE_CONFIG, send, clock);
+
+    for (let i = 0; i < 3; i++) {
+      await client.request('GET', '/').catch(() => null);
+    }
+
+    // breaker must still be closed — the same client's 4th call must throw AbortError, not BreakerOpenError
+    const error = await client.request('GET', '/').catch((e) => e);
+    expect(error).toBeInstanceOf(DOMException);
+    expect((error as DOMException).name).toBe('AbortError');
+    expect(error).not.toBeInstanceOf(BreakerOpenError);
   });
 
   it('throws BreakerOpenError immediately when open without calling fetch', async () => {
@@ -216,11 +278,24 @@ describe('createGatewayClient', () => {
     });
     const client = createGatewayClient(BASE_CONFIG, send, clock);
 
-    for (let i = 0; i < 6; i++) {
+    // 4 calls → 2 failures (even calls), which is below the threshold of 3
+    for (let i = 0; i < 4; i++) {
       await client.request('GET', '/').catch(() => null);
     }
 
     const response = await client.request('GET', '/');
     expect(response.status).toBe(200);
+  });
+
+  it('combines caller signal with timeout signal', async () => {
+    const controller = new AbortController();
+    const { send, calls } = fakeFetch(() => {
+      controller.abort();
+      return 200;
+    });
+    const client = createGatewayClient(BASE_CONFIG, send, clock);
+
+    await client.request('GET', '/', { signal: controller.signal }).catch(() => null);
+    expect(calls.length).toBe(1); // fetch was called once
   });
 });
