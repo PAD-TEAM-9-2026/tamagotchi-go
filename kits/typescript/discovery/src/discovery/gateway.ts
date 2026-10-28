@@ -47,7 +47,7 @@ export function readGatewayConfig(
   const resetSeconds = requireNumber(env['BREAKER_RESET_SECONDS'], 'BREAKER_RESET_SECONDS', BREAKER_RESET_SECONDS_DEFAULT);
 
   return {
-    url: env['GATEWAY_URL'] ?? GATEWAY_URL_DEFAULT,
+    url: env['GATEWAY_URL']?.trim() || GATEWAY_URL_DEFAULT,
     timeoutMs,
     breaker: {
       threshold,

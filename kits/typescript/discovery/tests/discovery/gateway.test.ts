@@ -100,6 +100,11 @@ describe('readGatewayConfig', () => {
     const config = readGatewayConfig({ BREAKER_WINDOW_MULTIPLIER: '' });
     expect(config.breaker.windowMs).toBe(5000 * 3.5);
   });
+
+  it('falls back to the default URL when GATEWAY_URL is blank', () => {
+    const config = readGatewayConfig({ GATEWAY_URL: '' });
+    expect(config.url).toBe('http://gateway:3000');
+  });
 });
 
 describe('createGatewayClient', () => {
