@@ -1520,6 +1520,54 @@ const response = await gateway.request('POST', '/v1/tasks', {
 Guild and Package-registry use this kit. Copy it with the discovery files and wire it up in
 the service's HTTP client layer.
 
+### C# discovery kit
+
+[`kits/csharp/discovery/`](kits/csharp/discovery/) is the same kit for the ASP.NET Core
+services (User Management, Battle, Map, Monster Raid): the [status endpoint](#status-endpoint)
+and registration with Service Discovery, with the same settings, timings and log messages as
+the TypeScript kit. Everything is in the namespace `Tamagotchi.Discovery`, so nothing is
+renamed when copying. Copy `src/Discovery/` into the service's web project and
+`tests/Discovery/` into its test project. It needs .NET 9 or later and the ASP.NET Core
+shared framework, nothing else; the tests use xUnit only.
+
+| File | Holds |
+|---|---|
+| `DiscoveryInstance.cs` | `instance_id` (UUIDv7, once per process), version of the entry assembly, start time |
+| `LoadCounter.cs` | `LoadCounter` and its middleware: the 60 second load counters, probes left out |
+| `StatusEndpoint.cs` | the `Status` body and its rules: 200 `UP` or `DEGRADED`, 503 `DOWN` |
+| `RegistrationService.cs` | hosted service: register once the server listens, check with `GET /v1/instances/{id}` every 30 seconds, register again only on a 404, retry 1 s doubling to 30 s, deregister on shutdown |
+| `DiscoverySettings.cs` | `DiscoverySettings.FromEnvironment()`: `SERVICE_DISCOVERY_ENABLED` (default `true`), `SERVICE_DISCOVERY_URL` (default `http://service-discovery:3009`), `INSTANCE_HOST` (default the container hostname). A blank value means the default, an invalid one stops the service at startup |
+| `DiscoveryLog.cs` | log lines with a fixed message and named fields, written as fields by the services' JSON log formatter |
+| `DiscoveryExtensions.cs` | `AddDiscovery`, `UseLoadCounter`, `MapStatusEndpoint` |
+
+Wiring in `Program.cs`:
+
+```csharp
+using Tamagotchi.Discovery;
+
+builder.Services.AddDiscovery("battle", port, DiscoverySettings.FromEnvironment());
+
+var app = builder.Build();
+app.UseLoadCounter();   // first, so it sees every request and its full duration
+app.MapStatusEndpoint("battle", isDown: http => /* true when the service cannot serve, e.g. no database */);
+```
+
+`/status` must answer Service Discovery directly: exempt it from Gateway assertion checks
+and task limits, as `/health` and `/ready` are. Set the version once, from the `VERSION`
+file, in the web project's `.csproj`, so `/status`, the registration and the image tag agree:
+
+```xml
+<Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../VERSION').Trim())</Version>
+```
+
+The log lines are `service registered` (info), `service re-registered` (debug),
+`registration failed` (warn, with `status` or `cause` and `retry_in_ms`),
+`registration check passed` (debug), `registration check failed` (warn),
+`service deregistered` (info) and `deregistration failed` (warn). Each carries
+`instance_id`, `host` and `port`.
+
+Change the kit here first, then copy it into every service that uses it.
+
 ## Image publication
 
 Release, code, package and image versions use `X.Y.Z`: integration milestone,
