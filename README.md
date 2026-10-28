@@ -1632,13 +1632,13 @@ one account per publishing or consuming service (see below).
 |---|---|---|---|
 | Gateway | `victoriamutruc/gateway:2.0.3` | `sha256:c383e53c3f75682f200df7cad2926801b2d1af8a5f558312d9c0fe548703bc81` | 3000 |
 | User Management | `patriciamoraru/user-management:2.0.3` | `sha256:aee3d2700abafa42650cdc08ab3f7a1085354b4129e0da758d337bb588be9ead` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:2.0.5` | `sha256:815dc4082a65b3fa71c403f5f4aed9c3c554ebabb194986d65c614ee8cc4f4fc` | 3002 |
+| Tamagotchi | `victoriamutruc/tamagotchi:3.0.0` | `sha256:7ee595b2f886f6189f66139c20e77804979ea7c911795562d204ec94e8fe25aa` | 3002 |
 | Battle | `patriciamoraru/battle:2.0.2` | `sha256:bdb67b53a34d37022d9e028ce5bf06f70278440d6b10f2a711a240b03794680c` | 3003 |
 | Guild | `mihaelacatan/guild-service:2.0.4` | `sha256:9fb1f1cce8665b022462a1072ef692791587470570eca60a04985baeb31f4049` | 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:2.0.4` | `sha256:802dc3c77621b502e6b43b67a031c3e3cbd7b8558ae974b520dcd65ad1f8b607` | 3005 |
 | Map | `sergedbs/map:2.0.0` | `sha256:b9928555973e65aacf2df3d2826b39093628c999ccb4a69c8884c05831e9faf1` | 3006 |
 | Monster Raid | `sergedbs/monster-raid:2.0.0` | `sha256:50d1424235f9638aa1d3436ca1f7d789e1293b2f0d28fe935bdfe91d5cdcd2aa` | 3007 |
-| Notification | `victoriamutruc/notification:2.0.4` | `sha256:061f439601a47b2c5aa10d73dba16e7711d48d32aa72b47b9174931559641953` | 3008 |
+| Notification | `victoriamutruc/notification:3.0.0` | `sha256:49361e8deb1d110768d96528c41e562e60fad777cc4dd5cf7a0b6a0cf74e00b2` | 3008 |
 
 To test unpublished source, use a local Compose override that builds Map, Monster Raid
 and Gateway from their standalone checkouts, with distinct local image names
