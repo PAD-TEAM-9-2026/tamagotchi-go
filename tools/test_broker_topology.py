@@ -44,6 +44,19 @@ class BrokerTopologyTests(unittest.TestCase):
         self.assertIsNone(re.fullmatch(permissions["notification"]["write"], "map.events"))
         self.assertEqual({*broker.PUBLISHERS, "notification"}, {item["name"] for item in self.topology["users"]})
 
+    def test_guild_can_declare_bind_publish_and_consume_its_transient_chat(self):
+        guild = next(p for p in self.topology["permissions"] if p["user"] == "guild")
+        for operation, resources in {
+            "configure": ["guild.events", "guild.chat", "amq.gen-example"],
+            "write": ["guild.events", "guild.chat", "amq.gen-example"],
+            "read": ["guild.chat", "amq.gen-example"],
+        }.items():
+            for resource in resources:
+                self.assertIsNotNone(re.fullmatch(guild[operation], resource))
+            for resource in ["map.events", "notification.work", "amq.default", "guildXchat", "amq.gen"]:
+                self.assertIsNone(re.fullmatch(guild[operation], resource))
+        self.assertFalse(any(q["name"].startswith("amq.gen.") for q in self.topology["queues"]))
+
 
 if __name__ == "__main__":
     unittest.main()
