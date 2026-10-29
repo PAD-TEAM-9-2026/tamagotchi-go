@@ -1416,6 +1416,13 @@ does not introduce an audit service or a processing consumer.
 Each active consumer has `<consumer>.work`, `<consumer>.retry.5s`,
 `<consumer>.retry.30s` and `<consumer>.dlq`. Use durable quorum queues and
 persistent messages (`delivery_mode=2`, content type application/json).
+Guild chat uses a separate durable topic exchange, `guild.chat`, declared by
+Guild, with one exclusive, non-durable, auto-delete `amq.gen.*` queue per
+instance. The Guild account can configure/publish that exchange, bind its
+generated queues and consume them; lifecycle exchange permissions are preserved.
+These transient subscriptions are not part of the durable event retry ladder.
+Chat messages remain in Guild PostgreSQL history for catch-up after relay gaps.
+
 Retry queues use queue TTLs of 5000/30000 ms and dead-letter to the default
 exchange with routing key `<consumer>.work`. Configure at-least-once
 dead-lettering and reject-publish overflow on the retry queues; verify support
