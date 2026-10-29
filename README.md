@@ -163,26 +163,6 @@ Registry builds that projection from the events alone and never reads from User
 Management, so no route lists every user's memberships. User Management only
 answers `GET /v1/internal/users/{userId}/membership` for one user at a time.
 
-### Scaling (Lab 3)
-
-![Lab 3 architecture: every service runs two replicas behind the Gateway, which balances them round-robin from Service Discovery's instance lists; instances register with Service Discovery, which polls their status, removes failing ones and sends alerts to Discord](docs/img/lab3_architecture_diagram.jpg)
-
-Lab 3 runs every domain service as two replicas (×2 in the diagram) and adds
-Service Discovery, the green box and arrows:
-
-- **Registration.** Each instance registers itself once it listens, checks every
-  30 seconds that it is still registered, registers again only after a 404, and
-  deregisters on shutdown. The Gateway registers itself the same way.
-- **Health.** Service Discovery calls every instance's `/status` every 5 seconds
-  (2 second limit), marks failing ones unhealthy and raises alerts on critical load.
-- **Balancing.** The Gateway reads the healthy instances of each service every 5
-  seconds and sends requests to them in turn (round-robin).
-- **Breakers and removal.** The Gateway keeps a circuit breaker per instance and
-  reports failures; three within 17.5 seconds remove the instance. Every service
-  also has a breaker on its own calls to the Gateway.
-- **Alerts.** Service Discovery sends unhealthy, removed and critical-load alerts to
-  Discord, at most one per alert type and instance every 5 minutes.
-
 ### Service Discovery
 
 Service Discovery is an internal control-plane service. Its registry and failure
@@ -207,7 +187,7 @@ an infrastructure exception to application REST routing through Gateway.
 
 ### Gateway
 
-![Gateway architecture: clients reach the eight services only through the Gateway, which verifies them, signs their identity and routes by prefix; Guild chat sockets go directly to Guild](docs/img/gateway_architecture_diagram.png)
+![Architecture: clients reach the eight services, each running two replicas, only through the Gateway, which verifies them, signs their identity and balances them round-robin from Service Discovery's instance lists; instances register with Service Discovery, which polls their status, removes failing ones and sends alerts to Discord; Guild chat sockets go directly to Guild](docs/img/lab3_architecture_diagram.jpg)
 
 The Gateway is the only public entry point for REST. Every client call and every service-to-service call goes through it, so a service never sees a caller it did not get from the Gateway. It holds no domain state: no database and no events. What it needs comes from configuration, User Management's public keys and its own signing key.
 
@@ -247,9 +227,17 @@ Patterns the Gateway applies:
 | Load Balancing | Round-robin over the healthy instances of each service |
 | Circuit Breaker | One breaker per instance: 3 failures in 17.5 seconds trip it, and in remove mode the instance is reported and dropped |
 
-What it deliberately does not do: it never retries a request, so a write cannot run twice. It caches no responses, and it does not stream, so Server-Sent Events would not pass through it. Since Lab 3 the service addresses are no longer fixed: they come from Service Discovery (see [Scaling (Lab 3)](#scaling-lab-3)).
+What it deliberately does not do: it never retries a request, so a write cannot run twice. It caches no responses, and it does not stream, so Server-Sent Events would not pass through it. Since Lab 3 the service addresses are no longer fixed: they come from Service Discovery.
 
 Lab 2 added the Gateway as its own service: a separate repository linked here as a submodule, an image on Docker Hub (`victoriamutruc/gateway:2.0.3`, published by CI on every merge to `main`), all REST traffic routed through it, the WebSocket negotiation, the task timeout and concurrency limits, and authorization at the Gateway.
+
+Lab 3 runs every domain service as two replicas (×2 in the diagram) and adds Service Discovery, the green box and arrows:
+
+- **Registration.** Each instance registers itself once it listens, checks every 30 seconds that it is still registered, registers again only after a 404, and deregisters on shutdown. The Gateway registers itself the same way.
+- **Health.** Service Discovery calls every instance's `/status` every 5 seconds (2 second limit), marks failing ones unhealthy and raises alerts on critical load.
+- **Balancing.** The Gateway reads the healthy instances of each service every 5 seconds and sends requests to them in turn (round-robin).
+- **Breakers and removal.** The Gateway keeps a circuit breaker per instance and reports failures; three within 17.5 seconds remove the instance. Every service also has a breaker on its own calls to the Gateway.
+- **Alerts.** Service Discovery sends unhealthy, removed and critical-load alerts to Discord, at most one per alert type and instance every 5 minutes.
 
 ### Service Discovery
 
