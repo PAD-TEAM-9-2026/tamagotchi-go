@@ -224,9 +224,16 @@ Patterns the Gateway applies:
 | Correlation Identifier | One ID across the client call, every nested call and the logs |
 | Health Endpoint Monitoring | `/health` for the process; `/ready` checks that both key sets are usable |
 
-What it deliberately does not do: it never retries a request, so a write cannot run twice. It has no circuit breaker, load balancer or service discovery; the eight addresses are fixed in configuration. It caches no responses, and it does not stream, so Server-Sent Events would not pass through it.
+Gateway never retries application requests. It discovers service instances,
+caches their routable addresses and balances REST calls round-robin. Per-instance
+breakers exclude failing targets; removal mode also reports failures to Discovery.
+Static URLs are migration fallback, not evidence of dynamic routing. Gateway
+caches no application responses and does not proxy streaming connections.
 
-Lab 2 added the Gateway as its own service: a separate repository linked here as a submodule, an image on Docker Hub (`victoriamutruc/gateway:2.0.3`, published by CI on every merge to `main`), all REST traffic routed through it, the WebSocket negotiation, the task timeout and concurrency limits, and authorization at the Gateway.
+Gateway is maintained in its own repository and linked here as a submodule.
+Its source pin, published image and validated deployment are separate evidence.
+See Deployment for the pinned image set; source-built candidates do not establish
+a completed published release.
 
 ### Service Discovery
 
@@ -1654,7 +1661,7 @@ and GitHub Release on its tested `main` merge. See [CONTRIBUTING.md](CONTRIBUTIN
 
 ## Deployment
 
-`deploy/compose.yaml` pulls nine versioned images under the `tamagotchi-go`
+`deploy/compose.yaml` pulls versioned service images under the `tamagotchi-go`
 Compose project. Each service has its own credentials and database in one
 PostGIS-enabled PostgreSQL container. A RabbitMQ broker runs alongside it, with
 one account per publishing or consuming service (see below).
@@ -1662,6 +1669,7 @@ one account per publishing or consuming service (see below).
 | Service | Image | Digest | Host port |
 |---|---|---|---|
 | Gateway | `victoriamutruc/gateway:3.0.0` | `sha256:413c02b5d17a38cdef99283012b357e590423bcb0cbe48129ce898bba6347c8c` | 3000 |
+| Service Discovery | `patriciamoraru/service-discovery:3.0.0` | `sha256:c3730a226e38d5b839a16d2b1381e786de6566fa2f7f6d00f22c63c6a344155d` | 3009 (loopback) |
 | User Management | `patriciamoraru/user-management:3.0.0` | `sha256:be8d62337ff55f96671a16e354c19ed1c0b104f8d29bba8e10cfccc9cb9a07b8` | internal |
 | Tamagotchi | `victoriamutruc/tamagotchi:3.0.0` | `sha256:7ee595b2f886f6189f66139c20e77804979ea7c911795562d204ec94e8fe25aa` | internal |
 | Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | internal |
