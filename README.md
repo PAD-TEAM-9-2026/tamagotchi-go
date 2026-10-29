@@ -102,32 +102,17 @@ This section describes the target architecture. Gateway source implements
 routing and authorization; Map and Monster Raid integration source uses real
 HTTP adapters and durable broker delivery. Published image versions may predate
 these changes. Validate the selected image set against real dependencies before
-claiming deployment compatibility. The diagram distinguishes transport paths from domain ownership.
+claiming deployment compatibility.
 
-```mermaid
-flowchart TB
-    Client[Application / Postman] -->|REST and socket negotiation| Gateway[Python Gateway]
-    Gateway --> Users[User Management]
-    Gateway --> Pets[Tamagotchi]
-    Gateway --> Battle[Battle]
-    Gateway --> Guild[Guild]
-    Gateway --> Registry[Package Registry]
-    Gateway --> Map[Map]
-    Gateway --> Raid[Monster Raid]
-    Gateway --> Notification[Notification]
-    Services[Service REST callers] -->|service bearer and signed context| Gateway
-    Client -->|negotiated ticket / direct WebSocket| Guild
-    Publishers[Users / Pets / Battle / Guild / Registry / Map / Raid] -->|committed facts| Broker[RabbitMQ]
-    Broker -->|package membership| Pets
-    Broker -->|package membership| Registry
-    Broker -->|occurrence lifecycle| Raid
-    Broker -->|notification events| Notification
-    Notification -->|configured push provider| Firebase[Firebase]
-    Instances[Registered instances] -->|registration and failure reports| Discovery[Python Service Discovery]
-    Discovery -->|direct status probes| Instances
-    Discovery -->|configured developer alerts| Discord[Discord]
-    Domain[Each domain service] -->|own credentials / own schema| Data[Eight separate PostgreSQL databases]
-```
+![Architecture: clients reach the eight services, each running two replicas, only through the Gateway, which verifies them, signs their identity and balances them round-robin from Service Discovery's instance lists; instances register with Service Discovery, which polls their status, removes failing ones and sends alerts to Discord; Guild chat sockets go directly to Guild](docs/img/lab3_architecture_diagram.jpg)
+
+Lab 3 runs every domain service as two replicas (×2 in the diagram) and adds Service Discovery, the green box and arrows:
+
+- **Registration.** Each instance registers itself once it listens, checks every 30 seconds that it is still registered, registers again only after a 404, and deregisters on shutdown. The Gateway registers itself the same way.
+- **Health.** Service Discovery calls every instance's `/status` every 5 seconds (2 second limit), marks failing ones unhealthy and raises alerts on critical load.
+- **Balancing.** The Gateway reads the healthy instances of each service every 5 seconds and sends requests to them in turn (round-robin).
+- **Breakers and removal.** The Gateway keeps a circuit breaker per instance and reports failures; three within 17.5 seconds remove the instance. Every service also has a breaker on its own calls to the Gateway.
+- **Alerts.** Service Discovery sends unhealthy, removed and critical-load alerts to Discord, at most one per alert type and instance every 5 minutes.
 
 Service REST dependencies traverse Gateway: Map reads User Management;
 Raid reads Guild, Registry and Tamagotchi and delivers rewards to User Management
@@ -187,8 +172,6 @@ an infrastructure exception to application REST routing through Gateway.
 
 ### Gateway
 
-![Gateway architecture: clients reach the eight services only through the Gateway, which verifies them, signs their identity and routes by prefix; Guild chat sockets go directly to Guild](docs/img/gateway_architecture_diagram.png)
-
 The Gateway is the only public entry point for REST. Every client call and every service-to-service call goes through it, so a service never sees a caller it did not get from the Gateway. It holds no domain state: no database and no events. What it needs comes from configuration, User Management's public keys and its own signing key.
 
 How one request is handled, in the order the code does it:
@@ -222,7 +205,10 @@ Patterns the Gateway applies:
 | Rate Limiting | Failed credential attempts are counted per address over a sliding window |
 | Cache-Aside | User Management's keys are cached for 300 seconds and refreshed once for an unknown key ID |
 | Correlation Identifier | One ID across the client call, every nested call and the logs |
-| Health Endpoint Monitoring | `/health` for the process; `/ready` checks that both key sets are usable |
+| Health Endpoint Monitoring | `/health` for the process; `/ready` checks that both key sets are usable; `/status` reports state and load to Service Discovery |
+| Service Discovery (client side) | Instance lists come from Service Discovery every 5 seconds; the Gateway also registers itself |
+| Load Balancing | Round-robin over the healthy instances of each service |
+| Circuit Breaker | One breaker per instance: 3 failures in 17.5 seconds trip it, and in remove mode the instance is reported and dropped |
 
 Gateway never retries application requests. It discovers service instances,
 caches their routable addresses and balances REST calls round-robin. Per-instance
@@ -1166,7 +1152,7 @@ contract above did not spell out:
 | `POST /v1/packages` | PackageInput, Idempotency-Key | 201 Package | admin |
 | `GET /v1/packages` | query limit, cursor | 200 PackagePage | public |
 | `GET /v1/packages/{packageId}` | none | 200 Package | public |
-| `PATCH /v1/packages/{packageId}` | PackageEdit, If-Match | 200 Package | moderator |
+| `PATCH /v1/packages/{packageId}` | PackageEdit, If-Match, Idempotency-Key | 200 Package | moderator |
 | `PUT /v1/packages/{packageId}/stats` | PackageConfigWrite, Idempotency-Key | 200 PackageConfig | moderator |
 | `GET /v1/packages/{packageId}/stat-definitions` | query config_version | 200 StatDefinitions | service |
 | `GET /v1/packages/{packageId}/stat-bonuses` | query config_version | 200 Bonuses | service |
@@ -1178,13 +1164,16 @@ contract above did not spell out:
 | `POST /v1/bosses` | BossInput, Idempotency-Key | 201 Boss | admin |
 | `GET /v1/bosses` | query limit, cursor | 200 BossPage | admin |
 | `GET /v1/bosses/{bossId}` | query config_version | 200 Boss | user or service |
-| `PUT /v1/bosses/{bossId}` | BossInput, If-Match | 200 Boss | admin |
+| `PUT /v1/bosses/{bossId}` | BossInput, If-Match, Idempotency-Key | 200 Boss | admin |
 | `POST /v1/raid-occurrences` | OccurrenceInput, Idempotency-Key | 201 Occurrence | admin |
 | `GET /v1/raid-occurrences` | query limit, cursor | 200 OccurrencePage | user |
 | `GET /v1/raid-occurrences/{id}` | none | 200 Occurrence | user or service |
 | `POST /v1/raid-occurrences/{id}/activate` | Idempotency-Key | 200 OccurrenceReceipt | admin |
 | `POST /v1/raid-occurrences/{id}/deactivate` | Idempotency-Key | 200 OccurrenceReceipt | admin |
 | `POST /v1/raid-occurrences/{id}/cancel` | Idempotency-Key | 200 OccurrenceReceipt | admin |
+
+New occurrences start as `scheduled`, including when their availability window
+is already open. An admin must explicitly activate them before Raid admission.
 
 Packages are abstract to this backend. A package defines its own creatures, art
 and care rules in its own frontend, and nothing here knows what `hunger` or
@@ -1227,6 +1216,12 @@ model.
 | `GET /v1/location/{userId}` | none | 200 Location | user |
 | `GET /v1/location/nearby/{userId}` | query limit, cursor | 200 Nearby | user |
 | `DELETE /v1/location/{userId}` | none | 204 | user |
+
+Location freshness defaults to 60 seconds (`LOCATION_FRESHNESS_SECONDS`).
+Expiry is the observation timestamp plus that duration. Observations older than
+the freshness window return `STALE`; observations older than the stored reading
+return `OUT_OF_ORDER`. A timestamp more than 60 seconds ahead returns
+`400 invalid_timestamp`. Refresh shared locations before a demonstration.
 
 Friends and enemies are visible while their location is fresh. Strangers appear
 within 6 metres, which is configurable.

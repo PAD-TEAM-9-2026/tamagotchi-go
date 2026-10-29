@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Tamagotchi",
-    "description": "A scenario of the Tamagotchi service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry, registers and logs in two fresh users, and fetches a Battle service token. Each registration publishes user.package_joined.v1, and Tamagotchi mints the package starter from it, so the creatures are polled for rather than minted: no service is allowed tamagotchi:mint.\n\nNeeds the shared stack with the broker, a seeded Registry, Tamagotchi with USER_MANAGEMENT_URL and PACKAGE_REGISTRY_URL set, and battle_service_secret set as a current value to BATTLE_SERVICE_CLIENT_SECRET from deploy/.env. Never save that value in the collection. Care expectations follow the seeded Dragon Tamers rules: feed adds 20 hunger, capped at 100, and 5 xp.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
+    "description": "A scenario of the Tamagotchi service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry, registers and logs in two fresh users, and fetches a Battle service token. Each registration publishes user.package_joined.v1, and Tamagotchi mints the package starter from it, so the creatures are polled for rather than minted: no service is allowed tamagotchi:mint.\n\nNeeds the shared stack with the broker, a seeded Registry, tamagotchi_fixture_package_id identifying the configured Dragon Tamers fixture (FEED adds 20 hunger and 5 XP), Tamagotchi with USER_MANAGEMENT_URL and PACKAGE_REGISTRY_URL set, and battle_service_secret set as a current value to BATTLE_SERVICE_CLIENT_SECRET from deploy/.env. Never save that value in the collection. Care expectations follow the seeded Dragon Tamers rules: feed adds 20 hunger, capped at 100, and 5 xp.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -326,7 +326,10 @@
                   "  pm.response.to.have.status(200);",
                   "  const active = pm.response.json().items.filter((p) => p.status === 'active');",
                   "  pm.expect(active.length).to.be.above(0);",
-                  "  const chosen = active.find((p) => p.name === 'Dragon Tamers') || active[0];",
+                  "  const fixture = pm.environment.get('tamagotchi_fixture_package_id');",
+                  "  pm.expect(fixture, 'Supply tamagotchi_fixture_package_id with the documented care rules and a configured starter').to.be.a('string').and.not.empty;",
+                  "  const chosen = active.find((p) => p.package_id === fixture);",
+                  "  pm.expect(chosen, 'Fixture package must be active and listed').to.be.an('object');",
                   "  pm.collectionVariables.set('package_id', chosen.package_id);",
                   "});"
                 ]
@@ -631,7 +634,7 @@
                   "  const body = response.json();",
                   "  if (body.primary !== null) {",
                   "    pm.test('200 with the package starter as the primary', () => {",
-                  "      response.to.have.status(200);",
+                  "      pm.expect(response.code).to.eql(200);",
                   "      pm.expect(body.primary).to.be.an('object');",
                   "      pm.expect(body.primary.role).to.eql('PRIMARY');",
                   "      pm.expect(body.primary.origin_package_id).to.eql(pm.collectionVariables.get('package_id'));",
@@ -698,7 +701,7 @@
                   "  const body = response.json();",
                   "  if (body.primary !== null) {",
                   "    pm.test('200 with the package starter as the primary', () => {",
-                  "      response.to.have.status(200);",
+                  "      pm.expect(response.code).to.eql(200);",
                   "      pm.expect(body.primary).to.be.an('object');",
                   "      pm.expect(body.primary.role).to.eql('PRIMARY');",
                   "      pm.expect(body.primary.origin_package_id).to.eql(pm.collectionVariables.get('package_id'));",
