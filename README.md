@@ -1662,21 +1662,21 @@ one account per publishing or consuming service (see below).
 | Service | Image | Digest | Host port |
 |---|---|---|---|
 | Gateway | `victoriamutruc/gateway:3.0.0` | `sha256:413c02b5d17a38cdef99283012b357e590423bcb0cbe48129ce898bba6347c8c` | 3000 |
-| User Management | `patriciamoraru/user-management:3.0.0` | `sha256:be8d62337ff55f96671a16e354c19ed1c0b104f8d29bba8e10cfccc9cb9a07b8` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:3.0.0` | `sha256:7ee595b2f886f6189f66139c20e77804979ea7c911795562d204ec94e8fe25aa` | 3002 |
-| Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | 3003 |
-| Guild | `mihaelacatan/guild-service:2.0.4` | `sha256:9fb1f1cce8665b022462a1072ef692791587470570eca60a04985baeb31f4049` | 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:2.0.4` | `sha256:802dc3c77621b502e6b43b67a031c3e3cbd7b8558ae974b520dcd65ad1f8b607` | 3005 |
-| Map | `sergedbs/map:2.0.0` | `sha256:b9928555973e65aacf2df3d2826b39093628c999ccb4a69c8884c05831e9faf1` | 3006 |
-| Monster Raid | `sergedbs/monster-raid:2.0.0` | `sha256:50d1424235f9638aa1d3436ca1f7d789e1293b2f0d28fe935bdfe91d5cdcd2aa` | 3007 |
-| Notification | `victoriamutruc/notification:3.0.0` | `sha256:49361e8deb1d110768d96528c41e562e60fad777cc4dd5cf7a0b6a0cf74e00b2` | 3008 |
+| User Management | `patriciamoraru/user-management:3.0.0` | `sha256:be8d62337ff55f96671a16e354c19ed1c0b104f8d29bba8e10cfccc9cb9a07b8` | internal |
+| Tamagotchi | `victoriamutruc/tamagotchi:3.0.0` | `sha256:7ee595b2f886f6189f66139c20e77804979ea7c911795562d204ec94e8fe25aa` | internal |
+| Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | internal |
+| Guild | `mihaelacatan/guild-service:3.0.0` | `sha256:5599c699563a1854de38a5e875a3800f1b78c4649f13f69000198305e290827c` | 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:3.0.0` | `sha256:6c5f0564f43125869e7367ecad4c09b8e4843a875552d5436728ab20a95f7baa` | internal |
+| Map | `sergedbs/map:2.0.0` | `sha256:b9928555973e65aacf2df3d2826b39093628c999ccb4a69c8884c05831e9faf1` | internal |
+| Monster Raid | `sergedbs/monster-raid:2.0.0` | `sha256:50d1424235f9638aa1d3436ca1f7d789e1293b2f0d28fe935bdfe91d5cdcd2aa` | internal |
+| Notification | `victoriamutruc/notification:3.0.0` | `sha256:49361e8deb1d110768d96528c41e562e60fad777cc4dd5cf7a0b6a0cf74e00b2` | internal |
 
 To test unpublished source, use a local Compose override that builds Map, Monster Raid
 and Gateway from their standalone checkouts, with distinct local image names
 and `pull_policy: never`. Keep the override outside Git. Replace canonical pins
 only after the corresponding numeric images are published and validated.
 
-Requires Docker with Compose v2 and free host ports 3000 through 3008 and
+Requires Docker with Compose v2 and free host ports 3000, 3004, 3009 and
 5432. The Gateway starts last, after all eight services report healthy, so a
 healthy Gateway only proves its registered checks passed; it does not establish
 routing, authentication or continuing downstream availability. PostgreSQL listens on
@@ -1854,3 +1854,23 @@ Authorization, service secrets, assertions or query strings containing credentia
 Map/Raid's supplied database pools are capped at 10 connections each, independently
 of their 64-task admission limits. Account for every service pool when sizing the
 shared PostgreSQL connection budget. Pool waits inherit request cancellation.
+
+## Replicated deployment
+
+The target topology runs two instances of every domain service, one Gateway and
+one Discovery, with one database/broker/provisioning service. Each service's
+replicas share only its own database and signing/cursor configuration. Domain
+REST ports are internal; use Gateway. Diagnostic probes may be published on
+private ephemeral loopback ports during acceptance.
+
+Guild uses `guild` and `guild-rest`, both registering as `guild`, for balanced
+REST. Only `guild` publishes the browser socket port. PostgreSQL-backed tickets
+can be issued by either instance and redeemed there. Chat rooms remain local to
+the designated socket process: there is no distributed broadcasting or automatic
+socket failover; a lost socket requires reconnection and a new ticket.
+
+Map/Raid must run the reviewed 3.0.0-or-newer images before this topology is
+released. Their current older canonical pins remain until tested artifacts are
+published; local source images establish candidate evidence only. Keep Gateway
+static fallback enabled during migration. Disable it only after all eight logical
+domain services have two healthy routable instances and end-to-end checks pass.
