@@ -94,13 +94,14 @@ export function createGatewayClient(
       const signal = callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal;
 
       const url = `${base}${path}`;
+      const requestHeaders = new Headers(headers);
+      if (body !== undefined && !requestHeaders.has('content-type')) {
+        requestHeaders.set('content-type', 'application/json');
+      }
       const init: RequestInit = {
         method,
         signal,
-        headers: {
-          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-          ...headers,
-        },
+        headers: Object.fromEntries(requestHeaders.entries()),
         ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
       };
 

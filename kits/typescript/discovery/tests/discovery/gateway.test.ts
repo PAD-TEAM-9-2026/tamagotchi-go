@@ -135,7 +135,7 @@ describe('createGatewayClient', () => {
       method: 'POST',
       url: 'http://gateway:3000/v1/items',
       body: { name: 'egg' },
-      headers: { Authorization: 'Bearer tok', 'Idempotency-Key': 'abc', 'Content-Type': 'application/json' },
+      headers: { authorization: 'Bearer tok', 'idempotency-key': 'abc', 'content-type': 'application/json' },
     });
   });
 
@@ -147,8 +147,22 @@ describe('createGatewayClient', () => {
       headers: { Authorization: 'Bearer tok' },
     });
 
-    expect(calls[0].headers).toEqual({ Authorization: 'Bearer tok' });
+    expect(calls[0].headers).toEqual({ authorization: 'Bearer tok' });
   });
+
+  it.each(['content-type', 'Content-Type', 'CONTENT-TYPE'])(
+    'preserves one JSON media type when the caller supplies %s', async (name) => {
+      const { send, calls } = fakeFetch(() => 200);
+      const client = createGatewayClient(BASE_CONFIG, send, clock);
+      await client.request('POST', '/users/v1/service-tokens', {
+        body: { service_name: 'tamagotchi' },
+        headers: { [name]: 'application/json' },
+      });
+      const wire = new Headers(calls[0].headers);
+      expect(wire.get('content-type')).toBe('application/json');
+      expect([...wire.keys()].filter((key) => key === 'content-type')).toHaveLength(1);
+    },
+  );
 
   it('returns the response for a successful call', async () => {
     const { send } = fakeFetch(() => 201);
