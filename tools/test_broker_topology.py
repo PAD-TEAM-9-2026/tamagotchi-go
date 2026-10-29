@@ -47,9 +47,9 @@ class BrokerTopologyTests(unittest.TestCase):
     def test_guild_can_declare_bind_publish_and_consume_its_transient_chat(self):
         guild = next(p for p in self.topology["permissions"] if p["user"] == "guild")
         for operation, resources in {
-            "configure": ["guild.events", "guild.chat", "amq.gen.example"],
-            "write": ["guild.events", "guild.chat", "amq.gen.example"],
-            "read": ["guild.chat", "amq.gen.example"],
+            "configure": ["guild.events", "guild.chat", "amq.gen-example"],
+            "write": ["guild.events", "guild.chat", "amq.gen-example"],
+            "read": ["guild.chat", "amq.gen-example"],
         }.items():
             for resource in resources:
                 self.assertIsNotNone(re.fullmatch(guild[operation], resource))

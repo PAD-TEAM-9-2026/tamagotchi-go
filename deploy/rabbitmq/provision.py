@@ -69,7 +69,7 @@ def definitions(passwords):
                             "read": regex(own_queues + sources)})
         if name == "guild":
             # Queue binding needs write on the queue and read on the exchange.
-            generated = r"amq\.gen\..+"
+            generated = r"amq\.gen-.+"
             permissions[-1].update({
                 "configure": r"^(guild\.events|guild\.chat|" + generated + ")$",
                 "write": r"^(guild\.events|guild\.chat|" + generated + ")$",
