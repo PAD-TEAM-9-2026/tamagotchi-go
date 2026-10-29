@@ -12,7 +12,7 @@ creatures, art and care rules, backed by eight domain services and a Python Gate
 | Victoria | Tamagotchi, Notification | TypeScript, Node.js |
 | Mihaela | Guild, Package Registry | TypeScript, Node.js |
 | Sergiu | Map, Monster Raid | C#, ASP.NET Core |
-| All four | Gateway | Python, FastAPI |
+| All four | Gateway, Service Discovery | Python, FastAPI |
 
 
 ## Repository
@@ -30,6 +30,7 @@ Each service has its own private repository. They are linked here as submodules.
 | Map | `services/map` | Sergiu |
 | Monster Raid | `services/monster-raid` | Sergiu |
 | Gateway | `services/gateway` | Shared by the team |
+| Service Discovery | `services/service-discovery` | Shared by the team |
 
 ## Service boundaries
 
@@ -47,6 +48,7 @@ service's tables.
 | Monster Raid | Live raids, boss HP, attacks, damage per player, rewards | Boss definitions, guild membership |
 | Notification | Devices, push tokens, delivery, history, mute settings | Every domain decision, message text |
 | Gateway | REST routing, caller validation, correlation and negotiation | Game rules, domain data, databases, events |
+| Service Discovery | In-memory instance registry, health polling, failure removal and developer alerts | Domain data, authentication, application request routing |
 
 Two rules keep the boundaries honest. Battle decides, Tamagotchi applies.
 Package Registry holds configuration, the runtime services hold state.
@@ -121,6 +123,9 @@ flowchart TB
     Broker -->|occurrence lifecycle| Raid
     Broker -->|notification events| Notification
     Notification -->|configured push provider| Firebase[Firebase]
+    Instances[Registered instances] -->|registration and failure reports| Discovery[Python Service Discovery]
+    Discovery -->|direct status probes| Instances
+    Discovery -->|configured developer alerts| Discord[Discord]
     Domain[Each domain service] -->|own credentials / own schema| Data[Eight separate PostgreSQL databases]
 ```
 
@@ -157,6 +162,79 @@ from User Management events, so package eligibility checks stay local.
 Registry builds that projection from the events alone and never reads from User
 Management, so no route lists every user's memberships. User Management only
 answers `GET /v1/internal/users/{userId}/membership` for one user at a time.
+
+### Service Discovery
+
+Service Discovery is an internal control-plane service. Its registry and failure
+windows are in memory; it has no database or broker queues. It exposes registration,
+instance listing and failure-report APIs, polls registered status endpoints and
+removes failing instances. Developer alerts use an optional Discord webhook.
+The implementation and API are documented in [its README](https://github.com/PatriciaMoraru/service-discovery#readme).
+
+Compose pins `patriciamoraru/service-discovery:3.0.0` and the submodule records
+its reviewed source. Published image metadata is separate from runtime acceptance.
+Gateway starts after Discovery is healthy and uses its internal URL explicitly.
+Static fallback remains enabled during migration; disable it after every domain
+service registers and routing passes. Adding Discovery alone does not establish
+scaled service acceptance.
+
+Inside Compose, use `http://service-discovery:3009`. Local diagnostics use
+`http://localhost:3009`; the published port is loopback-only. No Gateway prefix or
+Gateway assertion is used for this internal API. Configure `DISCORD_WEBHOOK_URL`
+privately and `ALERT_COOLDOWN_SECONDS` (default 300) in `deploy/.env`. Leave the
+webhook blank for logging-only operation. Direct registration/status traffic is
+an infrastructure exception to application REST routing through Gateway.
+
+### Gateway
+
+![Gateway architecture: clients reach the eight services only through the Gateway, which verifies them, signs their identity and routes by prefix; Guild chat sockets go directly to Guild](docs/img/gateway_architecture_diagram.png)
+
+The Gateway is the only public entry point for REST. Every client call and every service-to-service call goes through it, so a service never sees a caller it did not get from the Gateway. It holds no domain state: no database and no events. What it needs comes from configuration, User Management's public keys and its own signing key.
+
+How one request is handled, in the order the code does it:
+
+1. **Correlation.** A valid UUIDv7 `X-Correlation-Id` is kept, anything else is replaced by a new one. It is forwarded to the service and returned to the caller.
+2. **Admission.** The request takes one of 128 slots or gets `503 too_many_tasks` with `Retry-After: 1`. A five-second deadline starts for the whole request.
+3. **Routing.** The first path segment names the service. An unknown prefix, or a path that does not continue with `/v1/`, gets `404 unknown_route`.
+4. **Credential limit.** Login, register and refresh are refused with `429 too_many_attempts` after 10 failed attempts from one address in 60 seconds.
+5. **Authentication.** A bearer token is verified against User Management's JWKS: signature, expiry, audience and claims. An invalid one gets `401`. A request without `Authorization` goes on as anonymous, and the service decides.
+6. **Forwarding pool.** User traffic and service traffic each have 64 slots, so one cannot starve the other.
+7. **Signed identity.** `Authorization` and any client-sent identity headers are removed. The Gateway signs `X-Gateway-Assertion` for the destination service, carrying the verified caller, the correlation ID and the deadline.
+8. **Forwarding.** The prefix is stripped once, and the service's answer comes back unchanged. Bodies are capped at 10 MiB in both directions. An unreachable service gets `502 upstream_unavailable` and a passed deadline `504 task_timeout`.
+
+**Service-to-service calls** use the same path. The calling service sends its own service token and, when it acts for a user, the assertion it received as `X-Gateway-Context`. The Gateway verifies that assertion with its own key, keeps the correlation ID and the earlier deadline, and names the user as the actor in the new assertion. A chain of calls therefore shares one ID and one five-second budget.
+
+**WebSockets** are negotiated, not proxied. A signed-in user calls `POST /gateway/v1/ws-negotiate` for `guild.chat`. The Gateway verifies the user, asks Guild for a ticket and returns the socket URL with a single-use ticket that expires within 30 seconds. The browser then connects straight to Guild and sends the ticket in the first frame. The Gateway holds no socket, so chat traffic never uses its slots.
+
+**Observability.** Every completed request is logged as JSON with method, path, status, duration, correlation ID and target service. Prometheus metrics are served on a separate port, 9090, which Compose does not publish.
+
+Patterns the Gateway applies:
+
+| Pattern | In the Gateway |
+|---|---|
+| API Gateway, Gateway Routing | One entry point; the path prefix picks one of eight services |
+| Gateway Offloading | Authentication, rate limiting, timeouts and request logging happen once here, not in every service |
+| Identity propagation | The client's token stops at the Gateway; services receive a short-lived assertion signed for them alone |
+| Valet Key | The chat ticket is a short-lived, single-use key for direct access to Guild |
+| Bulkhead | Separate pools for user requests, service requests, authentication and health probes |
+| Fail fast | A full pool answers `503` with `Retry-After` at once instead of queueing |
+| Timeout and deadline propagation | One five-second deadline per root request, carried into every nested call |
+| Rate Limiting | Failed credential attempts are counted per address over a sliding window |
+| Cache-Aside | User Management's keys are cached for 300 seconds and refreshed once for an unknown key ID |
+| Correlation Identifier | One ID across the client call, every nested call and the logs |
+| Health Endpoint Monitoring | `/health` for the process; `/ready` checks that both key sets are usable |
+
+What it deliberately does not do: it never retries a request, so a write cannot run twice. It has no circuit breaker, load balancer or service discovery; the eight addresses are fixed in configuration. It caches no responses, and it does not stream, so Server-Sent Events would not pass through it.
+
+Lab 2 added the Gateway as its own service: a separate repository linked here as a submodule, an image on Docker Hub (`victoriamutruc/gateway:2.0.3`, published by CI on every merge to `main`), all REST traffic routed through it, the WebSocket negotiation, the task timeout and concurrency limits, and authorization at the Gateway.
+
+### Service Discovery
+
+Service Discovery ([PatriciaMoraru/service-discovery](https://github.com/PatriciaMoraru/service-discovery)) is a shared Python 3.13 / FastAPI service that maintains the live registry of running instances. Each domain service registers itself on startup with `POST /v1/instances` and deregisters on graceful shutdown with `DELETE /v1/instances/{instance_id}`. Service Discovery health-checks every registered instance on an interval; the health checker also reports each failed check as a failure.
+
+Any service or the Gateway can report a failure for an instance with `POST /v1/instances/{instance_id}/failures`. Three failures within a 17.5-second sliding window (configurable) removes the instance automatically and raises a `CRITICAL` alert. Every removal (deregistration, removal at the threshold, or replacement by a new id on the same address) clears the failure history for that instance. Registering an id that is still registered does not reset failures, so an instance cannot avoid removal by registering again. `GET /v1/failures` lists every instance with at least one in-window failure.
+
+The endpoints are in [Service Discovery, direct](#service-discovery-direct) and the shapes in [docs/field-types.md](docs/field-types.md) under **Service Discovery**.
 
 ## Technologies
 
@@ -200,7 +278,7 @@ Named patterns we use:
 
 | Pattern | Where |
 |---|---|
-| API Gateway | One entry point, routes by service prefix, handles auth and correlation IDs |
+| API Gateway | One entry point, routes by service prefix, verifies callers, signs their identity and carries correlation IDs; see [Gateway](#gateway) |
 | Database per Service | Eight databases, separate credentials |
 | Transactional Outbox | Every publisher, so a state change and its event commit together |
 | Idempotent Consumer | Every consumer, dedupe on `event_id` |
@@ -259,6 +337,38 @@ shape is listed field by field, with types and which fields are required, in
 [field-types.md](docs/field-types.md).
 
 Every service also exposes `GET /health` and `GET /ready`, returning 200 or 503.
+
+<a id="status-endpoint"></a>
+
+### Status endpoint
+
+Every service, Gateway and Service Discovery included, also exposes `GET /status`
+for Service Discovery. Service Discovery calls it directly on the instance's
+registered address, not through Gateway.
+
+| Method and path | Request | Response | Access |
+|---|---|---|---|
+| `GET /status` | none | 200 Status, or 503 Status when `DOWN` | direct, Service Discovery |
+
+`status` is `UP` when the instance works, `DEGRADED` when it works with a problem it
+reports itself, and `DOWN` when it cannot serve requests. Every `load` field is
+optional: a rule whose field is missing is skipped, so a minimal answer still works.
+
+Service Discovery calls every registered instance every 5 seconds with a 2 second
+timeout. A timeout, connection error, non-200 response, `DOWN` or a body without a known `status`
+marks the instance unhealthy: it stops being routable and the failure is reported to
+failure tracking. A healthy answer that reaches a critical load limit raises a
+`load_critical` alert for each broken rule.
+
+| Rule | Value | Default limit |
+|---|---|---|
+| `in_flight_requests` | `load.in_flight_requests` | 20 |
+| `requests_last_minute` | `load.requests_last_minute` | 600 |
+| `avg_response_ms_last_minute` | `load.avg_response_ms_last_minute` | 2500 |
+| `status_call_ms` | duration of the `/status` call | 1500 |
+| `status` | `DEGRADED` | none |
+
+The limits are Service Discovery settings, listed in its README.
 
 <a id="gateway-routing-and-negotiation-proposal"></a>
 
@@ -498,7 +608,7 @@ allowlist, `service-token-policy.json`, and each owner adds their own lines to i
 Public routes are exactly those marked public in the endpoint tables, plus
 Gateway health/readiness. If Authorization is supplied even on a public route,
 validate it; an invalid token does not become an anonymous request. The direct
-User Management JWKS bootstrap and service health/readiness probes are explicit
+User Management JWKS bootstrap and service health, readiness and status probes are explicit
 exceptions to downstream assertion enforcement. Other direct domain calls must
 fail without a valid Gateway assertion.
 
@@ -510,7 +620,7 @@ fail without a valid Gateway assertion.
 | 403 | `not_self` | a user asked for another user's resource on a route limited to its owner |
 | 503 | `gateway_keys_unavailable` | the service cannot read the Gateway's public keys, so it cannot verify any assertion |
 
-Every route except `GET /health`, `GET /ready` and the User Management `GET /v1/jwks`
+Every route except `GET /health`, `GET /ready`, `GET /status` and the User Management `GET /v1/jwks`
 needs an assertion, public routes included, which carry an anonymous one.
 
 Gateway removes `X-User-Id`, `X-User-Roles` and `X-Service-Name` from every request.
@@ -549,8 +659,8 @@ uncommitted work and retain any committed receipt/effect progress. Release a
 slot only when its actual work and cleanup finish, not merely when the client
 has received a timeout. No detached work may escape the capacity accounting.
 
-Health/readiness probes use a separate bounded three-second check and no domain
-slot. Startup initialization remains governed by shutdown cancellation.
+Health, readiness and status probes use a separate bounded three-second check and
+no domain slot. Startup initialization remains governed by shutdown cancellation.
 Established Guild sockets do not occupy Gateway HTTP slots; negotiation and
 message handling are bounded tasks. Guild owns its separate socket lifetime and
 connection policy. A worker batch uses a service slot and local deadline; leave
@@ -1213,6 +1323,44 @@ frontend.
 }
 ```
 
+<a id="service-discovery-direct"></a>
+
+### Service Discovery, direct
+
+Service Discovery is not behind the Gateway. Instances and the Gateway call it
+directly at `SERVICE_DISCOVERY_URL` (`http://service-discovery:3009` in Compose).
+It has no authentication and is reachable only on the internal network.
+
+| Method and path | Request | Response | Access |
+|---|---|---|---|
+| `POST /v1/instances` | InstanceRegistration | 201 Instance, or 200 Instance when the id is already registered | direct, the instance itself |
+| `GET /v1/instances/{instance_id}` | none | 200 Instance | direct, the instance itself |
+| `DELETE /v1/instances/{instance_id}` | none | 204 | direct, the instance itself |
+| `GET /v1/services` | none | 200 ServiceList | direct, Gateway and developers |
+| `GET /v1/services/{service_name}/instances` | query routable | 200 InstanceList | direct, Gateway |
+| `POST /v1/instances/{instance_id}/failures` | FailureReport | 202 FailureResult | direct, Gateway |
+| `GET /v1/failures` | none | 200 FailureWindowList | direct, developers |
+
+Registration rules:
+
+1. A new id is added with `health` `unknown`.
+2. The same id again updates `host`, `port`, `status_path` and `version`, keeps
+   `registered_at`, and resets `health` to `unknown`. Its failure window is kept.
+3. The same id under another `service_name` is refused with `409 instance_conflict`.
+4. A new id on an address another instance holds (a restarted container) removes
+   the old instance as `replaced`.
+
+Because rule 2 resets health, an instance does not register again on a timer. It
+checks itself with `GET /v1/instances/{instance_id}` every 30 seconds and registers
+again only on a 404, which means it was removed while it kept running. On shutdown
+it deregisters. The shared kits do this.
+
+`?routable=true` leaves out `unhealthy` instances; a new `unknown` instance is
+routable. An unknown service gives an empty list, not a 404.
+
+Error codes: `invalid_request` (400, the detail names the invalid fields),
+`instance_not_found` (404), `instance_conflict` (409).
+
 ### Events
 
 Seven durable topic exchanges, one per publisher. Notification publishes
@@ -1307,6 +1455,193 @@ name the variable without credentials. Gateway and database credentials are
 separate. Validate outage/recovery, redelivery, poison-message retries/DLQ,
 consumer restart and unroutable publication before claiming real delivery.
 
+## Shared kits
+
+Code every service of one language needs for the Lab 3 contracts lives here once and is
+copied into each service. It is not built in this repository: each service runs the
+kit's tests in its own CI after copying.
+
+### TypeScript discovery kit
+
+[`kits/typescript/discovery/`](kits/typescript/discovery/) implements the
+[status endpoint](#status-endpoint) and registration with Service Discovery. Its folders
+mirror a service's own, so copy `src/discovery/` and `tests/discovery/` into the service
+root as they are. It needs `express`, `uuid`, a logger at `src/lib/logger.ts` with
+`debug`, `info`, `warn` and `error(message, fields)`, and `vitest` with `supertest` for the
+tests.
+
+| File | Holds |
+|---|---|
+| `instance.ts` | `instance_id` (UUIDv7, once per process), version from `package.json`, start time |
+| `load.ts` | `countLoad()` middleware and the 60 second load counters, probes left out |
+| `status.ts` | `createStatusRouter({ serviceName, isDown, isDegraded })` for `GET /status` |
+| `registration.ts` | `createRegistration({ serviceName, url, host, port })` with `start()` and `stop()` |
+| `config.ts` | `readDiscoveryConfig()`: `SERVICE_DISCOVERY_ENABLED` (default `true`), `SERVICE_DISCOVERY_URL` (default `http://service-discovery:3009`), `INSTANCE_HOST` (default the container hostname) |
+| `log.ts` | Re-exports the service logger, the only file to adjust if the logger lives elsewhere |
+
+Wiring:
+
+```ts
+app.use(countLoad());
+app.use(createStatusRouter({ serviceName: config.serviceName, isDown, isDegraded }));
+
+const registration =
+  config.discovery &&
+  createRegistration({ ...config.discovery, serviceName: config.serviceName, port: config.port });
+registration?.start();
+await registration?.stop();
+```
+
+Mount the status router before admission control and authentication, start registration
+once the server listens, and stop it first on `SIGINT` or `SIGTERM`. Registration checks
+itself with `GET /v1/instances/{id}` every 30 seconds and registers again only on a 404,
+because registering an existing id resets its health. Its log lines are `service registered` (info),
+`service re-registered` (debug), `registration failed` (warn), `registration check failed` (warn),
+`service deregistered` (info) and `deregistration failed` (warn).
+
+Tamagotchi and Notification run this kit. Change the kit here first, then copy it into
+every service that uses it.
+
+### TypeScript circuit breaker kit
+
+[`kits/typescript/discovery/src/discovery/breaker.ts`](kits/typescript/discovery/src/discovery/breaker.ts) and
+[`gateway.ts`](kits/typescript/discovery/src/discovery/gateway.ts) add a sliding-window circuit breaker for
+calls a service makes to the Gateway. Copy them alongside the discovery files.
+
+| File | Holds |
+|---|---|
+| `breaker.ts` | `SlidingWindowBreaker` — injectable clock, `isOpen()`, `recordSuccess()`, `recordFailure(reason)` |
+| `gateway.ts` | `readGatewayConfig()`, `createGatewayClient(config, send?, now?)`, `BreakerOpenError` |
+
+`readGatewayConfig()` reads:
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `GATEWAY_URL` | `http://gateway:3000` | Base URL for the Gateway |
+| `GATEWAY_TIMEOUT_MS` | `5000` | Per-request timeout in ms |
+| `BREAKER_THRESHOLD` | `3` | Failures before opening |
+| `BREAKER_WINDOW_MULTIPLIER` | `3.5` | Window = timeout × multiplier (17 500 ms at defaults) |
+| `BREAKER_RESET_SECONDS` | `30` | Seconds open before allowing a trial call |
+
+Only `TypeError` (connection error) and `DOMException { name: 'TimeoutError' }` trip the breaker.
+`AbortError` (caller cancelled) does not count. 5xx responses count as successful calls.
+When the breaker is open every call throws `BreakerOpenError` immediately without touching
+the network. The breaker logs `circuit breaker tripped` at `error` and `circuit breaker closed`
+at `info`.
+
+`request()` accepts an optional options object: `{ body?, headers?, signal? }`. Pass service
+token headers (`Authorization`, `Idempotency-Key`) via `headers`. Pass the request deadline
+via `signal` — it is combined with the internal timeout via `AbortSignal.any` so whichever
+fires first wins. Blank env var values fall back to the default (same behaviour as the
+discovery kit).
+
+Wiring:
+
+```ts
+import { readGatewayConfig, createGatewayClient } from './discovery/gateway.js';
+
+// Call readGatewayConfig where the client is built (e.g. deps.ts), not from config.ts.
+// gateway.ts imports log.ts which imports logger.ts which may import config.ts, so
+// calling readGatewayConfig() from config.ts causes a circular import that fails at
+// runtime with "Cannot access ... before initialization".
+const gateway = createGatewayClient(readGatewayConfig());
+
+// later
+const response = await gateway.request('POST', '/v1/tasks', {
+  body,
+  headers: { Authorization: `Bearer ${serviceToken}` },
+});
+```
+
+Guild and Package-registry use this kit. Copy it with the discovery files and wire it up in
+the service's HTTP client layer.
+
+### C# discovery kit
+
+[`kits/csharp/discovery/`](kits/csharp/discovery/) is the same kit for the ASP.NET Core
+services (User Management, Battle, Map, Monster Raid): the [status endpoint](#status-endpoint)
+and registration with Service Discovery, with the same settings, timings and log messages as
+the TypeScript kit. Everything is in the namespace `Tamagotchi.Discovery`, so nothing is
+renamed when copying. Copy `src/Discovery/` into the service's web project and
+`tests/Discovery/` into its test project. It needs .NET 9 or later and the ASP.NET Core
+shared framework, nothing else; the tests use xUnit only.
+
+| File | Holds |
+|---|---|
+| `DiscoveryInstance.cs` | `instance_id` (UUIDv7, once per process), version of the entry assembly, start time |
+| `LoadCounter.cs` | `LoadCounter` and its middleware: the 60 second load counters, probes left out |
+| `StatusEndpoint.cs` | the `Status` body and its rules: 200 `UP` or `DEGRADED`, 503 `DOWN` |
+| `RegistrationService.cs` | hosted service: register once the server listens, check with `GET /v1/instances/{id}` every 30 seconds, register again only on a 404, retry 1 s doubling to 30 s, deregister on shutdown |
+| `DiscoverySettings.cs` | `DiscoverySettings.FromEnvironment()`: `SERVICE_DISCOVERY_ENABLED` (default `true`), `SERVICE_DISCOVERY_URL` (default `http://service-discovery:3009`), `INSTANCE_HOST` (default the container hostname). A blank value means the default, an invalid one stops the service at startup |
+| `DiscoveryLog.cs` | log lines with a fixed message and named fields, written as fields by the services' JSON log formatter |
+| `DiscoveryExtensions.cs` | `AddDiscovery`, `UseLoadCounter`, `MapStatusEndpoint` |
+
+Wiring in `Program.cs`:
+
+```csharp
+using Tamagotchi.Discovery;
+
+builder.Services.AddDiscovery("battle", port, DiscoverySettings.FromEnvironment());
+
+var app = builder.Build();
+app.UseLoadCounter();   // first, so it sees every request and its full duration
+app.MapStatusEndpoint("battle", isDown: http => /* true when the service cannot serve, e.g. no database */);
+```
+
+`/status` must answer Service Discovery directly: exempt it from Gateway assertion checks
+and task limits, as `/health` and `/ready` are. Set the version once, from the `VERSION`
+file, in the web project's `.csproj`, so `/status`, the registration and the image tag agree:
+
+```xml
+<Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../VERSION').Trim())</Version>
+```
+
+The version is read when the project is loaded, so the Dockerfile must copy `VERSION` to the same
+place relative to the web project, before `dotnet restore` (with `WORKDIR /src` and the projects
+copied to `/src/<Project>/`, that is `COPY VERSION /VERSION`).
+
+The log lines are `service registered` (info), `service re-registered` (debug),
+`registration failed` (warn, with `status` or `cause` and `retry_in_ms`),
+`registration check passed` (debug), `registration check failed` (warn),
+`service deregistered` (info) and `deregistration failed` (warn). Each carries
+`instance_id`, `host` and `port`.
+
+Change the kit here first, then copy it into every service that uses it.
+
+### C# circuit breaker kit
+
+The same kit folder holds the breaker for calls a C# service makes to the Gateway, with the
+rules and settings of the TypeScript breaker kit.
+
+| File | Holds |
+|---|---|
+| `SlidingWindowBreaker.cs` | closed, open, half-open; `TryEnter()`, `RecordSuccess()`, `RecordFailure(reason)`, injectable clock |
+| `GatewaySettings.cs` | `GatewaySettings.FromEnvironment()`: `GATEWAY_URL` (default `http://gateway:3000`), `GATEWAY_TIMEOUT_MS` (5000), `BREAKER_THRESHOLD` (3), `BREAKER_WINDOW_MULTIPLIER` (3.5), `BREAKER_RESET_SECONDS` (30). Window = timeout × multiplier, 17.5 seconds by default. A blank value means the default, an invalid one stops the service |
+| `GatewayBreakerHandler.cs` | the `DelegatingHandler` and `BreakerOpenException` |
+
+Wiring, on every `HttpClient` that calls the Gateway:
+
+```csharp
+var gateway = GatewaySettings.FromEnvironment();
+builder.Services.AddHttpClient<HttpPackageRegistryClient>(client => client.BaseAddress = registryUrl)
+    .AddGatewayBreaker(gateway);
+```
+
+Only a timeout (`GATEWAY_TIMEOUT_MS`) and a connection error count as failures. Any answer
+counts as a success, 5xx included: it usually comes from the service behind the Gateway. A call
+the caller cancelled does not count. Three failures in the window trip the breaker and log
+`circuit breaker tripped` (error) with `target`, `failures_in_window`, `threshold`,
+`window_seconds` and `last_reason` (`timeout` or `connection_error`). While it is open every
+call throws `BreakerOpenException` at once, without a network call. After
+`BREAKER_RESET_SECONDS` one trial call at a time goes through; a success logs
+`circuit breaker closed` (info).
+
+`BreakerOpenException` is an `HttpRequestException`, so code that already turns an unreachable
+dependency into a 502 keeps working. The handler owns the timeout: `AddGatewayBreaker` switches
+`HttpClient.Timeout` off, because a timeout from there looks like a cancelled call and never
+counts. Every client that calls the Gateway shares one breaker, since there is one Gateway.
+The breaker only logs; removing instances is the Gateway's job.
+
 ## Image publication
 
 Release, code, package and image versions use `X.Y.Z`: integration milestone,
@@ -1335,15 +1670,15 @@ one account per publishing or consuming service (see below).
 
 | Service | Image | Digest | Host port |
 |---|---|---|---|
-| Gateway | `victoriamutruc/gateway:2.0.3` | `sha256:c383e53c3f75682f200df7cad2926801b2d1af8a5f558312d9c0fe548703bc81` | 3000 |
-| User Management | `patriciamoraru/user-management:2.0.2` | `sha256:b3e5da413ac443522b9a039310667c4a7d3d586663f46935fdaf1993114b3df6` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:2.0.4` | `sha256:cc5a3b8cd9cbd61927090c60ca2775ff0b8f54cb989bef0c17cacfc3240c99dd` | 3002 |
-| Battle | `patriciamoraru/battle:2.0.1` | `sha256:4cc5ee7d1206e459832ce2d48f421729f7bb2d546bc24490c4a1d7849a3d1aec` | 3003 |
-| Guild | `mihaelacatan/guild-service:2.0.3` | `sha256:f3e41f56901a5378e43edc457d7908aaa2e8d6b5cb8e047428a2c3313f62d86d` | 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:2.0.3` | `sha256:34d73c2b2ac0eb8448421a4fdd67821d4d1de015c58cc78e67357559b20d3689` | 3005 |
+| Gateway | `victoriamutruc/gateway:3.0.0` | `sha256:413c02b5d17a38cdef99283012b357e590423bcb0cbe48129ce898bba6347c8c` | 3000 |
+| User Management | `patriciamoraru/user-management:3.0.0` | `sha256:be8d62337ff55f96671a16e354c19ed1c0b104f8d29bba8e10cfccc9cb9a07b8` | 3001 |
+| Tamagotchi | `victoriamutruc/tamagotchi:3.0.1` | `sha256:2b429a49a7ff6e237de1a61664b5d4c13fec817c43423a2cf263d7c4ac48d330` | 3002 |
+| Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | 3003 |
+| Guild | `mihaelacatan/guild-service:2.0.4` | `sha256:9fb1f1cce8665b022462a1072ef692791587470570eca60a04985baeb31f4049` | 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:2.0.4` | `sha256:802dc3c77621b502e6b43b67a031c3e3cbd7b8558ae974b520dcd65ad1f8b607` | 3005 |
 | Map | `sergedbs/map:2.0.0` | `sha256:b9928555973e65aacf2df3d2826b39093628c999ccb4a69c8884c05831e9faf1` | 3006 |
 | Monster Raid | `sergedbs/monster-raid:2.0.0` | `sha256:50d1424235f9638aa1d3436ca1f7d789e1293b2f0d28fe935bdfe91d5cdcd2aa` | 3007 |
-| Notification | `victoriamutruc/notification:2.0.3` | `sha256:b3c03037195717ef7be38fb2141b8c0634f436d7c00da8a78d8b769d403b2dd5` | 3008 |
+| Notification | `victoriamutruc/notification:3.0.0` | `sha256:49361e8deb1d110768d96528c41e562e60fad777cc4dd5cf7a0b6a0cf74e00b2` | 3008 |
 
 To test unpublished source, use a local Compose override that builds Map, Monster Raid
 and Gateway from their standalone checkouts, with distinct local image names
