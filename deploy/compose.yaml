@@ -48,10 +48,15 @@ services:
   user-management:
     image: patriciamoraru/user-management:3.0.0
     pull_policy: always
+    deploy:
+      replicas: 2
     depends_on:
       database:
         condition: service_healthy
     environment:
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      GATEWAY_URL: http://gateway:3000
+      GATEWAY_TIMEOUT_MS: "2500"
       PORT: 3001
       LOG_LEVEL: ${USER_MANAGEMENT_LOG_LEVEL:-info}
       ConnectionStrings__UserManagementDb: Host=database;Port=5432;Database=${USER_MANAGEMENT_DB_NAME:-user_management};Username=${USER_MANAGEMENT_DB_USER:-user_management};Password=${USER_MANAGEMENT_DB_PASSWORD}
@@ -71,8 +76,6 @@ services:
     volumes:
       - ./secrets/access-token.pem:/run/secrets/access-token.pem:ro
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    ports:
-      - "3001:3001"
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3001 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q READY'"]
       interval: 5s
@@ -82,12 +85,16 @@ services:
   tamagotchi:
     image: victoriamutruc/tamagotchi:3.0.1
     pull_policy: always
+    deploy:
+      replicas: 2
     depends_on:
       database:
         condition: service_healthy
       rabbitmq-provision:
         condition: service_completed_successfully
     environment:
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      GATEWAY_URL: http://gateway:3000
       PORT: 3000
       LOG_LEVEL: ${TAMAGOTCHI_LOG_LEVEL:-info}
       STORAGE: postgres
@@ -99,8 +106,6 @@ services:
       RABBITMQ_URL: amqp://tamagotchi:${TAMAGOTCHI_RABBITMQ_PASSWORD:?set TAMAGOTCHI_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    ports:
-      - "3002:3000"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
       interval: 5s
@@ -110,10 +115,16 @@ services:
   guild:
     image: mihaelacatan/guild-service:3.0.1
     pull_policy: always
+    deploy:
+      replicas: 1
     depends_on:
       database:
         condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
     environment:
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      GATEWAY_URL: http://gateway:3000
       PORT: 3000
       DB_HOST: database
       DB_PORT: 5432
@@ -127,10 +138,58 @@ services:
       SERVICE_CLIENT_SECRET: ${GUILD_SERVICE_CLIENT_SECRET:?set GUILD_SERVICE_CLIENT_SECRET in .env}
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  guild-rest:
+    image: mihaelacatan/guild-service:3.0.1
+    pull_policy: always
+    deploy:
+      replicas: 1
+    depends_on:
+      database:
+        condition: service_healthy
+      rabbitmq-provision:
+        condition: service_completed_successfully
+    environment:
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      GATEWAY_URL: http://gateway:3000
+      PORT: 3000
+      DB_HOST: database
+      DB_PORT: 5432
+      POSTGRES_USER: ${GUILD_DB_USER:-guild}
+      POSTGRES_PASSWORD: ${GUILD_DB_PASSWORD:?set GUILD_DB_PASSWORD in .env}
+      POSTGRES_DB: ${GUILD_DB_NAME:-guild}
+      USER_MANAGEMENT_URL: http://gateway:3000/users
+      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      RABBITMQ_URL: amqp://guild:${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      SERVICE_CLIENT_SECRET: ${GUILD_SERVICE_CLIENT_SECRET:?set GUILD_SERVICE_CLIENT_SECRET in .env}
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  guild-socket:
+    image: nginx:1.28.0-alpine@sha256:30f1c0d78e0ad60901648be663a710bdadf19e4c10ac6782c235200619158284
+    pull_policy: always
+    depends_on:
+      guild:
+        condition: service_started
+      guild-rest:
+        condition: service_started
+    volumes:
+      - ./guild/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "3004:3000"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -138,12 +197,16 @@ services:
   registry:
     image: mihaelacatan/package-registry-service:3.0.0
     pull_policy: always
+    deploy:
+      replicas: 2
     depends_on:
       database:
         condition: service_healthy
       rabbitmq-provision:
         condition: service_completed_successfully
     environment:
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      GATEWAY_URL: http://gateway:3000
       PORT: 3000
       DB_HOST: database
       DB_PORT: 5432
@@ -154,8 +217,6 @@ services:
       RABBITMQ_URL: amqp://registry:${REGISTRY_RABBITMQ_PASSWORD:?set REGISTRY_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    ports:
-      - "3005:3000"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
       interval: 5s
@@ -165,12 +226,17 @@ services:
   battle:
     image: patriciamoraru/battle:3.0.0
     pull_policy: always
+    deploy:
+      replicas: 2
     depends_on:
       database:
         condition: service_healthy
       rabbitmq-provision:
         condition: service_completed_successfully
     environment:
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      GATEWAY_URL: http://gateway:3000
+      GATEWAY_TIMEOUT_MS: "2500"
       PORT: 3003
       LOG_LEVEL: ${BATTLE_LOG_LEVEL:-info}
       ConnectionStrings__BattleDb: Host=database;Port=5432;Database=${BATTLE_DB_NAME:-battle};Username=${BATTLE_DB_USER:-battle};Password=${BATTLE_DB_PASSWORD}
@@ -183,8 +249,6 @@ services:
       SERVICE_CLIENT_SECRET: ${BATTLE_SERVICE_CLIENT_SECRET:?set BATTLE_SERVICE_CLIENT_SECRET in .env}
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    ports:
-      - "3003:3003"
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3003 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q READY'"]
       interval: 5s
@@ -192,14 +256,19 @@ services:
       retries: 10
 
   map:
-    image: sergedbs/map:2.0.0
+    image: sergedbs/map:3.0.0
     pull_policy: always
+    deploy:
+      replicas: 2
     depends_on:
       database:
         condition: service_healthy
       rabbitmq-provision:
         condition: service_completed_successfully
     environment:
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      GATEWAY_URL: http://gateway:3000
+      GATEWAY_TIMEOUT_MS: 2500
       PORT: 8080
       Logging__LogLevel__Default: ${MAP_LOG_LEVEL:-Information}
       LOCATION_FRESHNESS_SECONDS: 60
@@ -213,8 +282,6 @@ services:
       USERS_RELATIONSHIP_SCOPES: ${MAP_USERS_RELATIONSHIP_SCOPES:-users:read-relationships}
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    ports:
-      - "3006:8080"
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q \"200 OK\"'"]
       interval: 5s
@@ -222,14 +289,19 @@ services:
       retries: 10
 
   monster-raid:
-    image: sergedbs/monster-raid:2.0.0
+    image: sergedbs/monster-raid:3.0.0
     pull_policy: always
+    deploy:
+      replicas: 2
     depends_on:
       database:
         condition: service_healthy
       rabbitmq-provision:
         condition: service_completed_successfully
     environment:
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      GATEWAY_URL: http://gateway:3000
+      GATEWAY_TIMEOUT_MS: 2500
       PORT: 8080
       Logging__LogLevel__Default: ${MONSTER_RAID_LOG_LEVEL:-Information}
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD};GSS Encryption Mode=Disable;Maximum Pool Size=10
@@ -250,8 +322,6 @@ services:
       USERS_CREDIT_SCOPES: ${MONSTER_RAID_USERS_CREDIT_SCOPES:-users:credit-global}
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    ports:
-      - "3007:8080"
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q \"200 OK\"'"]
       interval: 5s
@@ -261,12 +331,16 @@ services:
   notification:
     image: victoriamutruc/notification:3.0.0
     pull_policy: always
+    deploy:
+      replicas: 2
     depends_on:
       database:
         condition: service_healthy
       rabbitmq-provision:
         condition: service_completed_successfully
     environment:
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      GATEWAY_URL: http://gateway:3000
       PORT: 3000
       LOG_LEVEL: ${NOTIFICATION_LOG_LEVEL:-info}
       STORAGE: postgres
@@ -277,8 +351,6 @@ services:
       RABBITMQ_URL: amqp://notification:${NOTIFICATION_RABBITMQ_PASSWORD:?set NOTIFICATION_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    ports:
-      - "3008:3000"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
       interval: 5s
@@ -350,7 +422,7 @@ services:
       retries: 10
 
   gateway:
-    image: victoriamutruc/gateway:3.0.0
+    image: victoriamutruc/gateway:3.0.1
     pull_policy: always
     depends_on:
       service-discovery:
@@ -360,6 +432,8 @@ services:
       tamagotchi:
         condition: service_healthy
       guild:
+        condition: service_healthy
+      guild-rest:
         condition: service_healthy
       registry:
         condition: service_healthy
@@ -378,7 +452,8 @@ services:
       GATEWAY_ASSERTION_KEY_ID: ${GATEWAY_ASSERTION_KEY_ID:?set GATEWAY_ASSERTION_KEY_ID in .env (run deploy/gateway/generate-keys.sh)}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      DISCOVERY_STATIC_FALLBACK: "true"
+      DISCOVERY_STATIC_FALLBACK: "false"
+      WS_GUILD_PUBLIC_URL: ${WS_GUILD_PUBLIC_URL:-ws://localhost:3004}
     volumes:
       - ./secrets/gateway-assertion.pem:/run/secrets/gateway-assertion.pem:ro
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro

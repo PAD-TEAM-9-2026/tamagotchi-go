@@ -67,6 +67,14 @@ def definitions(passwords):
         permissions.append({"user": name, "vhost": "/", "configure": regex(own_exchange + own_queues),
                             "write": regex(own_exchange + own_queues + (["amq.default"] if own_queues else [])),
                             "read": regex(own_queues + sources)})
+        if name == "guild":
+            # Queue binding needs write on the queue and read on the exchange.
+            generated = r"amq\.gen-.+"
+            permissions[-1].update({
+                "configure": r"^(guild\.events|guild\.chat|" + generated + ")$",
+                "write": r"^(guild\.events|guild\.chat|" + generated + ")$",
+                "read": r"^(guild\.chat|" + generated + ")$",
+            })
     return {"users": users, "permissions": permissions,
             "exchanges": [{"name": exchange, "vhost": "/", "type": "topic", "durable": True,
                            "auto_delete": False, "internal": False, "arguments": {}} for exchange in PUBLISHERS.values()],

@@ -210,9 +210,16 @@ Patterns the Gateway applies:
 | Load Balancing | Round-robin over the healthy instances of each service |
 | Circuit Breaker | One breaker per instance: 3 failures in 17.5 seconds trip it, and in remove mode the instance is reported and dropped |
 
-What it deliberately does not do: it never retries a request, so a write cannot run twice. It caches no responses, and it does not stream, so Server-Sent Events would not pass through it. Since Lab 3 the service addresses are no longer fixed: they come from Service Discovery.
+Gateway never retries application requests. It discovers service instances,
+caches their routable addresses and balances REST calls round-robin. Per-instance
+breakers exclude failing targets; removal mode also reports failures to Discovery.
+Static URLs are migration fallback, not evidence of dynamic routing. Gateway
+caches no application responses and does not proxy streaming connections.
 
-Lab 2 added the Gateway as its own service: a separate repository linked here as a submodule, an image on Docker Hub (`victoriamutruc/gateway:2.0.3`, published by CI on every merge to `main`), all REST traffic routed through it, the WebSocket negotiation, the task timeout and concurrency limits, and authorization at the Gateway.
+Gateway is maintained in its own repository and linked here as a submodule.
+Its source pin, published image and validated deployment are separate evidence.
+See Deployment for the pinned image set; source-built candidates do not establish
+a completed published release.
 
 ### Service Discovery
 
@@ -1409,6 +1416,13 @@ does not introduce an audit service or a processing consumer.
 Each active consumer has `<consumer>.work`, `<consumer>.retry.5s`,
 `<consumer>.retry.30s` and `<consumer>.dlq`. Use durable quorum queues and
 persistent messages (`delivery_mode=2`, content type application/json).
+Guild chat uses a separate durable topic exchange, `guild.chat`, declared by
+Guild, with one exclusive, non-durable, auto-delete `amq.gen-*` queue per
+instance. The Guild account can configure/publish that exchange, bind its
+generated queues and consume them; lifecycle exchange permissions are preserved.
+These transient subscriptions are not part of the durable event retry ladder.
+Chat messages remain in Guild PostgreSQL history for catch-up after relay gaps.
+
 Retry queues use queue TTLs of 5000/30000 ms and dead-letter to the default
 exchange with routing key `<consumer>.work`. Configure at-least-once
 dead-lettering and reject-publish overflow on the retry queues; verify support
@@ -1649,29 +1663,30 @@ and GitHub Release on its tested `main` merge. See [CONTRIBUTING.md](CONTRIBUTIN
 
 ## Deployment
 
-`deploy/compose.yaml` pulls nine versioned images under the `tamagotchi-go`
+`deploy/compose.yaml` pulls versioned service images under the `tamagotchi-go`
 Compose project. Each service has its own credentials and database in one
 PostGIS-enabled PostgreSQL container. A RabbitMQ broker runs alongside it, with
 one account per publishing or consuming service (see below).
 
 | Service | Image | Digest | Host port |
 |---|---|---|---|
-| Gateway | `victoriamutruc/gateway:3.0.0` | `sha256:413c02b5d17a38cdef99283012b357e590423bcb0cbe48129ce898bba6347c8c` | 3000 |
-| User Management | `patriciamoraru/user-management:3.0.0` | `sha256:be8d62337ff55f96671a16e354c19ed1c0b104f8d29bba8e10cfccc9cb9a07b8` | 3001 |
-| Tamagotchi | `victoriamutruc/tamagotchi:3.0.1` | `sha256:2b429a49a7ff6e237de1a61664b5d4c13fec817c43423a2cf263d7c4ac48d330` | 3002 |
-| Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | 3003 |
-| Guild | `mihaelacatan/guild-service:2.0.4` | `sha256:9fb1f1cce8665b022462a1072ef692791587470570eca60a04985baeb31f4049` | 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:2.0.4` | `sha256:802dc3c77621b502e6b43b67a031c3e3cbd7b8558ae974b520dcd65ad1f8b607` | 3005 |
-| Map | `sergedbs/map:2.0.0` | `sha256:b9928555973e65aacf2df3d2826b39093628c999ccb4a69c8884c05831e9faf1` | 3006 |
-| Monster Raid | `sergedbs/monster-raid:2.0.0` | `sha256:50d1424235f9638aa1d3436ca1f7d789e1293b2f0d28fe935bdfe91d5cdcd2aa` | 3007 |
-| Notification | `victoriamutruc/notification:3.0.0` | `sha256:49361e8deb1d110768d96528c41e562e60fad777cc4dd5cf7a0b6a0cf74e00b2` | 3008 |
+| Gateway | `victoriamutruc/gateway:3.0.1` | `sha256:d9e8c64a3f6283205ebce015bcc5ff35fd2b051dc27caf4a94ee2044cb456103` | 3000 |
+| Service Discovery | `patriciamoraru/service-discovery:3.0.0` | `sha256:c3730a226e38d5b839a16d2b1381e786de6566fa2f7f6d00f22c63c6a344155d` | 3009 (loopback) |
+| User Management | `patriciamoraru/user-management:3.0.0` | `sha256:be8d62337ff55f96671a16e354c19ed1c0b104f8d29bba8e10cfccc9cb9a07b8` | internal |
+| Tamagotchi | `victoriamutruc/tamagotchi:3.0.1` | `sha256:2b429a49a7ff6e237de1a61664b5d4c13fec817c43423a2cf263d7c4ac48d330` | internal |
+| Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | internal |
+| Guild | `mihaelacatan/guild-service:3.0.1` | `sha256:0cd0780d5e6dab54c8ab5b4246ccacb539ef0b2d451cb9319b1ec13312b41487` | internal; socket balancer 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:3.0.0` | `sha256:6c5f0564f43125869e7367ecad4c09b8e4843a875552d5436728ab20a95f7baa` | internal |
+| Map | `sergedbs/map:3.0.0` | `sha256:ed133aeef707c19ecef0765ee712ece3eb6c2b88e9bdbfad591860f20791e23d` | internal |
+| Monster Raid | `sergedbs/monster-raid:3.0.0` | `sha256:15955f3cf3fd6967bf9b5f0728e2bdb910cfe5c68c92ad7ddd8143e0494924ae` | internal |
+| Notification | `victoriamutruc/notification:3.0.0` | `sha256:49361e8deb1d110768d96528c41e562e60fad777cc4dd5cf7a0b6a0cf74e00b2` | internal |
 
 To test unpublished source, use a local Compose override that builds Map, Monster Raid
 and Gateway from their standalone checkouts, with distinct local image names
 and `pull_policy: never`. Keep the override outside Git. Replace canonical pins
 only after the corresponding numeric images are published and validated.
 
-Requires Docker with Compose v2 and free host ports 3000 through 3008 and
+Requires Docker with Compose v2 and free host ports 3000, 3004, 3009 and
 5432. The Gateway starts last, after all eight services report healthy, so a
 healthy Gateway only proves its registered checks passed; it does not establish
 routing, authentication or continuing downstream availability. PostgreSQL listens on
@@ -1849,3 +1864,35 @@ Authorization, service secrets, assertions or query strings containing credentia
 Map/Raid's supplied database pools are capped at 10 connections each, independently
 of their 64-task admission limits. Account for every service pool when sizing the
 shared PostgreSQL connection budget. Pool waits inherit request cancellation.
+
+## Replicated deployment
+
+The target topology runs two instances of every domain service, one Gateway and
+one Discovery, with one database/broker/provisioning service. Each service's
+replicas share only its own database and signing/cursor configuration. Domain
+REST ports are internal; use Gateway. Diagnostic probes may be published on
+private ephemeral loopback ports during acceptance.
+
+User Management, Battle, Map and Monster Raid explicitly use
+`GATEWAY_TIMEOUT_MS=2500`, with an 8.75-second breaker window, inside their
+three-second local work budget. Their published 3.0.0 images already support
+this setting. Other services retain their own settings; do not infer a uniform
+timeout from the copied kit defaults.
+
+Guild uses `guild` and `guild-rest`, both registering as `guild`, for balanced
+REST. `guild-socket` is a separate Nginx WebSocket load balancer on port 3004;
+Gateway still returns the configured public socket URL and never owns sockets.
+Both Guild instances redeem shared PostgreSQL tickets. The RabbitMQ chat relay
+fans committed messages to each instance's local sockets. Failed handshakes can
+try the other instance; an established socket cannot migrate. Clients negotiate
+fresh tickets on reconnect and merge paginated history by message ID.
+
+Relay queues are transient: messages missed during a broker gap are recovered
+from PostgreSQL history, not replayed by RabbitMQ. A client whose socket stays
+open must also refresh history periodically or on focus. The public socket URL
+must be reachable by the browser; remote HTTPS clients require a TLS endpoint.
+
+Map/Raid use the tested multi-platform 3.0.0 images; Gateway uses 3.0.1.
+Static fallback is disabled. All eight logical domain services must register
+before application routing is usable; readiness alone does not prove every route.
+Use `WS_GUILD_PUBLIC_URL` for the browser-reachable socket ingress address.
