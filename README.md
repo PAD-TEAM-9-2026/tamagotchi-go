@@ -102,32 +102,17 @@ This section describes the target architecture. Gateway source implements
 routing and authorization; Map and Monster Raid integration source uses real
 HTTP adapters and durable broker delivery. Published image versions may predate
 these changes. Validate the selected image set against real dependencies before
-claiming deployment compatibility. The diagram distinguishes transport paths from domain ownership.
+claiming deployment compatibility.
 
-```mermaid
-flowchart TB
-    Client[Application / Postman] -->|REST and socket negotiation| Gateway[Python Gateway]
-    Gateway --> Users[User Management]
-    Gateway --> Pets[Tamagotchi]
-    Gateway --> Battle[Battle]
-    Gateway --> Guild[Guild]
-    Gateway --> Registry[Package Registry]
-    Gateway --> Map[Map]
-    Gateway --> Raid[Monster Raid]
-    Gateway --> Notification[Notification]
-    Services[Service REST callers] -->|service bearer and signed context| Gateway
-    Client -->|negotiated ticket / direct WebSocket| Guild
-    Publishers[Users / Pets / Battle / Guild / Registry / Map / Raid] -->|committed facts| Broker[RabbitMQ]
-    Broker -->|package membership| Pets
-    Broker -->|package membership| Registry
-    Broker -->|occurrence lifecycle| Raid
-    Broker -->|notification events| Notification
-    Notification -->|configured push provider| Firebase[Firebase]
-    Instances[Registered instances] -->|registration and failure reports| Discovery[Python Service Discovery]
-    Discovery -->|direct status probes| Instances
-    Discovery -->|configured developer alerts| Discord[Discord]
-    Domain[Each domain service] -->|own credentials / own schema| Data[Eight separate PostgreSQL databases]
-```
+![Architecture: clients reach the eight services, each running two replicas, only through the Gateway, which verifies them, signs their identity and balances them round-robin from Service Discovery's instance lists; instances register with Service Discovery, which polls their status, removes failing ones and sends alerts to Discord; Guild chat sockets go directly to Guild](docs/img/lab3_architecture_diagram.jpg)
+
+Lab 3 runs every domain service as two replicas (×2 in the diagram) and adds Service Discovery, the green box and arrows:
+
+- **Registration.** Each instance registers itself once it listens, checks every 30 seconds that it is still registered, registers again only after a 404, and deregisters on shutdown. The Gateway registers itself the same way.
+- **Health.** Service Discovery calls every instance's `/status` every 5 seconds (2 second limit), marks failing ones unhealthy and raises alerts on critical load.
+- **Balancing.** The Gateway reads the healthy instances of each service every 5 seconds and sends requests to them in turn (round-robin).
+- **Breakers and removal.** The Gateway keeps a circuit breaker per instance and reports failures; three within 17.5 seconds remove the instance. Every service also has a breaker on its own calls to the Gateway.
+- **Alerts.** Service Discovery sends unhealthy, removed and critical-load alerts to Discord, at most one per alert type and instance every 5 minutes.
 
 Service REST dependencies traverse Gateway: Map reads User Management;
 Raid reads Guild, Registry and Tamagotchi and delivers rewards to User Management
@@ -187,8 +172,6 @@ an infrastructure exception to application REST routing through Gateway.
 
 ### Gateway
 
-![Gateway architecture: clients reach the eight services only through the Gateway, which verifies them, signs their identity and routes by prefix; Guild chat sockets go directly to Guild](docs/img/gateway_architecture_diagram.png)
-
 The Gateway is the only public entry point for REST. Every client call and every service-to-service call goes through it, so a service never sees a caller it did not get from the Gateway. It holds no domain state: no database and no events. What it needs comes from configuration, User Management's public keys and its own signing key.
 
 How one request is handled, in the order the code does it:
@@ -222,9 +205,12 @@ Patterns the Gateway applies:
 | Rate Limiting | Failed credential attempts are counted per address over a sliding window |
 | Cache-Aside | User Management's keys are cached for 300 seconds and refreshed once for an unknown key ID |
 | Correlation Identifier | One ID across the client call, every nested call and the logs |
-| Health Endpoint Monitoring | `/health` for the process; `/ready` checks that both key sets are usable |
+| Health Endpoint Monitoring | `/health` for the process; `/ready` checks that both key sets are usable; `/status` reports state and load to Service Discovery |
+| Service Discovery (client side) | Instance lists come from Service Discovery every 5 seconds; the Gateway also registers itself |
+| Load Balancing | Round-robin over the healthy instances of each service |
+| Circuit Breaker | One breaker per instance: 3 failures in 17.5 seconds trip it, and in remove mode the instance is reported and dropped |
 
-What it deliberately does not do: it never retries a request, so a write cannot run twice. It has no circuit breaker, load balancer or service discovery; the eight addresses are fixed in configuration. It caches no responses, and it does not stream, so Server-Sent Events would not pass through it.
+What it deliberately does not do: it never retries a request, so a write cannot run twice. It caches no responses, and it does not stream, so Server-Sent Events would not pass through it. Since Lab 3 the service addresses are no longer fixed: they come from Service Discovery.
 
 Lab 2 added the Gateway as its own service: a separate repository linked here as a submodule, an image on Docker Hub (`victoriamutruc/gateway:2.0.3`, published by CI on every merge to `main`), all REST traffic routed through it, the WebSocket negotiation, the task timeout and concurrency limits, and authorization at the Gateway.
 
