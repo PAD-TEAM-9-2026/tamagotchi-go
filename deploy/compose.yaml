@@ -108,7 +108,7 @@ services:
       retries: 10
 
   guild:
-    image: mihaelacatan/guild-service:3.0.0
+    image: mihaelacatan/guild-service:3.0.1
     pull_policy: always
     depends_on:
       database:
