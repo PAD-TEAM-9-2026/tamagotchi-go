@@ -1671,7 +1671,7 @@ one account per publishing or consuming service (see below).
 | Gateway | `victoriamutruc/gateway:3.0.0` | `sha256:413c02b5d17a38cdef99283012b357e590423bcb0cbe48129ce898bba6347c8c` | 3000 |
 | Service Discovery | `patriciamoraru/service-discovery:3.0.0` | `sha256:c3730a226e38d5b839a16d2b1381e786de6566fa2f7f6d00f22c63c6a344155d` | 3009 (loopback) |
 | User Management | `patriciamoraru/user-management:3.0.0` | `sha256:be8d62337ff55f96671a16e354c19ed1c0b104f8d29bba8e10cfccc9cb9a07b8` | internal |
-| Tamagotchi | `victoriamutruc/tamagotchi:3.0.0` | `sha256:7ee595b2f886f6189f66139c20e77804979ea7c911795562d204ec94e8fe25aa` | internal |
+| Tamagotchi | `victoriamutruc/tamagotchi:3.0.1` | `sha256:2b429a49a7ff6e237de1a61664b5d4c13fec817c43423a2cf263d7c4ac48d330` | internal |
 | Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | internal |
 | Guild | `mihaelacatan/guild-service:3.0.0` | `sha256:5599c699563a1854de38a5e875a3800f1b78c4649f13f69000198305e290827c` | 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:3.0.0` | `sha256:6c5f0564f43125869e7367ecad4c09b8e4843a875552d5436728ab20a95f7baa` | internal |

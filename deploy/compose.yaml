@@ -83,7 +83,7 @@ services:
       retries: 10
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:3.0.0
+    image: victoriamutruc/tamagotchi:3.0.1
     pull_policy: always
     deploy:
       replicas: 2
