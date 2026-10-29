@@ -102,32 +102,7 @@ This section describes the target architecture. Gateway source implements
 routing and authorization; Map and Monster Raid integration source uses real
 HTTP adapters and durable broker delivery. Published image versions may predate
 these changes. Validate the selected image set against real dependencies before
-claiming deployment compatibility. The diagram distinguishes transport paths from domain ownership.
-
-```mermaid
-flowchart TB
-    Client[Application / Postman] -->|REST and socket negotiation| Gateway[Python Gateway]
-    Gateway --> Users[User Management]
-    Gateway --> Pets[Tamagotchi]
-    Gateway --> Battle[Battle]
-    Gateway --> Guild[Guild]
-    Gateway --> Registry[Package Registry]
-    Gateway --> Map[Map]
-    Gateway --> Raid[Monster Raid]
-    Gateway --> Notification[Notification]
-    Services[Service REST callers] -->|service bearer and signed context| Gateway
-    Client -->|negotiated ticket / direct WebSocket| Guild
-    Publishers[Users / Pets / Battle / Guild / Registry / Map / Raid] -->|committed facts| Broker[RabbitMQ]
-    Broker -->|package membership| Pets
-    Broker -->|package membership| Registry
-    Broker -->|occurrence lifecycle| Raid
-    Broker -->|notification events| Notification
-    Notification -->|configured push provider| Firebase[Firebase]
-    Instances[Registered instances] -->|registration and failure reports| Discovery[Python Service Discovery]
-    Discovery -->|direct status probes| Instances
-    Discovery -->|configured developer alerts| Discord[Discord]
-    Domain[Each domain service] -->|own credentials / own schema| Data[Eight separate PostgreSQL databases]
-```
+claiming deployment compatibility. The diagram is in the [Gateway](#gateway) section below.
 
 Service REST dependencies traverse Gateway: Map reads User Management;
 Raid reads Guild, Registry and Tamagotchi and delivers rewards to User Management
