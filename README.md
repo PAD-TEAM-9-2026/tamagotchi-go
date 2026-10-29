@@ -1635,9 +1635,9 @@ one account per publishing or consuming service (see below).
 | Service | Image | Digest | Host port |
 |---|---|---|---|
 | Gateway | `victoriamutruc/gateway:3.0.0` | `sha256:413c02b5d17a38cdef99283012b357e590423bcb0cbe48129ce898bba6347c8c` | 3000 |
-| User Management | `patriciamoraru/user-management:2.0.3` | `sha256:aee3d2700abafa42650cdc08ab3f7a1085354b4129e0da758d337bb588be9ead` | 3001 |
+| User Management | `patriciamoraru/user-management:3.0.0` | `sha256:be8d62337ff55f96671a16e354c19ed1c0b104f8d29bba8e10cfccc9cb9a07b8` | 3001 |
 | Tamagotchi | `victoriamutruc/tamagotchi:3.0.0` | `sha256:7ee595b2f886f6189f66139c20e77804979ea7c911795562d204ec94e8fe25aa` | 3002 |
-| Battle | `patriciamoraru/battle:2.0.2` | `sha256:bdb67b53a34d37022d9e028ce5bf06f70278440d6b10f2a711a240b03794680c` | 3003 |
+| Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | 3003 |
 | Guild | `mihaelacatan/guild-service:2.0.4` | `sha256:9fb1f1cce8665b022462a1072ef692791587470570eca60a04985baeb31f4049` | 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:2.0.4` | `sha256:802dc3c77621b502e6b43b67a031c3e3cbd7b8558ae974b520dcd65ad1f8b607` | 3005 |
 | Map | `sergedbs/map:2.0.0` | `sha256:b9928555973e65aacf2df3d2826b39093628c999ccb4a69c8884c05831e9faf1` | 3006 |
