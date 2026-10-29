@@ -39,6 +39,9 @@ Existing databases need the owning service's migrations before domain checks.
 Health/readiness alone does not prove schema compatibility. Preserve existing
 volumes; do not rerun first-start SQL or unrelated standalone seed commands.
 Use dedicated registered users and active Registry packages for shared fixtures.
+For Tamagotchi, set `tamagotchi_fixture_package_id` to an active package with the
+Ember starter and care rules used by the scenario. This overrides name-based
+selection when multiple packages have the same name.
 Keep bearer credentials in an untracked local environment; exported Newman
 reports can contain tokens and must also stay private.
 
