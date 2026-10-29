@@ -1675,8 +1675,8 @@ one account per publishing or consuming service (see below).
 | Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | internal |
 | Guild | `mihaelacatan/guild-service:3.0.0` | `sha256:5599c699563a1854de38a5e875a3800f1b78c4649f13f69000198305e290827c` | 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:3.0.0` | `sha256:6c5f0564f43125869e7367ecad4c09b8e4843a875552d5436728ab20a95f7baa` | internal |
-| Map | `sergedbs/map:2.0.0` | `sha256:b9928555973e65aacf2df3d2826b39093628c999ccb4a69c8884c05831e9faf1` | internal |
-| Monster Raid | `sergedbs/monster-raid:2.0.0` | `sha256:50d1424235f9638aa1d3436ca1f7d789e1293b2f0d28fe935bdfe91d5cdcd2aa` | internal |
+| Map | `sergedbs/map:3.0.0` | `sha256:ed133aeef707c19ecef0765ee712ece3eb6c2b88e9bdbfad591860f20791e23d` | internal |
+| Monster Raid | `sergedbs/monster-raid:3.0.0` | `sha256:15955f3cf3fd6967bf9b5f0728e2bdb910cfe5c68c92ad7ddd8143e0494924ae` | internal |
 | Notification | `victoriamutruc/notification:3.0.0` | `sha256:49361e8deb1d110768d96528c41e562e60fad777cc4dd5cf7a0b6a0cf74e00b2` | internal |
 
 To test unpublished source, use a local Compose override that builds Map, Monster Raid
@@ -1877,8 +1877,8 @@ can be issued by either instance and redeemed there. Chat rooms remain local to
 the designated socket process: there is no distributed broadcasting or automatic
 socket failover; a lost socket requires reconnection and a new ticket.
 
-Map/Raid must run the reviewed 3.0.0-or-newer images before this topology is
-released. Their current older canonical pins remain until tested artifacts are
-published; local source images establish candidate evidence only. Keep Gateway
+Map/Raid use the tested multi-platform 3.0.0 images. Gateway removal fixes still
+require review and a published replacement; local Gateway source establishes
+candidate evidence only. Keep Gateway
 static fallback enabled during migration. Disable it only after all eight logical
 domain services have two healthy routable instances and end-to-end checks pass.
