@@ -46,7 +46,7 @@ services:
       retries: 20
 
   user-management:
-    image: patriciamoraru/user-management:2.0.2
+    image: patriciamoraru/user-management:3.0.0
     pull_policy: always
     depends_on:
       database:
@@ -80,7 +80,7 @@ services:
       retries: 10
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:2.0.5
+    image: victoriamutruc/tamagotchi:3.0.0
     pull_policy: always
     depends_on:
       database:
@@ -108,7 +108,7 @@ services:
       retries: 10
 
   guild:
-    image: mihaelacatan/guild-service:2.0.3
+    image: mihaelacatan/guild-service:3.0.0
     pull_policy: always
     depends_on:
       database:
@@ -136,7 +136,7 @@ services:
       retries: 10
 
   registry:
-    image: mihaelacatan/package-registry-service:2.0.3
+    image: mihaelacatan/package-registry-service:3.0.0
     pull_policy: always
     depends_on:
       database:
@@ -163,7 +163,7 @@ services:
       retries: 10
 
   battle:
-    image: patriciamoraru/battle:2.0.1
+    image: patriciamoraru/battle:3.0.0
     pull_policy: always
     depends_on:
       database:
@@ -259,7 +259,7 @@ services:
       retries: 10
 
   notification:
-    image: victoriamutruc/notification:2.0.4
+    image: victoriamutruc/notification:3.0.0
     pull_policy: always
     depends_on:
       database:
@@ -350,7 +350,7 @@ services:
       retries: 10
 
   gateway:
-    image: victoriamutruc/gateway:2.0.3
+    image: victoriamutruc/gateway:3.0.0
     pull_policy: always
     depends_on:
       user-management:
@@ -375,6 +375,7 @@ services:
       GATEWAY_ASSERTION_PRIVATE_KEY_PATH: /run/secrets/gateway-assertion.pem
       GATEWAY_ASSERTION_KEY_ID: ${GATEWAY_ASSERTION_KEY_ID:?set GATEWAY_ASSERTION_KEY_ID in .env (run deploy/gateway/generate-keys.sh)}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      DISCOVERY_STATIC_FALLBACK: "true"
     volumes:
       - ./secrets/gateway-assertion.pem:/run/secrets/gateway-assertion.pem:ro
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
