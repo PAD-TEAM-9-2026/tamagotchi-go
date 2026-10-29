@@ -25,3 +25,7 @@
 [submodule "services/gateway"]
 	path = services/gateway
 	url = git@github.com:victoriaaa111/gateway.git
+[submodule "services/service-discovery"]
+	path = services/service-discovery
+	url = git@github.com:PatriciaMoraru/service-discovery.git
+	branch = develop

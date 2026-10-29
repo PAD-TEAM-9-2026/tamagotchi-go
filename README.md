@@ -12,7 +12,7 @@ creatures, art and care rules, backed by eight domain services and a Python Gate
 | Victoria | Tamagotchi, Notification | TypeScript, Node.js |
 | Mihaela | Guild, Package Registry | TypeScript, Node.js |
 | Sergiu | Map, Monster Raid | C#, ASP.NET Core |
-| All four | Gateway | Python, FastAPI |
+| All four | Gateway, Service Discovery | Python, FastAPI |
 
 
 ## Repository
@@ -30,6 +30,7 @@ Each service has its own private repository. They are linked here as submodules.
 | Map | `services/map` | Sergiu |
 | Monster Raid | `services/monster-raid` | Sergiu |
 | Gateway | `services/gateway` | Shared by the team |
+| Service Discovery | `services/service-discovery` | Shared by the team |
 
 ## Service boundaries
 
@@ -47,6 +48,7 @@ service's tables.
 | Monster Raid | Live raids, boss HP, attacks, damage per player, rewards | Boss definitions, guild membership |
 | Notification | Devices, push tokens, delivery, history, mute settings | Every domain decision, message text |
 | Gateway | REST routing, caller validation, correlation and negotiation | Game rules, domain data, databases, events |
+| Service Discovery | In-memory instance registry, health polling, failure removal and developer alerts | Domain data, authentication, application request routing |
 
 Two rules keep the boundaries honest. Battle decides, Tamagotchi applies.
 Package Registry holds configuration, the runtime services hold state.
@@ -121,6 +123,9 @@ flowchart TB
     Broker -->|occurrence lifecycle| Raid
     Broker -->|notification events| Notification
     Notification -->|configured push provider| Firebase[Firebase]
+    Instances[Registered instances] -->|registration and failure reports| Discovery[Python Service Discovery]
+    Discovery -->|direct status probes| Instances
+    Discovery -->|configured developer alerts| Discord[Discord]
     Domain[Each domain service] -->|own credentials / own schema| Data[Eight separate PostgreSQL databases]
 ```
 
@@ -157,6 +162,28 @@ from User Management events, so package eligibility checks stay local.
 Registry builds that projection from the events alone and never reads from User
 Management, so no route lists every user's memberships. User Management only
 answers `GET /v1/internal/users/{userId}/membership` for one user at a time.
+
+### Service Discovery
+
+Service Discovery is an internal control-plane service. Its registry and failure
+windows are in memory; it has no database or broker queues. It exposes registration,
+instance listing and failure-report APIs, polls registered status endpoints and
+removes failing instances. Developer alerts use an optional Discord webhook.
+The implementation and API are documented in [its README](https://github.com/PatriciaMoraru/service-discovery#readme).
+
+Compose pins `patriciamoraru/service-discovery:3.0.0` and the submodule records
+its reviewed source. Published image metadata is separate from runtime acceptance.
+Gateway starts after Discovery is healthy and uses its internal URL explicitly.
+Static fallback remains enabled during migration; disable it after every domain
+service registers and routing passes. Adding Discovery alone does not establish
+scaled service acceptance.
+
+Inside Compose, use `http://service-discovery:3009`. Local diagnostics use
+`http://localhost:3009`; the published port is loopback-only. No Gateway prefix or
+Gateway assertion is used for this internal API. Configure `DISCORD_WEBHOOK_URL`
+privately and `ALERT_COOLDOWN_SECONDS` (default 300) in `deploy/.env`. Leave the
+webhook blank for logging-only operation. Direct registration/status traffic is
+an infrastructure exception to application REST routing through Gateway.
 
 ### Gateway
 

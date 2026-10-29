@@ -323,10 +323,38 @@ services:
     entrypoint: ["sh", "/provision.sh"]
     restart: "no"
 
+  service-discovery:
+    image: patriciamoraru/service-discovery:3.0.0
+    pull_policy: always
+    environment:
+      PORT: 3009
+      SERVICE_VERSION: 3.0.0
+      LOG_LEVEL: ${SERVICE_DISCOVERY_LOG_LEVEL:-info}
+      TASK_TIMEOUT_MS: 5000
+      FAILURE_THRESHOLD: 3
+      FAILURE_WINDOW_MULTIPLIER: 3.5
+      HEALTH_CHECK_INTERVAL_SECONDS: 5
+      HEALTH_CHECK_TIMEOUT_MS: 2000
+      CRITICAL_IN_FLIGHT_REQUESTS: 20
+      CRITICAL_REQUESTS_PER_MINUTE: 600
+      CRITICAL_AVG_RESPONSE_MS: 2500
+      STATUS_SLOW_MS: 1500
+      ALERT_COOLDOWN_SECONDS: ${ALERT_COOLDOWN_SECONDS:-300}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+    ports:
+      - "127.0.0.1:3009:3009"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request as r; r.urlopen('http://127.0.0.1:3009/ready', timeout=2)\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   gateway:
     image: victoriamutruc/gateway:3.0.0
     pull_policy: always
     depends_on:
+      service-discovery:
+        condition: service_healthy
       user-management:
         condition: service_healthy
       tamagotchi:
@@ -349,6 +377,7 @@ services:
       GATEWAY_ASSERTION_PRIVATE_KEY_PATH: /run/secrets/gateway-assertion.pem
       GATEWAY_ASSERTION_KEY_ID: ${GATEWAY_ASSERTION_KEY_ID:?set GATEWAY_ASSERTION_KEY_ID in .env (run deploy/gateway/generate-keys.sh)}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
       DISCOVERY_STATIC_FALLBACK: "true"
     volumes:
       - ./secrets/gateway-assertion.pem:/run/secrets/gateway-assertion.pem:ro
