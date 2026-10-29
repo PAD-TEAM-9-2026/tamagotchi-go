@@ -171,11 +171,12 @@ instance listing and failure-report APIs, polls registered status endpoints and
 removes failing instances. Developer alerts use an optional Discord webhook.
 The implementation and API are documented in [its README](https://github.com/PatriciaMoraru/service-discovery#readme).
 
-The deployment candidate is `patriciamoraru/service-discovery:3.0.0`. It must be
-published and validated before this wiring is released. The submodule pins merged source with alerts and publication safeguards. The
-Docker Hub image is still pending publication and runtime validation. Service
-registration, Gateway discovery routing and scaled domain instances are separate
-integration work and are not established by adding this container.
+Compose pins `patriciamoraru/service-discovery:3.0.0` and the submodule records
+its reviewed source. Published image metadata is separate from runtime acceptance.
+Gateway starts after Discovery is healthy and uses its internal URL explicitly.
+Static fallback remains enabled during migration; disable it after every domain
+service registers and routing passes. Adding Discovery alone does not establish
+scaled service acceptance.
 
 Inside Compose, use `http://service-discovery:3009`. Local diagnostics use
 `http://localhost:3009`; the published port is loopback-only. No Gateway prefix or
