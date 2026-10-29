@@ -246,6 +246,7 @@ services:
     environment:
       SERVICE_DISCOVERY_URL: http://service-discovery:3009
       GATEWAY_URL: http://gateway:3000
+      GATEWAY_TIMEOUT_MS: 2500
       PORT: 8080
       Logging__LogLevel__Default: ${MAP_LOG_LEVEL:-Information}
       LOCATION_FRESHNESS_SECONDS: 60
@@ -278,6 +279,7 @@ services:
     environment:
       SERVICE_DISCOVERY_URL: http://service-discovery:3009
       GATEWAY_URL: http://gateway:3000
+      GATEWAY_TIMEOUT_MS: 2500
       PORT: 8080
       Logging__LogLevel__Default: ${MONSTER_RAID_LOG_LEVEL:-Information}
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD};GSS Encryption Mode=Disable;Maximum Pool Size=10

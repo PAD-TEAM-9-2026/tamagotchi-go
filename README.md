@@ -1871,6 +1871,11 @@ replicas share only its own database and signing/cursor configuration. Domain
 REST ports are internal; use Gateway. Diagnostic probes may be published on
 private ephemeral loopback ports during acceptance.
 
+Map and Monster Raid explicitly use `GATEWAY_TIMEOUT_MS=2500`, with an
+8.75-second breaker window, inside their three-second local work budget. Their
+published 3.0.0 images already support this setting. Other services retain their
+own settings; do not infer a uniform timeout from the copied kit defaults.
+
 Guild uses `guild` and `guild-rest`, both registering as `guild`, for balanced
 REST. Only `guild` publishes the browser socket port. PostgreSQL-backed tickets
 can be issued by either instance and redeemed there. Chat rooms remain local to
