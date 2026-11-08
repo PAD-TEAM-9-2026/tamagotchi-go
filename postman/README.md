@@ -95,3 +95,8 @@ Notification and Tamagotchi event-dependent reads poll within the request itself
 every 500 ms for at most 15 seconds. They work with Send as well as Runner, and
 fail visibly on transport, authentication or missing effects. No mutation is
 automatically retried.
+
+For the Tamagotchi scenario, supply `tamagotchi_fixture_package_id` for an active
+package with a configured starter and the documented care rules (FEED adds
+20 hunger and 5 XP). Do not select a package merely because it is active;
+Registry edit scenarios may leave active packages without starter definitions.

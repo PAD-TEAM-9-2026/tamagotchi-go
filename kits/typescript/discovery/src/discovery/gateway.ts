@@ -1,0 +1,125 @@
+import { SlidingWindowBreaker } from './breaker.js';
+import type { BreakerSettings } from './breaker.js';
+import { logger } from './log.js';
+
+export type GatewayConfig = {
+  url: string;
+  timeoutMs: number;
+  breaker: BreakerSettings;
+};
+
+export type RequestOptions = {
+  body?: unknown;
+  headers?: Record<string, string>;
+  signal?: AbortSignal;
+};
+
+export type GatewayClient = {
+  request(method: string, path: string, options?: RequestOptions): Promise<Response>;
+};
+
+export class BreakerOpenError extends Error {
+  constructor() {
+    super('circuit breaker is open');
+    this.name = 'BreakerOpenError';
+  }
+}
+
+const GATEWAY_URL_DEFAULT = 'http://gateway:3000';
+const GATEWAY_TIMEOUT_MS_DEFAULT = 5000;
+const BREAKER_THRESHOLD_DEFAULT = 3;
+const BREAKER_WINDOW_MULTIPLIER_DEFAULT = 3.5;
+const BREAKER_RESET_SECONDS_DEFAULT = 30;
+
+function requireNumber(raw: string | undefined, name: string, fallback: number): number {
+  if (raw === undefined || raw.trim() === '') return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) throw new Error(`${name} must be a finite number, got: ${JSON.stringify(raw)}`);
+  return n;
+}
+
+export function readGatewayConfig(
+  env: Record<string, string | undefined> = process.env,
+): GatewayConfig {
+  const timeoutMs = requireNumber(env['GATEWAY_TIMEOUT_MS'], 'GATEWAY_TIMEOUT_MS', GATEWAY_TIMEOUT_MS_DEFAULT);
+  const threshold = requireNumber(env['BREAKER_THRESHOLD'], 'BREAKER_THRESHOLD', BREAKER_THRESHOLD_DEFAULT);
+  const multiplier = requireNumber(env['BREAKER_WINDOW_MULTIPLIER'], 'BREAKER_WINDOW_MULTIPLIER', BREAKER_WINDOW_MULTIPLIER_DEFAULT);
+  const resetSeconds = requireNumber(env['BREAKER_RESET_SECONDS'], 'BREAKER_RESET_SECONDS', BREAKER_RESET_SECONDS_DEFAULT);
+
+  return {
+    url: env['GATEWAY_URL']?.trim() || GATEWAY_URL_DEFAULT,
+    timeoutMs,
+    breaker: {
+      threshold,
+      windowMs: timeoutMs * multiplier,
+      resetMs: resetSeconds * 1000,
+    },
+  };
+}
+
+export function createGatewayClient(
+  config: GatewayConfig,
+  send: typeof fetch = fetch,
+  now: () => number = Date.now,
+): GatewayClient {
+  const base = config.url.replace(/\/+$/, '');
+
+  const breaker = new SlidingWindowBreaker(
+    config.breaker,
+    {
+      onTrip(count, reason) {
+        logger.error('circuit breaker tripped', {
+          target: base,
+          failures_in_window: count,
+          threshold: config.breaker.threshold,
+          window_seconds: config.breaker.windowMs / 1000,
+          last_reason: reason,
+        });
+      },
+      onClose() {
+        logger.info('circuit breaker closed', { target: base });
+      },
+    },
+    now,
+  );
+
+  return {
+    async request(method: string, path: string, options?: RequestOptions): Promise<Response> {
+      if (breaker.isOpen()) {
+        throw new BreakerOpenError();
+      }
+
+      const { body, headers, signal: callerSignal } = options ?? {};
+      const timeoutSignal = AbortSignal.timeout(config.timeoutMs);
+      const signal = callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal;
+
+      const url = `${base}${path}`;
+      const requestHeaders = new Headers(headers);
+      if (body !== undefined && !requestHeaders.has('content-type')) {
+        requestHeaders.set('content-type', 'application/json');
+      }
+      const init: RequestInit = {
+        method,
+        signal,
+        headers: Object.fromEntries(requestHeaders.entries()),
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      };
+
+      try {
+        const response = await send(url, init);
+        breaker.recordSuccess();
+        return response;
+      } catch (error) {
+        // Only a gateway timeout (TimeoutError) or connection error (TypeError) trips the breaker.
+        // AbortError means the caller cancelled the request — that says nothing about the gateway.
+        if (
+          error instanceof TypeError ||
+          (error instanceof DOMException && error.name === 'TimeoutError')
+        ) {
+          breaker.recordFailure(error.name);
+        }
+        throw error;
+      }
+    },
+  };
+}
