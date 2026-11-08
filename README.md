@@ -229,6 +229,13 @@ Any service or the Gateway can report a failure for an instance with `POST /v1/i
 
 The endpoints are in [Service Discovery, direct](#service-discovery-direct) and the shapes in [docs/field-types.md](docs/field-types.md) under **Service Discovery**.
 
+### Broker transport proposal
+
+The proposed custom-broker gRPC boundary is documented in
+[contracts/README.md](contracts/README.md), with versioned Protobuf source.
+It is pending affected-owner review and does not change the current deployed
+Gateway/RabbitMQ paths. Compilation alone does not establish runtime support.
+
 ## Technologies
 
 | Service | Stack | Database | Why |
