@@ -1879,13 +1879,27 @@ three-second local work budget. Their published 3.0.0 images already support
 this setting. Other services retain their own settings; do not infer a uniform
 timeout from the copied kit defaults.
 
-Guild uses `guild` and `guild-rest`, both registering as `guild`, for balanced
-REST. `guild-socket` is a separate Nginx WebSocket load balancer on port 3004;
-Gateway still returns the configured public socket URL and never owns sockets.
-Both Guild instances redeem shared PostgreSQL tickets. The RabbitMQ chat relay
+Guild uses one `guild` Compose service with two replicas, all registering as
+`guild` for balanced REST. `guild-socket` is a separate Nginx WebSocket load
+balancer on port 3004. Gateway still returns the configured public socket URL and never owns sockets.
+All Guild replicas redeem shared PostgreSQL tickets. The RabbitMQ chat relay
 fans committed messages to each instance's local sockets. Failed handshakes can
-try the other instance; an established socket cannot migrate. Clients negotiate
-fresh tickets on reconnect and merge paginated history by message ID.
+try another available instance; an established socket cannot migrate. Clients
+negotiate fresh tickets on reconnect and merge paginated history by message ID.
+
+Nginx resolves the `guild` Docker DNS name to the current replica addresses and
+refreshes them without an ingress restart. Scale REST and new socket connections
+together from `deploy/`:
+
+```sh
+docker compose up -d --no-deps --scale guild=3 guild
+docker compose up -d --no-deps --scale guild=2 guild
+```
+
+Allow DNS and Discovery/cache convergence. Scale-down closes sockets on a removed
+replica; clients obtain fresh tickets, reconnect and recover from history. When
+upgrading an older deployment, stop and remove only its obsolete `guild-rest`
+container after the new `guild` replicas are healthy. Preserve all volumes.
 
 Relay queues are transient: messages missed during a broker gap are recovered
 from PostgreSQL history, not replayed by RabbitMQ. A client whose socket stays
