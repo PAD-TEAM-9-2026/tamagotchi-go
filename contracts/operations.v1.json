@@ -334,6 +334,34 @@
       }
     },
     {
+      "name": "tamagotchi.award_xp",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.AwardXpRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.AwardXpReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:award-xp"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:award-xp"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "name": "tamagotchi.care",
       "destination": "tamagotchi",
       "storage": "DURABLE",
@@ -387,6 +415,46 @@
           "retry-after",
           "www-authenticate",
           "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GetCollectionRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GetCollectionReply",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:read-collection"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.get_engagement",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GetEngagementRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.Engagement",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:read-engagement"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:read-engagement"
+            ]
+          }
         ]
       }
     },
@@ -472,6 +540,28 @@
       }
     },
     {
+      "name": "tamagotchi.grant_access",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GrantAccessRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GrantAccessReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:grant-access"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "name": "tamagotchi.list_holders",
       "destination": "tamagotchi",
       "storage": "DURABLE",
@@ -495,6 +585,18 @@
           "retry-after",
           "www-authenticate",
           "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.ListHoldersRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.ListHoldersReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:read-holders"
+            ]
+          }
         ]
       }
     },
@@ -559,6 +661,34 @@
       }
     },
     {
+      "name": "tamagotchi.release_engagement",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.ReleaseEngagementRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.Engagement",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:release-engagement"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:release-engagement"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "name": "tamagotchi.remove_from_collection",
       "destination": "tamagotchi",
       "storage": "DURABLE",
@@ -609,6 +739,34 @@
           "retry-after",
           "www-authenticate",
           "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.reserve_engagement",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.ReserveEngagementRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.Engagement",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:reserve-engagement"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:reserve-engagement"
+            ]
+          }
         ]
       }
     },

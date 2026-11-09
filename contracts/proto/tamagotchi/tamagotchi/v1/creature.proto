@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package tamagotchi.tamagotchi.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.tamagotchi.v1";
+option csharp_namespace = "Tamagotchi.Contracts.Tamagotchi.V1";
+
+import "google/protobuf/timestamp.proto";
+
+enum Source {
+  SOURCE_UNSPECIFIED = 0;
+  SOURCE_BATTLE = 1;
+  SOURCE_RAID = 2;
+}
+
+message StatValue {
+  oneof value {
+    double number = 1;
+    string text = 2;
+    bool flag = 3;
+  }
+}
+
+message Creature {
+  enum CombatType {
+    COMBAT_TYPE_UNSPECIFIED = 0;
+    FLAME = 1;
+    NATURE = 2;
+    EARTH = 3;
+    ELECTRIC = 4;
+    WATER = 5;
+    SHADOW = 6;
+  }
+
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    PRIMARY = 1;
+    SECONDARY = 2;
+  }
+
+  string id = 1;
+  string name = 2;
+  string origin_package_id = 3;
+  uint32 config_version = 4;
+  string origin_owner_id = 5;
+  repeated string holder_user_ids = 6;
+  Role role = 7;
+  CombatType combat_type = 8;
+  uint32 level = 9;
+  uint64 xp = 10;
+  string sprite_ref = 11;
+  map<string, StatValue> package_stats = 12;
+  google.protobuf.Timestamp acquired_at = 13;
+  uint32 version = 14;
+}
