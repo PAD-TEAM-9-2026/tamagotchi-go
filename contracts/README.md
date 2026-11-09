@@ -229,8 +229,11 @@ users:read-relationships), and Victoria's eleven Tamagotchi/eight Notification
 public mappings. Public routes keep the payloads, self/holder checks, errors and
 pagination defined in the main README and docs/field-types.md. These are approved
 migration targets after review, not claims that gRPC adapters are deployed.
-The 16 KiB request, 64 KiB reply and 512 KiB list limits are explicit target
-bounds; owners must exercise maximum-size fixtures before runtime cutover.
+Default bounds are 16 KiB per request and 64 KiB per reply. Creature and
+collection pages allow 768 KiB, device/notification pages 128 KiB, holders/types/
+matrix 64 KiB, and Map nearby pages 512 KiB. Creature pages at the current
+32-stat maximum exceed 512 KiB. These payload limits remain subject to the
+complete 1 MiB envelope cap; maximum-size fixtures must pass before cutover.
 
 Relationships use tamagotchi.user_management.v1.ListRelationshipsRequest/Reply.
 Request user_id and item user_id are canonical UUIDv7. Limit is 1..100. A cursor

@@ -172,7 +172,7 @@
       "idempotency": "NONE",
       "contains_credentials": false,
       "request_max_bytes": 16384,
-      "reply_max_bytes": 524288,
+      "reply_max_bytes": 131072,
       "public": {
         "method": "GET",
         "path": "/v1/devices",
@@ -202,7 +202,7 @@
       "idempotency": "NONE",
       "contains_credentials": false,
       "request_max_bytes": 16384,
-      "reply_max_bytes": 524288,
+      "reply_max_bytes": 131072,
       "public": {
         "method": "GET",
         "path": "/v1/users/{userId}/notifications",
@@ -368,7 +368,7 @@
       "idempotency": "NONE",
       "contains_credentials": false,
       "request_max_bytes": 16384,
-      "reply_max_bytes": 524288,
+      "reply_max_bytes": 786432,
       "public": {
         "method": "GET",
         "path": "/v1/users/{userId}/collection",
@@ -452,7 +452,7 @@
       "idempotency": "NONE",
       "contains_credentials": false,
       "request_max_bytes": 16384,
-      "reply_max_bytes": 524288,
+      "reply_max_bytes": 65536,
       "public": {
         "method": "GET",
         "path": "/v1/types/matrix",
@@ -479,7 +479,7 @@
       "idempotency": "NONE",
       "contains_credentials": false,
       "request_max_bytes": 16384,
-      "reply_max_bytes": 524288,
+      "reply_max_bytes": 65536,
       "public": {
         "method": "GET",
         "path": "/v1/tamagotchis/{id}/holders",
@@ -506,7 +506,7 @@
       "idempotency": "NONE",
       "contains_credentials": false,
       "request_max_bytes": 16384,
-      "reply_max_bytes": 524288,
+      "reply_max_bytes": 786432,
       "public": {
         "method": "GET",
         "path": "/v1/tamagotchis",
@@ -539,7 +539,7 @@
       "idempotency": "NONE",
       "contains_credentials": false,
       "request_max_bytes": 16384,
-      "reply_max_bytes": 524288,
+      "reply_max_bytes": 65536,
       "public": {
         "method": "GET",
         "path": "/v1/types",
