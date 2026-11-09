@@ -122,7 +122,7 @@ compilation proves syntax, not owner agreement or runtime compatibility.
 [operations.v1.json](operations.v1.json) is the only executable allowlist, checked
 against [operations.schema.json](operations.schema.json) and compiled Protobuf
 descriptors. An absent operation/mapping is unavailable, not an implicit grant.
-The initial foundation has no operations; subsequent reviewed slices add them.
+The foundation establishes the format; reviewed slices add operation mappings.
 This is an incremental catalogue, not a replacement deployment manifest until
 all current service operations and subscriptions have migrated.
 
@@ -220,3 +220,46 @@ allowlisted and cannot require the token it issues. Invalid service credentials
 never fall back to admin. Login, refresh, logout, registration, device registration
 and ticket operations need explicit secret-bearing request/reply classification.
 No missing identity fields or schemas are invented by this catalogue foundation.
+
+## First migration slice
+
+The catalogue now contains four Map public mappings, typed
+users.list_relationships (destination user-management, caller map,
+users:read-relationships), and Victoria's eleven Tamagotchi/eight Notification
+public mappings. Public routes keep the payloads, self/holder checks, errors and
+pagination defined in the main README and docs/field-types.md. These are approved
+migration targets after review, not claims that gRPC adapters are deployed.
+The 16 KiB request, 64 KiB reply and 512 KiB list limits are explicit target
+bounds; owners must exercise maximum-size fixtures before runtime cutover.
+
+Relationships use tamagotchi.user_management.v1.ListRelationshipsRequest/Reply.
+Request user_id and item user_id are canonical UUIDv7. Limit is 1..100. A cursor
+is absent for the first page or opaque nonempty text of at most 2048 characters.
+Reply items are bounded to 100, enum values must be FRIEND/ENEMY, and absent
+next_cursor corresponds to JSON null. Empty-present cursors and unknown enum
+values are invalid dependency responses. Do not classify missing users as strangers
+until all pages were fetched successfully. Same-user duplicates with conflicting
+relationships and repeated/cyclic cursors are refused by the caller.
+
+Map's public writes, reads, deletion and nearby queries remain self-only.
+Upsert requires its existing command key; reads are safe; deletion stays unsafe
+for automatic failover because a repeat changes its response. Completed command
+replay still returns before calling User Management. Preserve the current
+six-metre stranger-only partial response on relationship failure. Existing Map
+JSON timestamps, fingerprints and cursor bindings are unchanged.
+
+The manifest retains every existing durable event/subscription from the deployed
+topology, including all six Notification topics and bounded offline audit work.
+Audit is not a new authenticated service or claimed online consumer. Guild's
+per-instance chat relay is not invented here; its reviewed replacement topic and
+adapter remain required before replacing the current relay. Deployment still uses
+its current topology until the entire replacement passes acceptance.
+
+Absent internal Tamagotchi definitions (holders/collection/XP/access/engagement),
+UM bootstrap/credits, Guild/Registry operations and Raid routes must be supplied
+by their owners before those paths are enabled. Public entries do not implicitly
+expose their service-only routes. No concrete security claim names, bootstrap
+messages or Discovery registration fields are invented in this slice.
+Notification mark_read remains UNSAFE until concurrent-repeat tests demonstrate
+natural idempotency and no duplicate effects; then change its manifest policy in
+a focused tested update. No generic acknowledgement is needed for that evidence.
