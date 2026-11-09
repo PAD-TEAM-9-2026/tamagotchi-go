@@ -46,7 +46,7 @@ services:
       retries: 20
 
   user-management:
-    image: patriciamoraru/user-management:3.0.0
+    image: patriciamoraru/user-management:3.0.1
     pull_policy: always
     deploy:
       replicas: 2
@@ -190,7 +190,7 @@ services:
       retries: 10
 
   battle:
-    image: patriciamoraru/battle:3.0.0
+    image: patriciamoraru/battle:3.0.1
     pull_policy: always
     deploy:
       replicas: 2
@@ -362,11 +362,11 @@ services:
     restart: "no"
 
   service-discovery:
-    image: patriciamoraru/service-discovery:3.0.0
+    image: patriciamoraru/service-discovery:3.0.1
     pull_policy: always
     environment:
       PORT: 3009
-      SERVICE_VERSION: 3.0.0
+      SERVICE_VERSION: 3.0.1
       LOG_LEVEL: ${SERVICE_DISCOVERY_LOG_LEVEL:-info}
       TASK_TIMEOUT_MS: 5000
       FAILURE_THRESHOLD: 3
