@@ -113,6 +113,8 @@ message DeliveryReply {
     DUPLICATE = 2;
     RETRYABLE_FAILURE = 3;
     PERMANENT_FAILURE = 4;
+    // Refused before handler execution; no effects and no handler attempt.
+    DEFERRED = 5;
   }
   Outcome outcome = 1;
   // Stable bounded machine code, never raw exception/payload contents.
