@@ -156,7 +156,7 @@ instance listing and failure-report APIs, polls registered status endpoints and
 removes failing instances. Developer alerts use an optional Discord webhook.
 The implementation and API are documented in [its README](https://github.com/PatriciaMoraru/service-discovery#readme).
 
-Compose pins `patriciamoraru/service-discovery:3.0.0` and the submodule records
+Compose pins `patriciamoraru/service-discovery:3.0.1` and the submodule records
 its reviewed source. Published image metadata is separate from runtime acceptance.
 Gateway starts after Discovery is healthy and uses its internal URL explicitly.
 Static fallback remains enabled during migration; disable it after every domain
@@ -1678,10 +1678,10 @@ one account per publishing or consuming service (see below).
 | Service | Image | Digest | Host port |
 |---|---|---|---|
 | Gateway | `victoriamutruc/gateway:3.0.1` | `sha256:d9e8c64a3f6283205ebce015bcc5ff35fd2b051dc27caf4a94ee2044cb456103` | 3000 |
-| Service Discovery | `patriciamoraru/service-discovery:3.0.0` | `sha256:c3730a226e38d5b839a16d2b1381e786de6566fa2f7f6d00f22c63c6a344155d` | 3009 (loopback) |
-| User Management | `patriciamoraru/user-management:3.0.0` | `sha256:be8d62337ff55f96671a16e354c19ed1c0b104f8d29bba8e10cfccc9cb9a07b8` | internal |
+| Service Discovery | `patriciamoraru/service-discovery:3.0.1` | `sha256:dba12a0c80e5d9631ce0e9a87a5075351c3209efd11a66d95b8c330f8d1153a0` | 3009 (loopback) |
+| User Management | `patriciamoraru/user-management:3.0.1` | `sha256:dfe48dd9eaab794594db16de5fa1181bea77190cccaed2def1c828f9d8086ab8` | internal |
 | Tamagotchi | `victoriamutruc/tamagotchi:3.0.1` | `sha256:2b429a49a7ff6e237de1a61664b5d4c13fec817c43423a2cf263d7c4ac48d330` | internal |
-| Battle | `patriciamoraru/battle:3.0.0` | `sha256:09fce49ee209051fb975f1458a946f9ac5cb575f49d6f6c1e33e7841552b0d59` | internal |
+| Battle | `patriciamoraru/battle:3.0.1` | `sha256:52f934088460ef38d0c4157cd3879c268eb4df316203e359bc4993b7de5d5f4e` | internal |
 | Guild | `mihaelacatan/guild-service:3.0.1` | `sha256:0cd0780d5e6dab54c8ab5b4246ccacb539ef0b2d451cb9319b1ec13312b41487` | internal; socket balancer 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:3.0.0` | `sha256:6c5f0564f43125869e7367ecad4c09b8e4843a875552d5436728ab20a95f7baa` | internal |
 | Map | `sergedbs/map:3.0.0` | `sha256:ed133aeef707c19ecef0765ee712ece3eb6c2b88e9bdbfad591860f20791e23d` | internal |
