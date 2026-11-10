@@ -28,14 +28,13 @@ class FirstSliceTests(unittest.TestCase):
 
     def test_victoria_public_mappings_keep_credential_and_retry_policy(self):
         operations = self.catalogue['operations']
-        self.assertEqual(11, sum(o['destination'] == 'tamagotchi' for o in operations))
+        self.assertEqual(11, sum(o['destination'] == 'tamagotchi' and 'public' in o for o in operations))
         self.assertEqual(8, sum(o['destination'] == 'notification' for o in operations))
         device = next(o for o in operations if o['name'] == 'notification.register_device')
         self.assertEqual('VOLATILE', device['storage'])
         self.assertTrue(device['contains_credentials'])
         mark = next(o for o in operations if o['name'] == 'notification.mark_read')
         self.assertEqual('UNSAFE', mark['failover'])
-        self.assertFalse(any(o['name'] == 'tamagotchi.award_xp' for o in operations))
 
     def test_all_existing_durable_subscriptions_and_publishers_preserved(self):
         spec = importlib.util.spec_from_file_location('topology', ROOT / 'deploy/rabbitmq/provision.py')

@@ -234,6 +234,8 @@ collection pages allow 768 KiB, device/notification pages 128 KiB, holders/types
 matrix 64 KiB, and Map nearby pages 512 KiB. Creature pages at the current
 32-stat maximum exceed 512 KiB. These payload limits remain subject to the
 complete 1 MiB envelope cap; maximum-size fixtures must pass before cutover.
+Measured worst cases of a 100 item page are 26 KiB (devices), 55 KiB (notifications)
+and 532 KiB (creatures).
 
 Relationships use tamagotchi.user_management.v1.ListRelationshipsRequest/Reply.
 Request user_id and item user_id are canonical UUIDv7. Limit is 1..100. A cursor
@@ -251,6 +253,40 @@ replay still returns before calling User Management. Preserve the current
 six-metre stranger-only partial response on relationship failure. Existing Map
 JSON timestamps, fingerprints and cursor bindings are unchanged.
 
+## Tamagotchi internal operations
+
+Package tamagotchi.tamagotchi.v1 defines the service-only routes and the service
+reads of Tamagotchi. Callers and scopes match the issuer allowlist in the main README.
+
+| Operation | Callers and scope | Retry |
+| --- | --- | --- |
+| tamagotchi.award_xp | battle, monster-raid: tamagotchi:award-xp | command key |
+| tamagotchi.grant_access | battle: tamagotchi:grant-access | command key |
+| tamagotchi.reserve_engagement | battle, monster-raid: tamagotchi:reserve-engagement | command key |
+| tamagotchi.release_engagement | battle, monster-raid: tamagotchi:release-engagement | command key |
+| tamagotchi.get_engagement | battle, monster-raid: tamagotchi:read-engagement | safe read |
+| tamagotchi.list_holders | battle: tamagotchi:read-holders | safe read |
+| tamagotchi.get_collection | monster-raid: tamagotchi:read-collection | safe read |
+
+list_holders and get_collection keep their public user mapping and add the typed
+service mapping. The caller kind is taken from the verified identity, never from a
+request field. Creating a creature (tamagotchi:mint) and reading one as a service
+(tamagotchi:read-creature) have no caller and stay unmapped.
+
+The command key is the CallRequest idempotency_key, 1 to 128 printable ASCII
+characters, and Tamagotchi keeps its 24 hour receipts. A replay returns the stored
+reply. Ids are canonical UUIDv7 strings, versions are 1..2147483647, timestamps are
+UTC with millisecond precision, xp is at most 2^53-1. Absent cursor starts the first
+page and a present cursor is 1..2048 characters. An absent primary or next_cursor
+corresponds to JSON null. Unspecified enum values are refused by the adapter.
+package_stats values are number, text or flag, with keys of 1..64 characters.
+
+Business refusals are call failures with the HTTP status and code of the public
+API, not typed replies: 400 invalid_xp, invalid_grant, unknown_engagement,
+invalid_lineup; 404 unknown_tamagotchi, unknown_creature, unknown_engagement;
+409 creature_engaged, reference_in_use. ALREADY_HOLDER and CAP_REACHED are
+successful GrantAccessReply outcomes and never count against the target.
+
 The manifest retains every existing durable event/subscription from the deployed
 topology, including all six Notification topics and bounded offline audit work.
 Audit is not a new authenticated service or claimed online consumer. Guild's
@@ -258,7 +294,6 @@ per-instance chat relay is not invented here; its reviewed replacement topic and
 adapter remain required before replacing the current relay. Deployment still uses
 its current topology until the entire replacement passes acceptance.
 
-Absent internal Tamagotchi definitions (holders/collection/XP/access/engagement),
 UM bootstrap/credits, Guild/Registry operations and Raid routes must be supplied
 by their owners before those paths are enabled. Public entries do not implicitly
 expose their service-only routes. No concrete security claim names, bootstrap
