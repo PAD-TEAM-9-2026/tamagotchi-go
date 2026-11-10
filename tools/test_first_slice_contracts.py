@@ -40,7 +40,7 @@ class FirstSliceTests(unittest.TestCase):
     def test_conditional_writes_and_repeat_sensitive_deletes_stay_unsafe_to_retry(self):
         operations = self.catalogue['operations']
         conditional = [o for o in operations if 'if-match' in o.get('public', {}).get('request_headers', [])]
-        self.assertEqual(4, len(conditional))
+        self.assertEqual(6, len(conditional))
         for entry in conditional:
             self.assertEqual('UNSAFE', entry['failover'], entry['name'])
         delete = next(o for o in operations if o['name'] == 'notification.delete_device')
