@@ -984,18 +984,6 @@
           "www-authenticate",
           "cache-control"
         ]
-      },
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.guild.v1.GetGuildRequest",
-        "response_type": "type.googleapis.com/tamagotchi.guild.v1.Guild",
-        "callers": [
-          {
-            "service": "guild",
-            "scopes": [
-              "guild:read"
-            ]
-          }
-        ]
       }
     },
     {
@@ -1004,7 +992,7 @@
       "storage": "VOLATILE",
       "failover": "UNSAFE",
       "idempotency": "NONE",
-      "contains_credentials": false,
+      "contains_credentials": true,
       "request_max_bytes": 16384,
       "reply_max_bytes": 65536,
       "public": {
@@ -1109,18 +1097,6 @@
           "retry-after",
           "www-authenticate",
           "cache-control"
-        ]
-      },
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.guild.v1.ListMembersRequest",
-        "response_type": "type.googleapis.com/tamagotchi.guild.v1.ListMembersReply",
-        "callers": [
-          {
-            "service": "guild",
-            "scopes": [
-              "guild:read"
-            ]
-          }
         ]
       }
     },
@@ -1246,7 +1222,7 @@
       "public": {
         "method": "POST",
         "path": "/v1/raid-occurrences/{id}/activate",
-        "access": "user",
+        "access": "admin",
         "request_headers": [
           "accept",
           "content-type"
@@ -1273,7 +1249,7 @@
       "public": {
         "method": "POST",
         "path": "/v1/raid-occurrences/{id}/cancel",
-        "access": "user",
+        "access": "admin",
         "request_headers": [
           "accept",
           "content-type"
@@ -1289,28 +1265,6 @@
       }
     },
     {
-      "name": "registry.check_eligibility",
-      "destination": "package-registry",
-      "storage": "DURABLE",
-      "failover": "SAFE_READ",
-      "idempotency": "NONE",
-      "contains_credentials": false,
-      "request_max_bytes": 16384,
-      "reply_max_bytes": 65536,
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.registry.v1.CheckEligibilityRequest",
-        "response_type": "type.googleapis.com/tamagotchi.registry.v1.CheckEligibilityReply",
-        "callers": [
-          {
-            "service": "package-registry",
-            "scopes": [
-              "registry:check-eligibility"
-            ]
-          }
-        ]
-      }
-    },
-    {
       "name": "registry.create_boss",
       "destination": "package-registry",
       "storage": "DURABLE",
@@ -1322,7 +1276,7 @@
       "public": {
         "method": "POST",
         "path": "/v1/bosses",
-        "access": "user",
+        "access": "admin",
         "request_headers": [
           "accept",
           "content-type"
@@ -1349,7 +1303,7 @@
       "public": {
         "method": "POST",
         "path": "/v1/raid-occurrences",
-        "access": "user",
+        "access": "admin",
         "request_headers": [
           "accept",
           "content-type"
@@ -1376,7 +1330,7 @@
       "public": {
         "method": "POST",
         "path": "/v1/packages",
-        "access": "user",
+        "access": "admin",
         "request_headers": [
           "accept",
           "content-type"
@@ -1403,7 +1357,7 @@
       "public": {
         "method": "POST",
         "path": "/v1/raid-occurrences/{id}/deactivate",
-        "access": "user",
+        "access": "admin",
         "request_headers": [
           "accept",
           "content-type"
@@ -1474,40 +1428,6 @@
           "www-authenticate",
           "cache-control"
         ]
-      },
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.registry.v1.GetBossRequest",
-        "response_type": "type.googleapis.com/tamagotchi.registry.v1.Boss",
-        "callers": [
-          {
-            "service": "package-registry",
-            "scopes": [
-              "registry:read-bosses"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "registry.get_currency_rules",
-      "destination": "package-registry",
-      "storage": "DURABLE",
-      "failover": "SAFE_READ",
-      "idempotency": "NONE",
-      "contains_credentials": false,
-      "request_max_bytes": 16384,
-      "reply_max_bytes": 65536,
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.registry.v1.GetCurrencyRulesRequest",
-        "response_type": "type.googleapis.com/tamagotchi.registry.v1.CurrencyRules",
-        "callers": [
-          {
-            "service": "package-registry",
-            "scopes": [
-              "registry:read-config"
-            ]
-          }
-        ]
       }
     },
     {
@@ -1534,18 +1454,6 @@
           "retry-after",
           "www-authenticate",
           "cache-control"
-        ]
-      },
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.registry.v1.GetOccurrenceRequest",
-        "response_type": "type.googleapis.com/tamagotchi.registry.v1.RaidOccurrence",
-        "callers": [
-          {
-            "service": "package-registry",
-            "scopes": [
-              "registry:read-occurrences"
-            ]
-          }
         ]
       }
     },
@@ -1577,72 +1485,6 @@
       }
     },
     {
-      "name": "registry.get_starter_pet",
-      "destination": "package-registry",
-      "storage": "DURABLE",
-      "failover": "SAFE_READ",
-      "idempotency": "NONE",
-      "contains_credentials": false,
-      "request_max_bytes": 16384,
-      "reply_max_bytes": 65536,
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.registry.v1.GetStarterPetRequest",
-        "response_type": "type.googleapis.com/tamagotchi.registry.v1.StarterPet",
-        "callers": [
-          {
-            "service": "package-registry",
-            "scopes": [
-              "registry:read-config"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "registry.get_stat_bonuses",
-      "destination": "package-registry",
-      "storage": "DURABLE",
-      "failover": "SAFE_READ",
-      "idempotency": "NONE",
-      "contains_credentials": false,
-      "request_max_bytes": 16384,
-      "reply_max_bytes": 65536,
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.registry.v1.GetStatBonusesRequest",
-        "response_type": "type.googleapis.com/tamagotchi.registry.v1.StatBonuses",
-        "callers": [
-          {
-            "service": "package-registry",
-            "scopes": [
-              "registry:read-config"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "registry.get_stat_definitions",
-      "destination": "package-registry",
-      "storage": "DURABLE",
-      "failover": "SAFE_READ",
-      "idempotency": "NONE",
-      "contains_credentials": false,
-      "request_max_bytes": 16384,
-      "reply_max_bytes": 65536,
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.registry.v1.GetStatDefinitionsRequest",
-        "response_type": "type.googleapis.com/tamagotchi.registry.v1.StatDefinitions",
-        "callers": [
-          {
-            "service": "package-registry",
-            "scopes": [
-              "registry:read-config"
-            ]
-          }
-        ]
-      }
-    },
-    {
       "name": "registry.list_bosses",
       "destination": "package-registry",
       "storage": "DURABLE",
@@ -1654,7 +1496,7 @@
       "public": {
         "method": "GET",
         "path": "/v1/bosses",
-        "access": "user",
+        "access": "admin",
         "request_headers": [
           "accept",
           "if-none-match"
@@ -1703,28 +1545,6 @@
       }
     },
     {
-      "name": "registry.list_package_members",
-      "destination": "package-registry",
-      "storage": "DURABLE",
-      "failover": "SAFE_READ",
-      "idempotency": "NONE",
-      "contains_credentials": false,
-      "request_max_bytes": 16384,
-      "reply_max_bytes": 524288,
-      "internal": {
-        "request_type": "type.googleapis.com/tamagotchi.registry.v1.ListPackageMembersRequest",
-        "response_type": "type.googleapis.com/tamagotchi.registry.v1.ListPackageMembersReply",
-        "callers": [
-          {
-            "service": "package-registry",
-            "scopes": [
-              "registry:read-members"
-            ]
-          }
-        ]
-      }
-    },
-    {
       "name": "registry.list_packages",
       "destination": "package-registry",
       "storage": "DURABLE",
@@ -1766,7 +1586,7 @@
       "public": {
         "method": "PUT",
         "path": "/v1/bosses/{bossId}",
-        "access": "user",
+        "access": "admin",
         "request_headers": [
           "accept",
           "content-type",
