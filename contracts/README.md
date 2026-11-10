@@ -69,12 +69,13 @@ does not modify current registration requests or existing endpoint tables.
 gRPC authenticates workloads with mTLS. Gateway assertions remain destination
 bound; the broker validates rather than blindly retargeting them. Internal
 service tokens retain destination-scoped UM grants; verified caller and actor
-context become short-lived assertions signed by the broker's own key. Exact
-claim/type/issuer definitions are a separate affected-owner review gate.
+context become short-lived assertions signed by the broker's own key. The exact
+certificate identities, metadata keys, claims, issuers and bootstrap flow are in
+[identity.md](identity.md).
 
 Assertions/tokens use gRPC metadata, not trusted client-supplied principal fields:
-`authorization`, `x-gateway-assertion`, `x-gateway-context` or the reviewed broker
-assertion equivalent. Repeated security metadata is refused. Public envelope
+`authorization`, `x-gateway-assertion` and `x-broker-context`
+(`x-gateway-context` stays on the Gateway's HTTP path). Repeated security metadata is refused. Public envelope
 headers exclude Authorization, secrets, assertion/context and hop-by-hop headers.
 Persist only validated authorization context required by queued work.
 
