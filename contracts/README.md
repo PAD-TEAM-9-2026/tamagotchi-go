@@ -299,6 +299,11 @@ UM bootstrap/credits, Guild/Registry operations and Raid routes must be supplied
 by their owners before those paths are enabled. Public entries do not implicitly
 expose their service-only routes. No concrete security claim names, bootstrap
 messages or Discovery registration fields are invented in this slice.
-Notification mark_read remains UNSAFE until concurrent-repeat tests demonstrate
-natural idempotency and no duplicate effects; then change its manifest policy in
-a focused tested update. No generic acknowledgement is needed for that evidence.
+Notification mark_read is IDEMPOTENT by NATURAL basis, not by a command key: the
+update keeps the first read_at atomically, a repeat returns the same record and the
+operation has no other effect (victoriaaa111/notifications#51, with 20 overlapping marks
+against PostgreSQL). The ownership check runs on every invocation, the two-target limit
+and the remaining-deadline rule still apply, and the If-Match writes stay UNSAFE. The
+policy may be applied only when every selectable Notification replica runs an image
+that contains that change. Notification images up to 3.0.1 do not, so the first image
+pinned in Compose after them is the earliest one failover may use.

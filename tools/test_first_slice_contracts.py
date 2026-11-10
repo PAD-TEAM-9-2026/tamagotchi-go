@@ -34,7 +34,17 @@ class FirstSliceTests(unittest.TestCase):
         self.assertEqual('VOLATILE', device['storage'])
         self.assertTrue(device['contains_credentials'])
         mark = next(o for o in operations if o['name'] == 'notification.mark_read')
-        self.assertEqual('UNSAFE', mark['failover'])
+        self.assertEqual(('IDEMPOTENT', 'NATURAL'), (mark['failover'], mark['idempotency']))
+        self.assertEqual([mark['name']], [o['name'] for o in operations if o['idempotency'] == 'NATURAL'])
+
+    def test_conditional_writes_and_repeat_sensitive_deletes_stay_unsafe_to_retry(self):
+        operations = self.catalogue['operations']
+        conditional = [o for o in operations if 'if-match' in o.get('public', {}).get('request_headers', [])]
+        self.assertEqual(4, len(conditional))
+        for entry in conditional:
+            self.assertEqual('UNSAFE', entry['failover'], entry['name'])
+        delete = next(o for o in operations if o['name'] == 'notification.delete_device')
+        self.assertEqual('UNSAFE', delete['failover'])
 
     def test_all_existing_durable_subscriptions_and_publishers_preserved(self):
         spec = importlib.util.spec_from_file_location('topology', ROOT / 'deploy/rabbitmq/provision.py')
