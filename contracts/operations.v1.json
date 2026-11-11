@@ -1648,6 +1648,94 @@
       }
     },
     {
+      "name": "registry.get_currency_rules",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetCurrencyRulesRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetCurrencyRulesResponse",
+        "callers": [
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.get_starter_pet",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStarterPetRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStarterPetResponse",
+        "callers": [
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.get_stat_bonuses",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatBonusesRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatBonusesResponse",
+        "callers": [
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.get_stat_definitions",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatDefinitionsRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatDefinitionsResponse",
+        "callers": [
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "name": "users.list_relationships",
       "destination": "user-management",
       "storage": "DURABLE",
