@@ -1,8 +1,8 @@
 # Broker identity and bootstrap
 
-**Status: proposed for review on sergedbs/message-broker#7.** It defines the exact
-names that the broker, the Gateway and every service adapter use. Nothing here is
-deployed yet; the current HTTP assertion path stays authoritative until cutover.
+**Status: agreed definition for sergedbs/message-broker#7.** It defines the exact
+names that the broker, the Gateway and every service adapter use. The runtime is
+not deployed yet; the current HTTP assertion path stays in use until cutover.
 
 The design reuses what services already verify. The broker's destination context
 has the same claims as today's `X-Gateway-Assertion`, with its own issuer, type
@@ -21,13 +21,22 @@ and `message-broker`.
 | CA | One local CA for the stack. Only its certificate is mounted into containers; its private key is never mounted |
 | Certificate | One per logical workload, shared by all its replicas. RSA 2048+ or ECDSA P-256 |
 | Identity | Exactly one URI SAN `spiffe://tamagotchi-go/workload/<name>`, where `<name>` is a canonical name above. Anything else is refused |
-| Hostname | A DNS SAN with the compose service hostname, so the client can verify the server |
+| Server name | A DNS SAN equal to the canonical name, also when the compose host differs (`package-registry`, whose compose host is `registry`) |
 | Protocol | TLS 1.3 only. No plaintext gRPC listener |
 | Files | `TLS_CA_PATH`, `TLS_CERT_PATH`, `TLS_KEY_PATH` (mounted read-only) |
 
 The broker's `MessageBroker` port requires a client certificate. A service's
 `ServiceDelivery` port requires a client certificate whose identity is
 `message-broker`; any other peer gets `UNAUTHENTICATED` before the request is read.
+
+**Calling a replica.** Certificates are per logical workload, but the broker
+calls one replica at a time. It dials the instance's `grpc_endpoint` from
+Discovery (a container host or IP and port) and sets the TLS authority to the
+destination's canonical name. It then requires a chain to the stack CA, a DNS SAN
+equal to that name and the matching URI SAN identity. The host part of
+`grpc_endpoint` is never used for the certificate check. The broker context's
+`instance_id` (section 4) binds each attempt to the selected replica. The Gateway
+and services call the broker with the authority `message-broker`.
 
 ## 2. Security metadata
 
@@ -161,8 +170,10 @@ failed check returns `UNAUTHENTICATED` with no detail, and the token is never lo
   the queue store, never logged. The typed request and reply mirror
   `ServiceTokenRequest` and `ServiceTokenResponse`, and are added with User
   Management's catalogue entries.
-- Services keep tokens in memory, one per destination. They refresh at 80% of
-  the lifetime, with a single refresh in flight per destination.
+- Services keep tokens in memory, unchanged from the Shared README: one token
+  per destination and scope set, renewed about 30 seconds before it expires,
+  with a single renewal in flight per destination and scope set. A token for one
+  scope set is never reused for another.
 - Verified admin issuance through the Gateway stays as a VOLATILE public mapping.
   An invalid secret never falls back to admin.
 
