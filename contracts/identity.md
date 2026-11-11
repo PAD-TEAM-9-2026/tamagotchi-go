@@ -72,6 +72,16 @@ User Management's `GatewayAssertionVerifier` applies today:
 - `jti` a UUID, `correlation_id` equal to `RequestContext.correlation_id`
 - `principal_kind`, `sub`, `roles` and `scope` agree, as in the Gateway README
 
+**Gateway-only typed operations.** `guild.issue_chat_ticket` is an internal
+mapping, called only by the authenticated `gateway` workload with a verified
+Gateway assertion for `guild` and `principal_kind` `user`. Guild checks current
+membership before issuing the ticket. The catalogue's `guild:issue-chat-ticket`
+label identifies this capability; it does not require a UM service token or a
+scope in the user's assertion, and it grants no authorization by itself.
+No other internal operation accepts a Gateway user assertion unless its agreed
+contract explicitly permits that caller and principal. Browser access remains
+`POST /gateway/v1/ws-negotiate`; no public ticket mapping is exposed.
+
 **Service calls.** The certificate identity must be a domain service, and
 `authorization` must hold a User Management access token:
 
