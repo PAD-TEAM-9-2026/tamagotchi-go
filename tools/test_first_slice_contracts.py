@@ -50,11 +50,12 @@ class FirstSliceTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('topology', ROOT / 'deploy/rabbitmq/provision.py')
         topology = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(topology)
-        actual = {(s['subscriber'], topic) for s in self.catalogue['subscriptions'] for topic in s['topics']}
+        actual = {(s['subscriber'], topic) for s in self.catalogue['subscriptions'] if s['kind'] == 'LOGICAL' for topic in s['topics']}
         expected = {(subscriber, topic) for subscriber, bindings in topology.CONSUMERS.items() for _, topic in bindings}
         self.assertEqual(expected, actual)
         producers = {exchange: ('package-registry' if account == 'registry' else account) for account, exchange in topology.PUBLISHERS.items()}
-        self.assertEqual({topic: producers[exchange] for bindings in topology.CONSUMERS.values() for exchange, topic in bindings}, {e['topic']: e['producer'] for e in self.catalogue['events']})
+        durable_topics = {topic for _, topic in expected}
+        self.assertEqual({topic: producers[exchange] for bindings in topology.CONSUMERS.values() for exchange, topic in bindings}, {e['topic']: e['producer'] for e in self.catalogue['events'] if e['topic'] in durable_topics})
         notifications = next(s for s in self.catalogue['subscriptions'] if s['subscriber'] == 'notification')
         self.assertEqual(6, len(notifications['topics']))
         self.assertNotIn('raid.completed.v1', notifications['topics'])

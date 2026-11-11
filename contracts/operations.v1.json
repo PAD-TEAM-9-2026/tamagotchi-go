@@ -1768,6 +1768,10 @@
       "producer": "battle"
     },
     {
+      "topic": "guild.chat_message.v1",
+      "producer": "guild"
+    },
+    {
       "topic": "guild.invitation_created.v1",
       "producer": "guild"
     },
@@ -1860,6 +1864,13 @@
       "kind": "LOGICAL",
       "topics": [
         "user.package_joined.v1"
+      ]
+    },
+    {
+      "subscriber": "guild",
+      "kind": "INSTANCE",
+      "topics": [
+        "guild.chat_message.v1"
       ]
     }
   ]
