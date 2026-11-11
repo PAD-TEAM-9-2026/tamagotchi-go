@@ -995,21 +995,11 @@
       "contains_credentials": true,
       "request_max_bytes": 16384,
       "reply_max_bytes": 65536,
-      "public": {
-        "method": "POST",
-        "path": "/v1/guilds/{guildId}/chat-tickets",
-        "access": "user",
-        "request_headers": [
-          "accept",
-          "content-type"
-        ],
-        "query_parameters": [],
-        "response_headers": [
-          "content-type",
-          "etag",
-          "retry-after",
-          "www-authenticate",
-          "cache-control"
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.guild.v1.IssueChatTicketRequest",
+        "response_type": "type.googleapis.com/tamagotchi.guild.v1.IssueChatTicketResponse",
+        "callers": [
+          { "service": "gateway", "scopes": ["guild:issue-chat-ticket"] }
         ]
       }
     },

@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package tamagotchi.guild.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.guild.v1";
+option csharp_namespace = "Tamagotchi.Contracts.Guild.V1";
+
+// Issued by the Gateway on behalf of an authenticated user to obtain a
+// short-lived ticket for the Guild WebSocket chat endpoint.
+// The user principal and guild membership are verified from the broker
+// context JWT; guild_id is the only additional routing parameter needed.
+message IssueChatTicketRequest {
+  // UUIDv4 of the guild the user wants to chat in.
+  string guild_id = 1;
+}
+
+// A short-lived opaque token the browser exchanges for a WebSocket upgrade.
+// The ticket is single-use and expires within the interval advertised.
+message IssueChatTicketResponse {
+  // Opaque authentication token for the WebSocket handshake.
+  string ticket = 1;
+  // Unix millisecond timestamp after which the ticket is invalid.
+  int64 expires_at_unix_ms = 2;
+}
