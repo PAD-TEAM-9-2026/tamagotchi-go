@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: gateway
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [gateway]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: tamagotchi
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [tamagotchi]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: notification
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [notification]
+        type: A
+        port: 9090
+        refresh_interval: 15s

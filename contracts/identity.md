@@ -1,8 +1,8 @@
 # Broker identity and bootstrap
 
-**Status: proposed for review on sergedbs/message-broker#7.** It defines the exact
-names that the broker, the Gateway and every service adapter use. Nothing here is
-deployed yet; the current HTTP assertion path stays authoritative until cutover.
+**Status: agreed definition for sergedbs/message-broker#7.** It defines the exact
+names that the broker, the Gateway and every service adapter use. The runtime is
+not deployed yet; the current HTTP assertion path stays in use until cutover.
 
 The design reuses what services already verify. The broker's destination context
 has the same claims as today's `X-Gateway-Assertion`, with its own issuer, type
@@ -21,13 +21,22 @@ and `message-broker`.
 | CA | One local CA for the stack. Only its certificate is mounted into containers; its private key is never mounted |
 | Certificate | One per logical workload, shared by all its replicas. RSA 2048+ or ECDSA P-256 |
 | Identity | Exactly one URI SAN `spiffe://tamagotchi-go/workload/<name>`, where `<name>` is a canonical name above. Anything else is refused |
-| Hostname | A DNS SAN with the compose service hostname, so the client can verify the server |
+| Server name | A DNS SAN equal to the canonical name, also when the compose host differs (`package-registry`, whose compose host is `registry`) |
 | Protocol | TLS 1.3 only. No plaintext gRPC listener |
 | Files | `TLS_CA_PATH`, `TLS_CERT_PATH`, `TLS_KEY_PATH` (mounted read-only) |
 
 The broker's `MessageBroker` port requires a client certificate. A service's
 `ServiceDelivery` port requires a client certificate whose identity is
 `message-broker`; any other peer gets `UNAUTHENTICATED` before the request is read.
+
+**Calling a replica.** Certificates are per logical workload, but the broker
+calls one replica at a time. It dials the instance's `grpc_endpoint` from
+Discovery (a container host or IP and port) and sets the TLS authority to the
+destination's canonical name. It then requires a chain to the stack CA, a DNS SAN
+equal to that name and the matching URI SAN identity. The host part of
+`grpc_endpoint` is never used for the certificate check. The broker context's
+`instance_id` (section 4) binds each attempt to the selected replica. The Gateway
+and services call the broker with the authority `message-broker`.
 
 ## 2. Security metadata
 
@@ -40,7 +49,7 @@ No security value is ever copied into the stored envelope, a reply or a log line
 | `x-gateway-assertion` | gateway | `MessageBroker.Call` | Today's Gateway assertion, unchanged |
 | `authorization` | a service | `MessageBroker.Call` | `Bearer <UM service token>` for the destination |
 | `x-broker-context` | a service | `MessageBroker.Call` (optional) | The broker context it received for the work it is doing |
-| `x-service-secret` | a service | `MessageBroker.Call` for `user-management.issue_service_token` only | The existing service secret |
+| `x-service-secret` | a service | `MessageBroker.Call` for `users.issue_service_token` only | The existing service secret |
 | `x-broker-context` | message-broker | `ServiceDelivery.Execute` and `Deliver` | The broker context in section 4 |
 
 `MessageBroker.Publish` needs only the workload certificate: the producer must
@@ -62,6 +71,16 @@ User Management's `GatewayAssertionVerifier` applies today:
 - integer `iat` and `exp`, with 0 < `exp` − `iat` ≤ 30 s, not expired (5 s leeway)
 - `jti` a UUID, `correlation_id` equal to `RequestContext.correlation_id`
 - `principal_kind`, `sub`, `roles` and `scope` agree, as in the Gateway README
+
+**Gateway-only typed operations.** `guild.issue_chat_ticket` is an internal
+mapping, called only by the authenticated `gateway` workload with a verified
+Gateway assertion for `guild` and `principal_kind` `user`. Guild checks current
+membership before issuing the ticket. The catalogue's `guild:issue-chat-ticket`
+label identifies this capability; it does not require a UM service token or a
+scope in the user's assertion, and it grants no authorization by itself.
+No other internal operation accepts a Gateway user assertion unless its agreed
+contract explicitly permits that caller and principal. Browser access remains
+`POST /gateway/v1/ws-negotiate`; no public ticket mapping is exposed.
 
 **Service calls.** The certificate identity must be a domain service, and
 `authorization` must hold a User Management access token:
@@ -150,21 +169,34 @@ failed check returns `UNAUTHENTICATED` with no detail, and the token is never lo
 
 ## 5. Token issuance and bootstrap
 
-- `user-management.issue_service_token` goes through the broker. The caller is
-  authenticated by its certificate and `x-service-secret`; no bearer token is
-  needed, so issuance never requires the token it issues.
+- `users.issue_service_token` goes through the broker. Its typed messages are
+  `tamagotchi.user_management.v1.IssueServiceTokenRequest` (`service_name`,
+  `audience`, `scopes`) and `IssueServiceTokenReply` (`access_token`,
+  `token_type`, `expires_in`), the same fields as `ServiceTokenRequest` and
+  `ServiceToken`. The secret is never a message field.
+- Callers are the services that hold a client secret and a grant: battle, guild,
+  map, monster-raid and tamagotchi. Their catalogue scope lists are empty because
+  this is the one internal operation authenticated by the certificate plus
+  `x-service-secret` instead of a bearer token, so issuance never requires the
+  token it issues. Any `authorization` metadata on it is refused. User Management
+  signs its own Registry token in-process and does not call this operation.
 - The broker requires the request's `service_name` to equal the certificate
   identity. It forwards the secret to User Management only as `x-service-secret`
   metadata on Execute. User Management checks the secret and its allowlist as it
-  does today.
+  does today, and a wrong secret is refused with no admin fallback.
 - Request and reply are VOLATILE: kept in memory with a bound, never written to
-  the queue store, never logged. The typed request and reply mirror
-  `ServiceTokenRequest` and `ServiceTokenResponse`, and are added with User
-  Management's catalogue entries.
-- Services keep tokens in memory, one per destination. They refresh at 80% of
-  the lifetime, with a single refresh in flight per destination.
-- Verified admin issuance through the Gateway stays as a VOLATILE public mapping.
-  An invalid secret never falls back to admin.
+  the queue store, never logged. The operation is UNSAFE for failover: a lost
+  reply is not resent to another replica, the service asks again.
+- Services keep tokens in memory, unchanged from the Shared README: one token
+  per destination and scope set, renewed about 30 seconds before it expires,
+  with a single renewal in flight per destination and scope set. A token for one
+  scope set is never reused for another.
+- Verified admin issuance stays as a separate public operation,
+  `users.issue_service_token_as_admin`: `POST /v1/service-tokens` with `admin`
+  access, VOLATILE. Keeping two operations keeps the two ways of proving identity
+  apart. `X-Service-Secret`
+  is a forbidden public header, so a secret never travels through the Gateway's
+  public envelope.
 
 Startup has no cycle: the CA, the certificates and the Gateway and broker public
 keys are mounted files, and the broker reads UM's JWKS directly. Order: User
