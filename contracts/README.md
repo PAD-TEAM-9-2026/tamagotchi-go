@@ -307,3 +307,22 @@ and the remaining-deadline rule still apply, and the If-Match writes stay UNSAFE
 policy may be applied only when every selectable Notification replica runs an image
 that contains that change. Notification images up to 3.0.1 do not, so the first image
 pinned in Compose after them is the earliest one failover may use.
+
+## User Management service token issuance
+
+`users.issue_service_token` is the bootstrap operation from
+[identity.md](identity.md) section 5. Its internal mapping uses
+`tamagotchi.user_management.v1.IssueServiceTokenRequest` and
+`IssueServiceTokenReply`, with the fields of ServiceTokenRequest and ServiceToken.
+Callers are battle, guild, map, monster-raid and tamagotchi, each with an empty
+scope list: the caller proves itself with its certificate and `x-service-secret`
+metadata, never a bearer token. User Management keeps its allowlist and its
+secret check; the broker only requires `service_name` to equal the certificate.
+
+The verified admin alternative is the separate public operation
+`users.issue_service_token_as_admin`, `POST /v1/service-tokens` with `admin`
+access, so the two ways of proving identity never share a mapping. Both
+operations are VOLATILE and contain credentials, and both are UNSAFE: a lost
+reply is not retried on another replica. A wrong secret never falls back to admin. Package Registry and
+Notification have no grants and do not call it; User Management signs its own
+Registry token in-process.
