@@ -1756,6 +1756,68 @@
           }
         ]
       }
+    },
+    {
+      "name": "users.issue_service_token_as_admin",
+      "destination": "user-management",
+      "storage": "VOLATILE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "public": {
+        "method": "POST",
+        "path": "/v1/service-tokens",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.issue_service_token",
+      "destination": "user-management",
+      "storage": "VOLATILE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.IssueServiceTokenRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.IssueServiceTokenReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": []
+          },
+          {
+            "service": "guild",
+            "scopes": []
+          },
+          {
+            "service": "map",
+            "scopes": []
+          },
+          {
+            "service": "monster-raid",
+            "scopes": []
+          },
+          {
+            "service": "tamagotchi",
+            "scopes": []
+          }
+        ]
+      }
     }
   ],
   "events": [

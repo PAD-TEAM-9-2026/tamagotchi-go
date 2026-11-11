@@ -49,7 +49,7 @@ No security value is ever copied into the stored envelope, a reply or a log line
 | `x-gateway-assertion` | gateway | `MessageBroker.Call` | Today's Gateway assertion, unchanged |
 | `authorization` | a service | `MessageBroker.Call` | `Bearer <UM service token>` for the destination |
 | `x-broker-context` | a service | `MessageBroker.Call` (optional) | The broker context it received for the work it is doing |
-| `x-service-secret` | a service | `MessageBroker.Call` for `user-management.issue_service_token` only | The existing service secret |
+| `x-service-secret` | a service | `MessageBroker.Call` for `users.issue_service_token` only | The existing service secret |
 | `x-broker-context` | message-broker | `ServiceDelivery.Execute` and `Deliver` | The broker context in section 4 |
 
 `MessageBroker.Publish` needs only the workload certificate: the producer must
@@ -169,23 +169,34 @@ failed check returns `UNAUTHENTICATED` with no detail, and the token is never lo
 
 ## 5. Token issuance and bootstrap
 
-- `user-management.issue_service_token` goes through the broker. The caller is
-  authenticated by its certificate and `x-service-secret`; no bearer token is
-  needed, so issuance never requires the token it issues.
+- `users.issue_service_token` goes through the broker. Its typed messages are
+  `tamagotchi.user_management.v1.IssueServiceTokenRequest` (`service_name`,
+  `audience`, `scopes`) and `IssueServiceTokenReply` (`access_token`,
+  `token_type`, `expires_in`), the same fields as `ServiceTokenRequest` and
+  `ServiceToken`. The secret is never a message field.
+- Callers are the services that hold a client secret and a grant: battle, guild,
+  map, monster-raid and tamagotchi. Their catalogue scope lists are empty because
+  this is the one internal operation authenticated by the certificate plus
+  `x-service-secret` instead of a bearer token, so issuance never requires the
+  token it issues. Any `authorization` metadata on it is refused. User Management
+  signs its own Registry token in-process and does not call this operation.
 - The broker requires the request's `service_name` to equal the certificate
   identity. It forwards the secret to User Management only as `x-service-secret`
   metadata on Execute. User Management checks the secret and its allowlist as it
-  does today.
+  does today, and a wrong secret is refused with no admin fallback.
 - Request and reply are VOLATILE: kept in memory with a bound, never written to
-  the queue store, never logged. The typed request and reply mirror
-  `ServiceTokenRequest` and `ServiceTokenResponse`, and are added with User
-  Management's catalogue entries.
+  the queue store, never logged. The operation is UNSAFE for failover: a lost
+  reply is not resent to another replica, the service asks again.
 - Services keep tokens in memory, unchanged from the Shared README: one token
   per destination and scope set, renewed about 30 seconds before it expires,
   with a single renewal in flight per destination and scope set. A token for one
   scope set is never reused for another.
-- Verified admin issuance through the Gateway stays as a VOLATILE public mapping.
-  An invalid secret never falls back to admin.
+- Verified admin issuance stays as a separate public operation,
+  `users.issue_service_token_as_admin`: `POST /v1/service-tokens` with `admin`
+  access, VOLATILE. Keeping two operations keeps the two ways of proving identity
+  apart. `X-Service-Secret`
+  is a forbidden public header, so a secret never travels through the Gateway's
+  public envelope.
 
 Startup has no cycle: the CA, the certificates and the Gateway and broker public
 keys are mounted files, and the broker reads UM's JWKS directly. Order: User
