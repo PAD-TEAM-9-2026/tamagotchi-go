@@ -26,6 +26,15 @@ class FirstSliceTests(unittest.TestCase):
         self.assertTrue(all(o['public']['access'] == 'user' for o in mapped))
         self.assertFalse(any('internal' in o for o in mapped))
 
+    def test_ticket_is_typed_gateway_only_volatile_and_unsafe(self):
+        ticket = next(o for o in self.catalogue['operations'] if o['name'] == 'guild.issue_chat_ticket')
+        self.assertNotIn('public', ticket)
+        self.assertEqual(('VOLATILE', 'UNSAFE', 'NONE', True),
+                         (ticket['storage'], ticket['failover'], ticket['idempotency'], ticket['contains_credentials']))
+        self.assertEqual([{'service': 'gateway', 'scopes': ['guild:issue-chat-ticket']}], ticket['internal']['callers'])
+        self.assertEqual('type.googleapis.com/tamagotchi.guild.v1.IssueChatTicketRequest', ticket['internal']['request_type'])
+        self.assertEqual('type.googleapis.com/tamagotchi.guild.v1.IssueChatTicketResponse', ticket['internal']['response_type'])
+
     def test_victoria_public_mappings_keep_credential_and_retry_policy(self):
         operations = self.catalogue['operations']
         self.assertEqual(11, sum(o['destination'] == 'tamagotchi' and 'public' in o for o in operations))
