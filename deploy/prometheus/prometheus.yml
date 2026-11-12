@@ -26,3 +26,27 @@ scrape_configs:
         type: A
         port: 9090
         refresh_interval: 15s
+
+  - job_name: user-management
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [user-management]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: battle
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [battle]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: service-discovery
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [service-discovery]
+        type: A
+        port: 9090
+        refresh_interval: 15s
