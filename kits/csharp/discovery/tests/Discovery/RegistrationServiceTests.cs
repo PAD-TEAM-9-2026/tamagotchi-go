@@ -15,7 +15,7 @@ public sealed class RegistrationServiceTests
     private readonly RecordingLogger<RegistrationService> _logs = new();
 
     private RegistrationService Create(
-        FakeHandler handler, TimeSpan? checkInterval = null, IHostApplicationLifetime? lifetime = null) =>
+        FakeHandler handler, TimeSpan? checkInterval = null, IHostApplicationLifetime? lifetime = null, int? grpcPort = null) =>
         new(
             new HttpClient(handler),
             new DiscoverySettings(new Uri("http://service-discovery:3009/"), "battle-1"),
@@ -23,6 +23,7 @@ public sealed class RegistrationServiceTests
             {
                 ServiceName = "battle",
                 Port = 3003,
+                GrpcPort = grpcPort,
                 CheckInterval = checkInterval ?? Interval,
             },
             new DiscoveryInstance(Id, "3.1.4", DateTimeOffset.UnixEpoch),
@@ -38,6 +39,23 @@ public sealed class RegistrationServiceTests
         Assert.Equal(
             new[] { 1, 1, 2, 4, 8, 16, 30, 30, 30 }.Select(s => TimeSpan.FromSeconds(s)),
             new[] { 0, 1, 2, 3, 4, 5, 6, 10, 100 }.Select(RegistrationService.RetryDelay));
+    }
+
+    [Fact]
+    public async Task With_broker_delivery_on_it_registers_the_grpc_endpoint_on_the_same_host()
+    {
+        var handler = new FakeHandler(_ => HttpStatusCode.Created);
+        var service = Create(handler, grpcPort: 5001);
+
+        await service.StartAsync(CancellationToken.None);
+
+        Assert.Equal(Interval, await _delays.NextAsync());
+        var body = Assert.Single(handler.Calls).Body!.Value;
+        Assert.Equal("battle-1:5001", body.GetProperty("grpc_endpoint").GetString());
+        Assert.Equal(3003, body.GetProperty("port").GetInt32());
+        Assert.False(body.TryGetProperty("subscriptions", out _));
+
+        await service.StopAsync(CancellationToken.None);
     }
 
     [Fact]
@@ -58,6 +76,7 @@ public sealed class RegistrationServiceTests
         Assert.Equal(3003, body.GetProperty("port").GetInt32());
         Assert.Equal("/status", body.GetProperty("status_path").GetString());
         Assert.Equal("3.1.4", body.GetProperty("version").GetString());
+        Assert.False(body.TryGetProperty("grpc_endpoint", out _));
         Assert.True(service.Registered);
 
         var line = Assert.Single(_logs.Named("service registered"));
