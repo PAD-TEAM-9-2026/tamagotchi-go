@@ -171,6 +171,11 @@ services:
       TLS_CA_PATH: /run/secrets/tls/ca.crt
       TLS_CERT_PATH: /run/secrets/tls/battle.crt
       TLS_KEY_PATH: /run/secrets/tls/battle.key
+      # Traces to Jaeger (deploy/monitoring.md, Tracing).
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
     volumes:
       - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
       - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
