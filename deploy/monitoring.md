@@ -1,8 +1,11 @@
 # Monitoring
 
-Prometheus scrapes every service replica and the message broker, and Grafana shows five provisioned dashboards. Use the optional `compose.monitoring.yaml` overlay with the reviewed candidate base.
-Scrape configuration is provisioned for the target services; a job is accepted only
-when its actual candidate exports metrics. Missing targets are not healthy replicas.
+Prometheus discovers service replicas and the message broker, and Grafana shows
+five provisioned dashboards. Use the optional `compose.monitoring.yaml` overlay
+with the reviewed candidate base. A target is accepted only when its actual
+candidate exports metrics; missing targets are not healthy replicas. Optional
+Jaeger tracing is documented in [Tracing](#tracing) and wired separately in the
+broker candidate base.
 
 | Path | Content |
 | --- | --- |
@@ -54,6 +57,44 @@ The broker does not export the common HTTP families. Its dashboard uses `broker_
 `tasks_in_flight`, `tasks_capacity` and the four `log_export` series, all described in the broker
 README. Queue and dead-letter values come from the broker's one database, so the panels take the
 maximum over replicas. `target` is an instance ID.
+
+## Tracing
+
+Jaeger shows OpenTelemetry traces: one request followed through every service it touches. It does not
+replace logs or metrics. Each service sends spans over OTLP/HTTP to `http://jaeger:4318` once it sets the
+variables below; without `OTEL_EXPORTER_OTLP_ENDPOINT` a service starts no tracing at all. Every log line
+written inside a span carries `trace_id` and `span_id`, so a line from the log export can be looked up in
+Jaeger by trace ID.
+
+| Path | Content |
+| --- | --- |
+| `jaeger/config.yaml` | OTLP receivers on 4317 (gRPC) and 4318 (HTTP), memory storage capped at 50,000 traces, and a processor that deletes query strings, URL paths, SQL text, headers and gRPC metadata from spans |
+| `grafana/provisioning/datasources/jaeger.yml` | The `Jaeger` datasource at `http://jaeger:16686`, not editable |
+
+```yaml
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0
+    command: ["--config", "/etc/jaeger/config.yaml"]
+    volumes:
+      - ./jaeger/config.yaml:/etc/jaeger/config.yaml:ro
+    ports:
+      - "127.0.0.1:16686:16686"
+    mem_limit: 768m
+```
+
+The UI is on `127.0.0.1:16686` only; OTLP is reachable only on the Compose network. The message-broker
+candidate (`compose.broker.yaml`) already contains this service. Each traced service gets:
+
+```yaml
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+```
+
+`service.name`, `service.version` and `service.instance.id` (the Discovery instance ID) are set by the
+service itself. Probes, metrics endpoints and calls to Service Discovery are not traced, and spans never
+hold tokens, headers, bodies, query strings, SQL text or user IDs.
 
 The optional [structured log volume overlay](log-volumes.md) gives applications
 service-owned log storage and Broker read-only access for system log export.
