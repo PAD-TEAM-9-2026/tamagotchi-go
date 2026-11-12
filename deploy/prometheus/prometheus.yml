@@ -50,3 +50,11 @@ scrape_configs:
         type: A
         port: 9090
         refresh_interval: 15s
+
+  - job_name: message-broker
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [message-broker]
+        type: A
+        port: 9090
+        refresh_interval: 15s
