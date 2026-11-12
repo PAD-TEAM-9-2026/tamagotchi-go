@@ -1,7 +1,8 @@
 # Tamagotchi Go
 
 Shared backend for virtual pet apps. Different frontend packages ship their own
-creatures, art and care rules, backed by eight domain services and a Python Gateway.
+creatures, art and care rules, backed by eight domain services, a Python Gateway,
+Service Discovery and a custom Java message broker.
 
 
 ## Team
@@ -13,6 +14,7 @@ creatures, art and care rules, backed by eight domain services and a Python Gate
 | Mihaela | Guild, Package Registry | TypeScript, Node.js |
 | Sergiu | Map, Monster Raid | C#, ASP.NET Core |
 | All four | Gateway, Service Discovery | Python, FastAPI |
+| Sergiu maintains; all four contribute | Message Broker | Java 21, Spring Boot |
 
 
 ## Repository
@@ -32,6 +34,8 @@ Each service has its own private repository. They are linked here as submodules.
 | Gateway | `services/gateway` | Shared by the team |
 | Service Discovery | `services/service-discovery` | Shared by the team |
 
+Message Broker is maintained in [its standalone repository](https://github.com/sergedbs/message-broker).
+
 ## Service boundaries
 
 Each service owns one part of the game and one database. Nothing reads another
@@ -48,7 +52,8 @@ service's tables.
 | Monster Raid | Live raids, boss HP, attacks, damage per player, rewards | Boss definitions, guild membership |
 | Notification | Devices, push tokens, delivery, history, mute settings | Every domain decision, message text |
 | Gateway | REST routing, caller validation, correlation and negotiation | Game rules, domain data, databases, events |
-| Service Discovery | In-memory instance registry, health polling, failure removal and developer alerts | Domain data, authentication, application request routing |
+| Service Discovery | In-memory instance registry, health polling, transport/subscription metadata, failure removal and developer alerts | Domain data, authentication, application request routing |
+| Message Broker | Durable admission/fan-out, delivery leases, gRPC routing, load balancing, instance breakers and administrative inspection | Domain effects, user account data or cross-service SQL |
 
 Two rules keep the boundaries honest. Battle decides, Tamagotchi applies.
 Package Registry holds configuration, the runtime services hold state.
@@ -98,55 +103,52 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
-This section describes the target architecture. Gateway source implements
-routing and authorization; Map and Monster Raid integration source uses real
-HTTP adapters and durable broker delivery. Published image versions may predate
-these changes. Validate the selected image set against real dependencies before
-claiming deployment compatibility.
+The custom-broker candidate is an incremental migration. The runtime, contracts
+and several service adapters are implemented on development branches; complete-stack
+acceptance and published replacement images are tracked separately. Base
+`deploy/compose.yaml` retains the earlier published HTTP/RabbitMQ deployment.
+Candidate overlays build reviewed source without silently replacing that release.
 
-![Architecture: clients reach the eight services, each running two replicas, only through the Gateway, which verifies them, signs their identity and balances them round-robin from Service Discovery's instance lists; instances register with Service Discovery, which polls their status, removes failing ones and sends alerts to Discord; Guild chat sockets go directly to Guild](docs/img/lab3_architecture_diagram.jpg)
+```mermaid
+flowchart LR
+    Client[Client] -->|HTTP / JSON| Gateway
+    Gateway -->|mTLS Call / user assertion| Broker[Message Broker]
+    Broker -->|Execute / signed context| Services[Domain replicas]
+    Services -->|Typed Call / service token| Broker
+    Services -->|Outbox Publish| Broker
+    Broker -->|Deliver / receipt deduplication| Subscribers[Subscriber replicas]
+    Broker --> BrokerDB[(Broker PostgreSQL)]
+    Broker -->|Instances and load| Discovery[Service Discovery]
+    Services -->|Status and subscriptions| Discovery
+    Discovery -->|Health / load alerts| Discord
+    Client -->|Negotiated WebSocket| Guild[Guild replicas / socket ingress]
+    Prometheus -->|Internal metrics| Broker
+    Grafana --> Prometheus
+```
 
-Lab 3 runs every domain service as two replicas (×2 in the diagram) and adds Service Discovery, the green box and arrows:
+Each domain service owns its database, effects and authorization. Synchronous
+service dependencies become typed gRPC calls through Broker; committed facts
+use durable topic subscriptions. Destination queues support public Gateway calls,
+logical subscriber queues distribute work across replicas, and transient
+per-instance subscriptions support Guild relay. Consumers retain event receipts.
 
-- **Registration.** Each instance registers itself once it listens, checks every 30 seconds that it is still registered, registers again only after a 404, and deregisters on shutdown. The Gateway registers itself the same way.
-- **Health.** Service Discovery calls every instance's `/status` every 5 seconds (2 second limit), marks failing ones unhealthy and raises alerts on critical load.
-- **Balancing.** The Gateway reads the healthy instances of each service every 5 seconds and sends requests to them in turn (round-robin).
-- **Breakers and removal.** The Gateway keeps a circuit breaker per instance and reports failures; three within 17.5 seconds remove the instance. Every service also has a breaker on its own calls to the Gateway.
-- **Alerts.** Service Discovery sends unhealthy, removed and critical-load alerts to Discord, at most one per alert type and instance every 5 minutes.
+Broker selects fresh eligible instances using reported load plus assignments
+since the last sample, reserves one half-open trial and handles safe-only
+failover. Discovery supplies addresses, process IDs, load and approved subscription
+metadata; it does not forward application requests. Breakers and delivery outcomes
+belong to Broker on migrated paths, rather than a second Gateway routing layer.
 
-Service REST dependencies traverse Gateway: Map reads User Management;
-Raid reads Guild, Registry and Tamagotchi and delivers rewards to User Management
-and Tamagotchi. Battle uses User Management, Registry and Tamagotchi. Guild uses
-User Management and Registry. User Management and Tamagotchi read Registry
-configuration. Notification consumes events rather than making domain REST calls.
-Direct probes, Gateway's JWKS bootstrap, broker traffic and provider assets are
-explicit exceptions. Registry has no membership-rebuild REST call to User
-Management; its projection is updated by committed membership events.
+The previous HTTP/RabbitMQ topology remains documented by
+[the earlier architecture diagram](docs/img/lab3_architecture_diagram.jpg).
+It is compatibility evidence, not the custom-broker target. Unmigrated services
+keep their existing transport until coordinated replacement acceptance and
+retained-work handover pass. No automatic dual publication is supported.
 
-Every client goes through the HTTP Gateway. It routes by path prefix to the eight
-services, so a frontend package never learns where a service lives or how many
-replicas answer.
-
-The dashed box holds the services themselves. Each one owns a single database on
-a shared PostgreSQL server, with its own user and grants, so there is no
-cross-service SQL. When a service needs something it does not own, it asks the
-owner over HTTP: Battle reserves pets, writes XP and grants access through
-Tamagotchi, Monster
-Raid checks guild membership with Guild, Map resolves relationships through User
-Management, and everyone reads combat rules, stat definitions and starter config
-from Package Registry. Those calls are synchronous because the caller cannot
-continue without the answer.
-
-Everything that already happened goes on the bus instead. All seven domain
-services publish committed facts to RabbitMQ, and the consumers decide what
-matters to them. Notification is the largest one: it turns those facts into
-delivery fan-out and pushes to phones through Firebase Cloud Messaging, without
-any publisher knowing it exists. Registry also keeps a membership projection
-from User Management events, so package eligibility checks stay local.
-
-Registry builds that projection from the events alone and never reads from User
-Management, so no route lists every user's memberships. User Management only
-answers `GET /v1/internal/users/{userId}/membership` for one user at a time.
+Direct probes, Discovery, metrics, configured issuer JWKS bootstrap, external
+providers and negotiated Guild sockets remain infrastructure exceptions.
+Narrowly allowlisted Map assets retain Discovery-aware HTTP forwarding; they do
+not provide an application API fallback. Guild replica relay does not replay
+messages missed during a broker gap: clients recover them from stored history.
 
 ### Service Discovery
 
@@ -172,69 +174,60 @@ an infrastructure exception to application REST routing through Gateway.
 
 ### Gateway
 
-The Gateway is the only public entry point for REST. Every client call and every service-to-service call goes through it, so a service never sees a caller it did not get from the Gateway. It holds no domain state: no database and no events. What it needs comes from configuration, User Management's public keys and its own signing key.
+Gateway is the public HTTP entry point. It verifies bearer credentials, enforces
+root admission/deadlines and rate limits, matches public routes against a pinned
+operation manifest, signs destination-bound user context and reconstructs the
+public HTTP response. It owns no domain database or event stream.
 
-How one request is handled, in the order the code does it:
+With `BROKER_DISPATCH=true`, public operations use mTLS `MessageBroker.Call` and
+Broker chooses the actual replica. Internal-only operations have no public
+mapping; domain services use typed calls directly through Broker. Services verify
+Broker context and perform their own business authorization. Common failure
+behavior remains502 upstream_unavailable,503 too_many_tasks for capacity and
+504 task_timeout for root expiry, with existing domain Problem Details preserved.
+The entire Protobuf envelope is bounded to1 MiB, with stricter per-operation limits.
 
-1. **Correlation.** A valid UUIDv7 `X-Correlation-Id` is kept, anything else is replaced by a new one. It is forwarded to the service and returned to the caller.
-2. **Admission.** The request takes one of 128 slots or gets `503 too_many_tasks` with `Retry-After: 1`. A five-second deadline starts for the whole request.
-3. **Routing.** The first path segment names the service. An unknown prefix, or a path that does not continue with `/v1/`, gets `404 unknown_route`.
-4. **Credential limit.** Login, register and refresh are refused with `429 too_many_attempts` after 10 failed attempts from one address in 60 seconds.
-5. **Authentication.** A bearer token is verified against User Management's JWKS: signature, expiry, audience and claims. An invalid one gets `401`. A request without `Authorization` goes on as anonymous, and the service decides.
-6. **Forwarding pool.** User traffic and service traffic each have 64 slots, so one cannot starve the other.
-7. **Signed identity.** `Authorization` and any client-sent identity headers are removed. The Gateway signs `X-Gateway-Assertion` for the destination service, carrying the verified caller, the correlation ID and the deadline.
-8. **Forwarding.** The prefix is stripped once, and the service's answer comes back unchanged. Bodies are capped at 10 MiB in both directions. An unreachable service gets `502 upstream_unavailable` and a passed deadline `504 task_timeout`.
+With Broker dispatch disabled, the existing REST proxy retains its earlier
+Discovery routing and signed `X-Gateway-Assertion` behavior for compatibility.
+Service REST callers may still carry `X-Gateway-Context` on that legacy path.
+Do not treat compatibility mode as completion of the broker migration.
 
-**Service-to-service calls** use the same path. The calling service sends its own service token and, when it acts for a user, the assertion it received as `X-Gateway-Context`. The Gateway verifies that assertion with its own key, keeps the correlation ID and the earlier deadline, and names the user as the actor in the new assertion. A chain of calls therefore shares one ID and one five-second budget.
+For `guild.chat`, Gateway invokes the internal-only volatile
+`guild.issue_chat_ticket` operation as authenticated workload gateway with a
+user assertion. Guild verifies membership and returns the single-use30-second
+ticket. The browser connects to the negotiated public WebSocket ingress; Gateway
+does not hold the socket. Transient relay gaps require history catch-up.
 
-**WebSockets** are negotiated, not proxied. A signed-in user calls `POST /gateway/v1/ws-negotiate` for `guild.chat`. The Gateway verifies the user, asks Guild for a ticket and returns the socket URL with a single-use ticket that expires within 30 seconds. The browser then connects straight to Guild and sends the ticket in the first frame. The Gateway holds no socket, so chat traffic never uses its slots.
+Gateway logs completed requests with correlation, route, status and duration;
+metrics remain on its internal monitoring port. Its source, published image and
+validated deployment are separate evidence. See
+[the Gateway README](https://github.com/victoriaaa111/gateway#readme).
 
-**Observability.** Every completed request is logged as JSON with method, path, status, duration, correlation ID and target service. Prometheus metrics are served on a separate port, 9090, which Compose does not publish.
+Failure reports and status polling remain direct internal APIs; see
+[Service Discovery, direct](#service-discovery-direct) and
+[docs/field-types.md](docs/field-types.md). Registry state is in memory and
+replicas re-register after Discovery restart.
 
-Patterns the Gateway applies:
+### Broker contracts and candidate deployment
 
-| Pattern | In the Gateway |
-|---|---|
-| API Gateway, Gateway Routing | One entry point; the path prefix picks one of eight services |
-| Gateway Offloading | Authentication, rate limiting, timeouts and request logging happen once here, not in every service |
-| Identity propagation | The client's token stops at the Gateway; services receive a short-lived assertion signed for them alone |
-| Valet Key | The chat ticket is a short-lived, single-use key for direct access to Guild |
-| Bulkhead | Separate pools for user requests, service requests, authentication and health probes |
-| Fail fast | A full pool answers `503` with `Retry-After` at once instead of queueing |
-| Timeout and deadline propagation | One five-second deadline per root request, carried into every nested call |
-| Rate Limiting | Failed credential attempts are counted per address over a sliding window |
-| Cache-Aside | User Management's keys are cached for 300 seconds and refreshed once for an unknown key ID |
-| Correlation Identifier | One ID across the client call, every nested call and the logs |
-| Health Endpoint Monitoring | `/health` for the process; `/ready` checks that both key sets are usable; `/status` reports state and load to Service Discovery |
-| Service Discovery (client side) | Instance lists come from Service Discovery every 5 seconds; the Gateway also registers itself |
-| Load Balancing | Round-robin over the healthy instances of each service |
-| Circuit Breaker | One breaker per instance: 3 failures in 17.5 seconds trip it, and in remove mode the instance is reported and dropped |
+[contracts/README.md](contracts/README.md) defines the approved operation manifest,
+Protobuf transport and identity rules. Consumers pin immutable Shared commits and
+per-file checksums; generated contracts are build output. A successful schema
+build does not establish authenticated runtime compatibility.
 
-Gateway never retries application requests. It discovers service instances,
-caches their routable addresses and balances REST calls round-robin. Per-instance
-breakers exclude failing targets; removal mode also reports failures to Discovery.
-Static URLs are migration fallback, not evidence of dynamic routing. Gateway
-caches no application responses and does not proxy streaming connections.
+Use the source-built `deploy/compose.broker.yaml` overlay with private source
+paths and workload material. UM exposes issuer JWKS/bootstrap before Broker
+readiness, avoiding a startup cycle. Producer/caller switches remain off until
+their destination adapters and subscribers pass real checks. Integration
+operators use owner-built candidates or owner-run evidence when source is
+private.
 
-Gateway is maintained in its own repository and linked here as a submodule.
-Its source pin, published image and validated deployment are separate evidence.
-See Deployment for the pinned image set; source-built candidates do not establish
-a completed published release.
-
-### Service Discovery
-
-Service Discovery ([PatriciaMoraru/service-discovery](https://github.com/PatriciaMoraru/service-discovery)) is a shared Python 3.13 / FastAPI service that maintains the live registry of running instances. Each domain service registers itself on startup with `POST /v1/instances` and deregisters on graceful shutdown with `DELETE /v1/instances/{instance_id}`. Service Discovery health-checks every registered instance on an interval; the health checker also reports each failed check as a failure.
-
-Any service or the Gateway can report a failure for an instance with `POST /v1/instances/{instance_id}/failures`. Three failures within a 17.5-second sliding window (configurable) removes the instance automatically and raises a `CRITICAL` alert. Every removal (deregistration, removal at the threshold, or replacement by a new id on the same address) clears the failure history for that instance. Registering an id that is still registered does not reset failures, so an instance cannot avoid removal by registering again. `GET /v1/failures` lists every instance with at least one in-window failure.
-
-The endpoints are in [Service Discovery, direct](#service-discovery-direct) and the shapes in [docs/field-types.md](docs/field-types.md) under **Service Discovery**.
-
-### Broker transport proposal
-
-The proposed custom-broker gRPC boundary is documented in
-[contracts/README.md](contracts/README.md), with versioned Protobuf source.
-It is pending affected-owner review and does not change the current deployed
-Gateway/RabbitMQ paths. Compilation alone does not establish runtime support.
+[Structured log volumes](deploy/log-volumes.md) isolate writable service roots
+and read-only Broker export access. [Monitoring](deploy/monitoring.md) documents
+Prometheus and Grafana provisioning. Broker's management port3010 exposes health,
+readiness/status and admin-only topics, dead letters and bounded ZIP log export;
+its internal gRPC listener defaults to5010 and metrics to9090. Configure host
+port mappings per candidate and keep credentials out of committed files.
 
 ## Technologies
 
@@ -248,7 +241,8 @@ Gateway/RabbitMQ paths. Compilation alone does not establish runtime support.
 | Package Registry | TypeScript, Node.js, Express| PostgreSQL | Config documents differ per package |
 | Map | C#, ASP.NET Core, EF Core | PostgreSQL with PostGIS | Distance queries need a spatial index |
 | Monster Raid | C#, ASP.NET Core, EF Core | PostgreSQL | Counters under concurrent attacks |
-| Gateway | Python 3.13, FastAPI, Uvicorn, HTTPX, uv | None | Asynchronous REST dispatch without domain state |
+| Gateway | Python 3.13, FastAPI, Uvicorn, HTTPX, uv | None | Public authentication/mapping and bounded broker dispatch |
+| Message Broker | Java 21, Spring Boot, gRPC, JDBC | Dedicated PostgreSQL | Durable queues, routing, workers and administrative inspection |
 
 The domain services use TypeScript and C#. Gateway uses Python with uv 0.12.23
 and a checked dependency lock. It has no database or event publisher.
@@ -265,8 +259,9 @@ How services talk:
 
 | Interaction | Shape | Technology | Where |
 |---|---|---|---|
-| Request and response | One to one, synchronous, the caller waits | HTTP, JSON | Client to gateway, and service to service when the answer is needed now |
-| Publish and subscribe | One to many, asynchronous | RabbitMQ topic exchanges | Announcing something that already happened |
+| Public request and response | One to one, synchronous | HTTP/JSON then mTLS gRPC Call/Execute | Client → Gateway → Broker → destination |
+| Internal request and response | Typed synchronous call | mTLS gRPC Call/Execute | Service → Broker → destination |
+| Publish and subscribe | One to many, asynchronous | Broker Publish/Deliver and durable logical queues | Committed domain facts; RabbitMQ remains only on unmigrated paths |
 | Bidirectional stream | One to one, asynchronous, both sides send | WebSocket | Guild chat |
 | One way notification | One to one, asynchronous, through a third party | Firebase Cloud Messaging | Push to a phone that is not running the app |
 
