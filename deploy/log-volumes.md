@@ -23,8 +23,11 @@ if a reviewed candidate changes its runtime UID. `LOG_READER_GID` defaults to
 
 The one-shot `log-init` job has no network and sees only these log volumes. It
 sets each volume root's owner and restricted group traversal/read permissions
-(2750, setgid). It does not recursively change existing files. Each application
-mounts only its own log volume writable. Broker receives the other volumes
+(2750, setgid). The initializer retains `FSETID` so the kernel preserves that
+bit when the directory group differs from its own groups. New directories/files
+inherit the reader group; writers must keep group traversal/read permission and
+restrict access for others. It does not recursively change existing files. Each
+application mounts only its own log volume writable. Broker receives the other volumes
 read-only and its own volume writable under a separate root. No Docker socket or
 service database is mounted into the initializer or exporter.
 

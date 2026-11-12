@@ -15,6 +15,7 @@ services:
     - CHOWN
     - DAC_OVERRIDE
     - FOWNER
+    - FSETID
     security_opt:
     - no-new-privileges:true
     environment:
