@@ -580,26 +580,35 @@ so nothing should be allowlisted for it until one does.
 
 Registry calls no other service, so it holds no `SERVICE_CLIENT_SECRET` either.
 
-Map, Monster Raid and Battle request these issuer allowlist entries. Each row is a
-caller service, a single destination audience and its permitted scope set:
+These are all current issuer grants, the User Management allowlist
+`service-token-policy.json` (user-management `7463266`). Each row is a caller service, a single
+destination audience and its permitted scope set:
 
 | `service_name` | `audience` | Scopes |
 |---|---|---|
-| `battle` | `user-management` | `users:read-profile`, `users:settle-battle`, `users:consume-boost`, `users:credit-global` |
 | `battle` | `package-registry` | `registry:read-config` |
-| `battle` | `tamagotchi` | `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp`, `tamagotchi:grant-access`, `tamagotchi:read-holders` |
+| `battle` | `tamagotchi` | `tamagotchi:award-xp`, `tamagotchi:grant-access`, `tamagotchi:read-holders`, `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement` |
+| `battle` | `user-management` | `users:read-profile`, `users:settle-battle`, `users:consume-boost`, `users:credit-global` |
+| `guild` | `package-registry` | `registry:check-eligibility` |
+| `guild` | `user-management` | `users:check-relationship`, `users:read-membership` |
 | `map` | `user-management` | `users:read-relationships` |
-| `monster-raid` | `user-management` | `users:credit-global` |
 | `monster-raid` | `guild` | `guild:read` |
 | `monster-raid` | `package-registry` | `registry:read-config`, `registry:read-bosses`, `registry:read-occurrences` |
 | `monster-raid` | `tamagotchi` | `tamagotchi:read-collection`, `tamagotchi:reserve-engagement`, `tamagotchi:read-engagement`, `tamagotchi:release-engagement`, `tamagotchi:award-xp` |
+| `monster-raid` | `user-management` | `users:credit-global` |
+| `tamagotchi` | `package-registry` | `registry:read-config` |
+| `tamagotchi` | `user-management` | `users:credit-local` |
+| `user-management` | `package-registry` | `registry:read-config` |
+
+Notification and Package Registry hold no grants. User Management signs its own Registry
+token in process with `registry:read-config`, the scope of its row; it does not request one.
 
 Raid and Battle request one operation scope per token; the table describes the allowed
 set, not a combined token for all destinations. The older proposal names
 `tamagotchi:engage` and `tamagotchi:grant-xp` are superseded. `raid:read` protects
 service reads of a raid and its leaderboard, but has no current service caller;
-do not add a speculative issuer grant. These caller requirements do not establish
-that the User Management policy or deployed images already implement them.
+do not add a speculative issuer grant. The table documents the policy; it does not
+issue or widen a grant, and a change to a grant is made in the policy first.
 
 A user needs no scope on the routes marked user or service. A service without the scope
 gets `403 insufficient_scope`. Which service may have which scope is the User Management
