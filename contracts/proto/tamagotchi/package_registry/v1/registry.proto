@@ -61,6 +61,24 @@ message GetCurrencyRulesResponse {
   repeated CareRule care_actions = 4;
 }
 
+// Reads one package as a service, the service-side twin of the public
+// registry.get_package. Called internally by User Management to check that a
+// package exists and is active when a user registers or joins it.
+message ReadPackageRequest {
+  // UUID of the package.
+  string package_id = 1;
+}
+
+message ReadPackageResponse {
+  string package_id = 1;
+  string name = 2;
+  string version = 3;
+  // "active" or "inactive".
+  string status = 4;
+  // The current config version; 0 when no config has been written yet.
+  int32 config_version = 5;
+}
+
 // ── Shared embedded types ──────────────────────────────────────────────────
 
 message StarterPet {
