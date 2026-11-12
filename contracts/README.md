@@ -298,8 +298,9 @@ per-instance chat relay is not invented here; its reviewed replacement topic and
 adapter remain required before replacing the current relay. Deployment still uses
 its current topology until the entire replacement passes acceptance.
 
-UM bootstrap/credits, Guild/Registry operations and Raid routes must be supplied
-by their owners before those paths are enabled. Public entries do not implicitly
+UM bootstrap/credits and Guild/Registry operations must be supplied by their
+owners before those paths are enabled; Raid's routes and reads are listed in
+"Monster Raid routes and dependency reads". Public entries do not implicitly
 expose their service-only routes. No concrete security claim names, bootstrap
 messages or Discovery registration fields are invented in this slice.
 Notification mark_read is IDEMPOTENT by NATURAL basis, not by a command key: the
@@ -368,21 +369,26 @@ call to Package Registry (`registry:read-config`) belongs to Registry's slice.
 ## Package Registry internal operations
 
 Package tamagotchi.package_registry.v1 defines Package Registry's service reads. Callers need `registry:read-config`, except `registry.check_eligibility`, which needs
-`registry:check-eligibility`; these are the scopes of the matching HTTP routes, and each is
-a safe read. User Management signs its own Registry token in process.
+`registry:check-eligibility`, and the two Monster Raid reads below, which need
+`registry:read-occurrences` and `registry:read-bosses`; these are the scopes of the
+matching HTTP routes, and each is a safe read. User Management signs its own Registry
+token in process.
 
 | Operation | Callers | Messages |
 | --- | --- | --- |
 | registry.get_stat_definitions | battle, tamagotchi | GetStatDefinitionsRequest, GetStatDefinitionsResponse |
-| registry.get_stat_bonuses | battle, tamagotchi | GetStatBonusesRequest, GetStatBonusesResponse |
+| registry.get_stat_bonuses | battle, monster-raid, tamagotchi | GetStatBonusesRequest, GetStatBonusesResponse |
 | registry.get_currency_rules | tamagotchi, user-management | GetCurrencyRulesRequest, GetCurrencyRulesResponse |
 | registry.get_starter_pet | tamagotchi | GetStarterPetRequest, GetStarterPetResponse |
 | registry.read_package | user-management | ReadPackageRequest, ReadPackageResponse |
 | registry.check_eligibility | guild (`registry:check-eligibility`) | CheckEligibilityRequest, CheckEligibilityResponse |
+| registry.get_occurrence | monster-raid (`registry:read-occurrences`) | GetOccurrenceRequest, GetOccurrenceResponse |
+| registry.get_boss | monster-raid (`registry:read-bosses`) | GetBossRequest, GetBossResponse |
 
 `registry.read_package` is the service read of a package, separate from the public
-anonymous `registry.get_package`: only Tamagotchi's two reads keep both mappings on one
-operation. `config_version` 0 in a config request means the current version. Business
+anonymous `registry.get_package`. Tamagotchi's two reads and the four Monster Raid
+dependency reads keep both mappings on one operation. `config_version` 0 in a config
+request means the current version. Business
 refusals are call failures with the public API's status and code (for example 404
 package_not_found, 400 validation_error).
 
@@ -416,3 +422,50 @@ Not in this slice:
   relationship check), and the service callers of `users.get_profile` and the
   global wallet, which need typed internal messages;
 - issuer JWKS, probes and `/status`, which are infrastructure paths.
+
+## Monster Raid routes and dependency reads
+
+The public routes of Monster Raid (`raid.*`, destination `monster-raid`), so the
+Gateway can send them through the broker. Paths, methods and query keys come from
+Raid's endpoint code; access is `user`, and the leader, member and actor checks
+stay inside the service. The service-caller `raid:read` reads have no current
+caller and get no internal mapping.
+
+| Policy | Routes |
+| --- | --- |
+| IDEMPOTENT with `COMMAND_KEY` (Raid requires `Idempotency-Key`) | `raid.create_raid`, `raid.attack` |
+| SAFE_READ | `raid.list_raids`, `raid.get_raid`, `raid.get_leaderboard` |
+| UNSAFE, never resent | `raid.cancel_raid` |
+
+A second cancellation answers a conflict, so it is not resent after an uncertain
+attempt. `raid.list_raids` takes `guild_id`, `limit` and `cursor`;
+`raid.get_leaderboard` takes `limit` and `cursor`; pages hold at most 100 items.
+Reply bounds are 256 KiB for `raid.list_raids`, about twice a full page of raids
+with their boss snapshots, and 64 KiB otherwise. Only `raid.create_raid` answers
+201 and keeps `location`.
+
+Raid's dependency reads below add typed internal mappings to existing public
+operations, with caller `monster-raid`:
+
+| Operation | Caller scope | Messages |
+| --- | --- | --- |
+| guild.get_guild | `guild:read` | GetGuildRequest, GetGuildResponse |
+| guild.list_members | `guild:read` | ListMembersRequest, ListMembersResponse |
+| registry.get_occurrence | `registry:read-occurrences` | GetOccurrenceRequest, GetOccurrenceResponse |
+| registry.get_boss | `registry:read-bosses` | GetBossRequest, GetBossResponse |
+
+Replies mirror the public Guild, Members, Occurrence and Boss shapes in
+docs/field-types.md. Timestamps are `google.protobuf.Timestamp`; Registry
+enumerations stay strings like the file's other messages; an absent
+`defeat_rewards` is JSON null. Raid always sends the occurrence's `boss_version` as
+`config_version`. Business refusals are call failures with the public API's
+status and code. Guild and Package Registry still have to serve these four
+operations; until they do, Raid keeps its existing Gateway client for exactly
+these reads. A separate service-read operation, like `registry.read_package`, is
+an alternative the owners may prefer in review.
+
+Raid's other dependencies are already listed: Tamagotchi's collection, engagement
+and XP operations, `users.credit_global`, `users.issue_service_token` and, with
+this change, `registry.get_stat_bonuses`. Its events are unchanged:
+`raid.started.v1` to Notification, `raid.completed.v1` to the passive audit queue
+and `registry.occurrence_changed.v1` to Raid's logical queue.
