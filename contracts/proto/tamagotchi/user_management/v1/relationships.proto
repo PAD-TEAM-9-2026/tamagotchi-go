@@ -31,3 +31,23 @@ message ListRelationshipsReply {
   repeated RelationshipItem items = 1;
   optional string next_cursor = 2;
 }
+
+// The path's userId and otherId, both UUIDv7.
+message GetRelationshipRequest {
+  string user_id = 1;
+  string other_user_id = 2;
+}
+
+// Equivalent to Relationship. version is 1..2147483647.
+message GetRelationshipReply {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    FRIEND = 1;
+    ENEMY = 2;
+    STRANGER = 3;
+  }
+  // UNSPECIFIED must be refused by adapters.
+  Kind relationship = 1;
+  Kind reverse_relationship = 2;
+  uint32 version = 3;
+}

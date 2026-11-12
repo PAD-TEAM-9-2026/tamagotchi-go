@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package tamagotchi.user_management.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.user_management.v1";
+option csharp_namespace = "Tamagotchi.Contracts.UserManagement.V1";
+
+message GetMembershipRequest {
+  string user_id = 1;
+}
+
+// Equivalent to MembershipSnapshot: 1..20 package ids, version 1..2147483647.
+message MembershipSnapshot {
+  string user_id = 1;
+  repeated string package_ids = 2;
+  uint32 membership_version = 3;
+}

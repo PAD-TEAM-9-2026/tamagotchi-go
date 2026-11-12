@@ -327,6 +327,41 @@ reply is not retried on another replica. A wrong secret never falls back to admi
 Notification have no grants and do not call it; User Management signs its own
 Registry token in-process.
 
+## User Management internal operations
+
+Package tamagotchi.user_management.v1 defines User Management's service-only
+routes and service reads. Callers and scopes match User Management's issuer
+allowlist (`service-token-policy.json`, audience user-management); the README's
+issuer table lists only the Battle, Map and Monster Raid rows of it.
+
+| Operation | Callers and scope | Retry | Messages |
+| --- | --- | --- | --- |
+| users.read_profile | battle: users:read-profile | safe read | GetUserProfileRequest, UserProfile |
+| users.settle_battle | battle: users:settle-battle | command key | SettleBattleRequest, BattleSettlement |
+| users.consume_boost | battle: users:consume-boost | command key | ConsumeBoostRequest, BoostReceipt |
+| users.credit_global | battle, monster-raid: users:credit-global | command key | CreditGlobalRequest, CreditReceipt |
+| users.credit_local | tamagotchi: users:credit-local | command key | CreditLocalRequest, CreditReceipt |
+| users.get_relationship | guild: users:check-relationship | safe read | GetRelationshipRequest, GetRelationshipReply |
+| users.get_membership | guild: users:read-membership | safe read | GetMembershipRequest, MembershipSnapshot |
+
+Each message carries the fields of its JSON shape in `docs/field-types.md`, and a
+route's path ids become request fields (`user_id`, `other_user_id`). The service
+read of a profile is `users.read_profile`, separate from the public
+`users.get_profile`: only Tamagotchi's two reads keep both mappings on one
+operation. The caller kind comes from the verified identity, never from a field.
+
+The command key is the CallRequest idempotency_key and User Management keeps its
+existing receipts, so a replay returns the stored reply. Ids are canonical UUIDv7
+strings, amounts and balances are at most 2^53-1, versions 1..2147483647.
+`BoostId`, `CreditReason` and the relationship `Kind` start with an UNSPECIFIED
+value that adapters refuse. The local credit `action` stays a string because each
+package defines its care actions. Business refusals are call failures with the
+public API's status and code (for example 404 user_not_found, 422 no_charges,
+422 unknown_care_action), not typed replies.
+
+`users:read-wallet` has no service caller and stays unmapped. User Management's own
+call to Package Registry (`registry:read-config`) belongs to Registry's slice.
+
 ## User Management and Battle public routes
 
 The public routes of User Management (`users.*`) and Battle (`battle.*`), so the
