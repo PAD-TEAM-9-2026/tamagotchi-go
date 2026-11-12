@@ -1822,6 +1822,8 @@ docker compose exec -T database sh -c 'psql -U "$BATTLE_DB_USER" -d "$BATTLE_DB_
 User Management 2.0.1 needs the three tables of its once-only ledgers (`CurrencyCredits`, `SettledBattles`, `ConsumedBoosts`), and Battle 2.0.1
 needs the outbox, the idempotency receipts, the combat snapshot columns and the settlement retry columns, so an old volume must be upgraded
 before the new images start. If a migration was applied by hand earlier, add its row to `__EFMigrationsHistory` first.
+The message-broker candidate's User Management and Battle (built from source) also need the nullable `OutboxMessages.TraceParent`
+column (`AddOutboxTraceParent`), so a volume created before it must run the same `upgrade.sql`. The published images ignore the column.
 
 Map and Monster Raid seed through Gateway using Python 3. From each standalone
 repository, run `scripts/seed.sh` after configuring real fixtures in your
