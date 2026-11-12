@@ -84,6 +84,10 @@ services:
     environment:
       GRPC_PORT: 50051
       BROKER_GRPC_ENDPOINT: message-broker:5010
+      # On, Guild's calls to User Management and Package Registry and its service tokens go through the
+      # broker. Turn it on only once User Management serves the broker and the broker's catalogue has
+      # registry.check_eligibility.
+      BROKER_CALLS_ENABLED: ${GUILD_BROKER_CALLS_ENABLED:-false}
       BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
       TLS_CA_PATH: /run/secrets/tls/ca.crt
       TLS_CERT_PATH: /run/secrets/tls/guild.crt
@@ -167,6 +171,17 @@ services:
       - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
       - ./secrets/tls/battle.crt:/run/secrets/tls/battle.crt:ro
       - ./secrets/tls/battle.key:/run/secrets/tls/battle.key:ro
+
+  # Traces from the services that set OTEL_EXPORTER_OTLP_ENDPOINT (deploy/monitoring.md, Tracing).
+  # Memory only; the UI is on loopback, OTLP only on the Compose network.
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0
+    command: ["--config", "/etc/jaeger/config.yaml"]
+    volumes:
+      - ./jaeger/config.yaml:/etc/jaeger/config.yaml:ro
+    ports:
+      - "127.0.0.1:16686:16686"
+    mem_limit: 768m
 
 volumes:
   broker-postgres-data:
