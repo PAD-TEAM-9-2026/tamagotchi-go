@@ -227,7 +227,10 @@ No missing identity fields or schemas are invented by this catalogue foundation.
 The catalogue now contains four Map public mappings, typed
 users.list_relationships (destination user-management, caller map,
 users:read-relationships), and Victoria's eleven Tamagotchi/eight Notification
-public mappings. Public routes keep the payloads, self/holder checks, errors and
+public mappings. users.list_relationships also has a public user mapping,
+`GET /v1/users/{userId}/relationships` with `limit` and `cursor`, for a user's own
+list (the client's social page); User Management's self check still refuses
+another user's list. Public routes keep the payloads, self/holder checks, errors and
 pagination defined in the main README and docs/field-types.md. These are approved
 migration targets after review, not claims that gRPC adapters are deployed.
 Default bounds are 16 KiB per request and 64 KiB per reply. Creature and
@@ -411,5 +414,4 @@ Not in this slice:
 - the service-only routes (`/v1/internal/*`, currency credits, membership and the
   relationship check), and the service callers of `users.get_profile` and the
   global wallet, which need typed internal messages;
-- the public mapping of `users.list_relationships`, which stays internal;
 - issuer JWKS, probes and `/status`, which are infrastructure paths.
