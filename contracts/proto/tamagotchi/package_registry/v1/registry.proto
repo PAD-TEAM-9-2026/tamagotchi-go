@@ -79,6 +79,21 @@ message ReadPackageResponse {
   int32 config_version = 5;
 }
 
+// Checks whether a user may found or join a guild: at least one of their
+// packages must exist and be active. Called internally by Guild.
+message CheckEligibilityRequest {
+  // UUIDs of the user's packages, 1 to 20.
+  repeated string user_packages = 1;
+}
+
+message CheckEligibilityResponse {
+  bool eligible = 1;
+  // The submitted packages that exist and are active.
+  repeated string eligible_package_ids = 2;
+  // Why the user is not eligible; empty when eligible.
+  string reason = 3;
+}
+
 // ── Shared embedded types ──────────────────────────────────────────────────
 
 message StarterPet {

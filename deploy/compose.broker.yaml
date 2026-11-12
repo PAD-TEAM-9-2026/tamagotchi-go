@@ -3,10 +3,12 @@
 #   deploy/message-broker/generate-identities.sh
 #   docker compose -f compose.yaml -f compose.broker.yaml up --build
 #
-# It adds the broker with its own database and switches Guild and Package Registry to the
-# broker. Those services and Discovery are built from local source checkouts named in .env
-# (MESSAGE_BROKER_SOURCE, SERVICE_DISCOVERY_SOURCE, GUILD_SOURCE, REGISTRY_SOURCE), so the
-# published images and the existing volumes stay untouched. Identity rules:
+# It adds the broker with its own database and switches Guild, Package Registry, User
+# Management and Battle to the broker. Those services and Discovery are built from local source
+# checkouts named in .env (MESSAGE_BROKER_SOURCE, SERVICE_DISCOVERY_SOURCE, GUILD_SOURCE,
+# REGISTRY_SOURCE, USER_MANAGEMENT_SOURCE, BATTLE_SOURCE), so the published images and the
+# existing volumes stay untouched. User Management and Battle keep publishing through RabbitMQ
+# until their events switches are turned on. Identity rules:
 # contracts/identity.md. Startup order: User Management, broker, then the services.
 
 services:
@@ -82,6 +84,10 @@ services:
     environment:
       GRPC_PORT: 50051
       BROKER_GRPC_ENDPOINT: message-broker:5010
+      # On, Guild's calls to User Management and Package Registry and its service tokens go through the
+      # broker. Turn it on only once User Management serves the broker and the broker's catalogue has
+      # registry.check_eligibility.
+      BROKER_CALLS_ENABLED: ${GUILD_BROKER_CALLS_ENABLED:-false}
       BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
       TLS_CA_PATH: /run/secrets/tls/ca.crt
       TLS_CERT_PATH: /run/secrets/tls/guild.crt
@@ -112,6 +118,70 @@ services:
       - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
       - ./secrets/tls/package-registry.crt:/run/secrets/tls/package-registry.crt:ro
       - ./secrets/tls/package-registry.key:/run/secrets/tls/package-registry.key:ro
+
+  # User Management starts first and never waits for the broker (contracts/identity.md section 5): the broker
+  # reads its JWKS at startup, and its broker clients connect only when used. The delivery listener serves the
+  # broker's calls into UM (its internal and public operations and users.issue_service_token).
+  user-management:
+    build: ${USER_MANAGEMENT_SOURCE:?set USER_MANAGEMENT_SOURCE in .env to a user-management checkout}
+    image: tamagotchi-go/user-management:candidate
+    pull_policy: build
+    environment:
+      BROKER_DELIVERY_ENABLED: "true"
+      BROKER_DELIVERY_PORT: 5001
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      BROKER_GRPC_TARGET: message-broker:5010
+      # Off until the cutover step: on, UM's outbox (user.friend_request_created.v1, user.package_joined.v1)
+      # is published through the broker instead of RabbitMQ, so Notification, Tamagotchi and Package Registry
+      # must already consume both topics from the broker.
+      BROKER_EVENTS_ENABLED: ${USER_MANAGEMENT_BROKER_EVENTS_ENABLED:-false}
+      # On, UM reads Package Registry (registry.read_package, registry.get_currency_rules) through the broker.
+      BROKER_CALLS_ENABLED: ${USER_MANAGEMENT_BROKER_CALLS_ENABLED:-false}
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/user-management.crt
+      TLS_KEY_PATH: /run/secrets/tls/user-management.key
+    volumes:
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/user-management.crt:/run/secrets/tls/user-management.crt:ro
+      - ./secrets/tls/user-management.key:/run/secrets/tls/user-management.key:ro
+
+  battle:
+    build: ${BATTLE_SOURCE:?set BATTLE_SOURCE in .env to a battle checkout}
+    image: tamagotchi-go/battle:candidate
+    pull_policy: build
+    depends_on:
+      message-broker:
+        condition: service_healthy
+    environment:
+      BROKER_DELIVERY_ENABLED: "true"
+      BROKER_DELIVERY_PORT: 5001
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      BROKER_GRPC_TARGET: message-broker:5010
+      # Off until the cutover step: on, Battle's outbox is published through the broker instead of RabbitMQ.
+      BROKER_EVENTS_ENABLED: ${BATTLE_BROKER_EVENTS_ENABLED:-false}
+      # One switch for all of Battle's calls: User Management, Package Registry and Tamagotchi (only the type
+      # matrix stays on the Gateway). Turn it on only once Tamagotchi serves the broker.
+      BROKER_CALLS_ENABLED: ${BATTLE_BROKER_CALLS_ENABLED:-false}
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/battle.crt
+      TLS_KEY_PATH: /run/secrets/tls/battle.key
+    volumes:
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/battle.crt:/run/secrets/tls/battle.crt:ro
+      - ./secrets/tls/battle.key:/run/secrets/tls/battle.key:ro
+
+  # Traces from the services that set OTEL_EXPORTER_OTLP_ENDPOINT (deploy/monitoring.md, Tracing).
+  # Memory only; the UI is on loopback, OTLP only on the Compose network.
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0
+    command: ["--config", "/etc/jaeger/config.yaml"]
+    volumes:
+      - ./jaeger/config.yaml:/etc/jaeger/config.yaml:ro
+    ports:
+      - "127.0.0.1:16686:16686"
+    mem_limit: 768m
 
 volumes:
   broker-postgres-data:

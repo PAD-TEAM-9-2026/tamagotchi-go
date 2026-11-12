@@ -367,9 +367,9 @@ call to Package Registry (`registry:read-config`) belongs to Registry's slice.
 
 ## Package Registry internal operations
 
-Package tamagotchi.package_registry.v1 defines Package Registry's service reads. Every
-caller needs `registry:read-config`, the scope of the matching HTTP routes, and each is a
-safe read. User Management signs its own Registry token in process.
+Package tamagotchi.package_registry.v1 defines Package Registry's service reads. Callers need `registry:read-config`, except `registry.check_eligibility`, which needs
+`registry:check-eligibility`; these are the scopes of the matching HTTP routes, and each is
+a safe read. User Management signs its own Registry token in process.
 
 | Operation | Callers | Messages |
 | --- | --- | --- |
@@ -378,6 +378,7 @@ safe read. User Management signs its own Registry token in process.
 | registry.get_currency_rules | tamagotchi, user-management | GetCurrencyRulesRequest, GetCurrencyRulesResponse |
 | registry.get_starter_pet | tamagotchi | GetStarterPetRequest, GetStarterPetResponse |
 | registry.read_package | user-management | ReadPackageRequest, ReadPackageResponse |
+| registry.check_eligibility | guild (`registry:check-eligibility`) | CheckEligibilityRequest, CheckEligibilityResponse |
 
 `registry.read_package` is the service read of a package, separate from the public
 anonymous `registry.get_package`: only Tamagotchi's two reads keep both mappings on one
