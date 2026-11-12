@@ -1921,3 +1921,11 @@ Map/Raid use the tested multi-platform 3.0.0 images; Gateway uses 3.0.1.
 Static fallback is disabled. All eight logical domain services must register
 before application routing is usable; readiness alone does not prove every route.
 Use `WS_GUILD_PUBLIC_URL` for the browser-reachable socket ingress address.
+
+### Reusing candidate identities
+
+Identity preparation validates existing key/certificate pairs, workload names,
+certificate validity and the Broker signer/JWKS before generating missing files.
+An incomplete or mismatched pair refuses startup preparation instead of rotating
+it. Repeated successful runs preserve existing material, including JWKS bytes.
+Change a key ID only through an explicit coordinated rotation.

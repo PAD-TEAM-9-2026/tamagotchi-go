@@ -4,9 +4,10 @@
 #   docker compose -f compose.yaml -f compose.broker.yaml up --build
 #
 # It adds the broker with its own database and switches Guild, Package Registry, User
-# Management and Battle to the broker. Those services and Discovery are built from local source
-# checkouts named in .env (MESSAGE_BROKER_SOURCE, SERVICE_DISCOVERY_SOURCE, GUILD_SOURCE,
-# REGISTRY_SOURCE, USER_MANAGEMENT_SOURCE, BATTLE_SOURCE), so the published images and the
+# Management, Battle, Tamagotchi, Notification and the Gateway to the broker. Those services and
+# Discovery are built from local source checkouts named in .env (MESSAGE_BROKER_SOURCE,
+# SERVICE_DISCOVERY_SOURCE, GUILD_SOURCE, REGISTRY_SOURCE, USER_MANAGEMENT_SOURCE, BATTLE_SOURCE,
+# TAMAGOTCHI_SOURCE, NOTIFICATION_SOURCE, GATEWAY_SOURCE), so the published images and the
 # existing volumes stay untouched. User Management and Battle keep publishing through RabbitMQ
 # until their events switches are turned on. Identity rules:
 # contracts/identity.md. Startup order: User Management, broker, then the services.
@@ -140,6 +141,11 @@ services:
       TLS_CA_PATH: /run/secrets/tls/ca.crt
       TLS_CERT_PATH: /run/secrets/tls/user-management.crt
       TLS_KEY_PATH: /run/secrets/tls/user-management.key
+      # Traces to Jaeger (deploy/monitoring.md, Tracing).
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
     volumes:
       - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
       - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
@@ -166,11 +172,89 @@ services:
       TLS_CA_PATH: /run/secrets/tls/ca.crt
       TLS_CERT_PATH: /run/secrets/tls/battle.crt
       TLS_KEY_PATH: /run/secrets/tls/battle.key
+      # Traces to Jaeger (deploy/monitoring.md, Tracing).
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
     volumes:
       - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
       - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
       - ./secrets/tls/battle.crt:/run/secrets/tls/battle.crt:ro
       - ./secrets/tls/battle.key:/run/secrets/tls/battle.key:ro
+
+  tamagotchi:
+    build: ${TAMAGOTCHI_SOURCE:?set TAMAGOTCHI_SOURCE in .env to a tamagotchi checkout}
+    image: tamagotchi-go/tamagotchi:candidate
+    pull_policy: build
+    depends_on:
+      message-broker:
+        condition: service_healthy
+    environment:
+      BROKER_DELIVERY: "true"
+      GRPC_PORT: 50051
+      BROKER_PUBLISH: ${TAMAGOTCHI_BROKER_PUBLISH:-false}
+      BROKER_CALLS: ${TAMAGOTCHI_BROKER_CALLS:-false}
+      BROKER_GRPC_TARGET: message-broker:5010
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/tamagotchi.crt
+      TLS_KEY_PATH: /run/secrets/tls/tamagotchi.key
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+    volumes:
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/tamagotchi.crt:/run/secrets/tls/tamagotchi.crt:ro
+      - ./secrets/tls/tamagotchi.key:/run/secrets/tls/tamagotchi.key:ro
+
+  notification:
+    build: ${NOTIFICATION_SOURCE:?set NOTIFICATION_SOURCE in .env to a notifications checkout}
+    image: tamagotchi-go/notification:candidate
+    pull_policy: build
+    depends_on:
+      message-broker:
+        condition: service_healthy
+    environment:
+      BROKER_DELIVERY: "true"
+      GRPC_PORT: 50051
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/notification.crt
+      TLS_KEY_PATH: /run/secrets/tls/notification.key
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+    volumes:
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/notification.crt:/run/secrets/tls/notification.crt:ro
+      - ./secrets/tls/notification.key:/run/secrets/tls/notification.key:ro
+
+  gateway:
+    build: ${GATEWAY_SOURCE:?set GATEWAY_SOURCE in .env to a gateway checkout}
+    image: tamagotchi-go/gateway:candidate
+    pull_policy: build
+    depends_on:
+      message-broker:
+        condition: service_healthy
+    environment:
+      BROKER_DISPATCH: ${GATEWAY_BROKER_DISPATCH:-false}
+      BROKER_GRPC_TARGET: message-broker:5010
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/gateway.crt
+      TLS_KEY_PATH: /run/secrets/tls/gateway.key
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+    volumes:
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/gateway.crt:/run/secrets/tls/gateway.crt:ro
+      - ./secrets/tls/gateway.key:/run/secrets/tls/gateway.key:ro
 
   # Traces from the services that set OTEL_EXPORTER_OTLP_ENDPOINT (deploy/monitoring.md, Tracing).
   # Memory only; the UI is on loopback, OTLP only on the Compose network.
