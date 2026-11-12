@@ -2267,6 +2267,166 @@
       }
     },
     {
+      "name": "users.read_profile",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.GetUserProfileRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.UserProfile",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:read-profile"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.settle_battle",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.SettleBattleRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.BattleSettlement",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:settle-battle"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.consume_boost",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.ConsumeBoostRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.BoostReceipt",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:consume-boost"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.credit_global",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.CreditGlobalRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.CreditReceipt",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:credit-global"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "users:credit-global"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.credit_local",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.CreditLocalRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.CreditReceipt",
+        "callers": [
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "users:credit-local"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.get_relationship",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.GetRelationshipRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.GetRelationshipReply",
+        "callers": [
+          {
+            "service": "guild",
+            "scopes": [
+              "users:check-relationship"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.get_membership",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.GetMembershipRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.MembershipSnapshot",
+        "callers": [
+          {
+            "service": "guild",
+            "scopes": [
+              "users:read-membership"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "name": "battle.create_battle",
       "destination": "battle",
       "storage": "DURABLE",
