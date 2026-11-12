@@ -67,6 +67,14 @@ message StarterPet {
   string name = 1;
   string combat_type = 2;
   string sprite_ref = 3;
+  // The starter's initial value for each stat, as text. Every key is a stat in
+  // GetStatDefinitionsResponse.stats for the same package and config_version,
+  // and that stat's value_type gives the encoding:
+  //   NUMBER  - a decimal number as JavaScript formats it ("80", "0.5", "-3";
+  //             magnitudes below 1e-6 use exponent form, such as "1e-7"), within
+  //             the stat's minimum and maximum when they are set.
+  //   BOOLEAN - "true" or "false".
+  //   STRING  - the value as is, one of allowed_strings when they are set.
   map<string, string> initial_stats = 4;
 }
 
