@@ -168,5 +168,16 @@ services:
       - ./secrets/tls/battle.crt:/run/secrets/tls/battle.crt:ro
       - ./secrets/tls/battle.key:/run/secrets/tls/battle.key:ro
 
+  # Traces from the services that set OTEL_EXPORTER_OTLP_ENDPOINT (deploy/monitoring.md, Tracing).
+  # Memory only; the UI is on loopback, OTLP only on the Compose network.
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0
+    command: ["--config", "/etc/jaeger/config.yaml"]
+    volumes:
+      - ./jaeger/config.yaml:/etc/jaeger/config.yaml:ro
+    ports:
+      - "127.0.0.1:16686:16686"
+    mem_limit: 768m
+
 volumes:
   broker-postgres-data:
