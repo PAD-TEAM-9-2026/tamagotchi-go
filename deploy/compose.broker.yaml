@@ -4,10 +4,10 @@
 #   docker compose -f compose.yaml -f compose.broker.yaml up --build
 #
 # It adds the broker with its own database and switches Guild, Package Registry, User
-# Management, Battle, Tamagotchi, Notification and the Gateway to the broker. Those services and
+# Management, Battle, Tamagotchi, Notification, Map and the Gateway to the broker. Those services and
 # Discovery are built from local source checkouts named in .env (MESSAGE_BROKER_SOURCE,
 # SERVICE_DISCOVERY_SOURCE, GUILD_SOURCE, REGISTRY_SOURCE, USER_MANAGEMENT_SOURCE, BATTLE_SOURCE,
-# TAMAGOTCHI_SOURCE, NOTIFICATION_SOURCE, GATEWAY_SOURCE), so the published images and the
+# TAMAGOTCHI_SOURCE, NOTIFICATION_SOURCE, MAP_SOURCE, GATEWAY_SOURCE), so the published images and the
 # existing volumes stay untouched. User Management publishes its events through the broker; Battle
 # keeps publishing through RabbitMQ until its events switch is turned on. Identity rules:
 # contracts/identity.md. Startup order: User Management, broker, then the services.
@@ -239,6 +239,30 @@ services:
       - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
       - ./secrets/tls/notification.crt:/run/secrets/tls/notification.crt:ro
       - ./secrets/tls/notification.key:/run/secrets/tls/notification.key:ro
+
+  # Map 4.0.0 source requires Broker transport; older published Map pins stay in compose.yaml.
+  map:
+    build: ${MAP_SOURCE:?set MAP_SOURCE in .env to a map checkout}
+    image: tamagotchi-go/map:candidate
+    pull_policy: build
+    depends_on:
+      message-broker:
+        condition: service_healthy
+    environment:
+      BROKER_DELIVERY: "true"
+      BROKER_URL: https://message-broker:5010
+      GRPC_PORT: 5010
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/map.crt
+      TLS_KEY_PATH: /run/secrets/tls/map.key
+      # Retained outbox rows are published through Broker only, never RabbitMQ.
+      RABBITMQ_URL: ""
+    volumes:
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/map.crt:/run/secrets/tls/map.crt:ro
+      - ./secrets/tls/map.key:/run/secrets/tls/map.key:ro
 
   gateway:
     build: ${GATEWAY_SOURCE:?set GATEWAY_SOURCE in .env to a gateway checkout}
