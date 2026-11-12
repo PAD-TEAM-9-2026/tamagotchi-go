@@ -8,9 +8,8 @@
 # Discovery are built from local source checkouts named in .env (MESSAGE_BROKER_SOURCE,
 # SERVICE_DISCOVERY_SOURCE, GUILD_SOURCE, REGISTRY_SOURCE, USER_MANAGEMENT_SOURCE, BATTLE_SOURCE,
 # TAMAGOTCHI_SOURCE, NOTIFICATION_SOURCE, MAP_SOURCE, GATEWAY_SOURCE), so the published images and the
-# existing volumes stay untouched. User Management and Battle publish their events through the broker
-# only (they no longer have a RabbitMQ publisher; the RABBITMQ_URL compose.yaml gives them is unused).
-# Identity rules:
+# existing volumes stay untouched. User Management publishes its events through the broker; Battle
+# keeps publishing through RabbitMQ until its events switch is turned on. Identity rules:
 # contracts/identity.md. Startup order: User Management, broker, then the services.
 
 services:
@@ -138,13 +137,12 @@ services:
       BROKER_DELIVERY_PORT: 5001
       BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
       BROKER_GRPC_TARGET: message-broker:5010
-      # On: UM's outbox (user.friend_request_created.v1, user.package_joined.v1) is published through the
-      # broker. Notification, Tamagotchi and Package Registry consume both topics from the broker. Off, the
-      # events wait in UM's outbox (UM has no RabbitMQ publisher any more).
+      # On (cutover step 2): UM's outbox (user.friend_request_created.v1, user.package_joined.v1) is published
+      # through the broker instead of RabbitMQ. Notification, Tamagotchi and Package Registry consume both
+      # topics from the broker. Set USER_MANAGEMENT_BROKER_EVENTS_ENABLED=false to go back to RabbitMQ.
       BROKER_EVENTS_ENABLED: ${USER_MANAGEMENT_BROKER_EVENTS_ENABLED:-true}
-      # On (cutover): UM reads Package Registry (registry.read_package, registry.get_currency_rules) through the
-      # broker. Set USER_MANAGEMENT_BROKER_CALLS_ENABLED=false to call it through the Gateway again.
-      BROKER_CALLS_ENABLED: ${USER_MANAGEMENT_BROKER_CALLS_ENABLED:-true}
+      # On, UM reads Package Registry (registry.read_package, registry.get_currency_rules) through the broker.
+      BROKER_CALLS_ENABLED: ${USER_MANAGEMENT_BROKER_CALLS_ENABLED:-false}
       TLS_CA_PATH: /run/secrets/tls/ca.crt
       TLS_CERT_PATH: /run/secrets/tls/user-management.crt
       TLS_KEY_PATH: /run/secrets/tls/user-management.key
@@ -171,10 +169,8 @@ services:
       BROKER_DELIVERY_PORT: 5001
       BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
       BROKER_GRPC_TARGET: message-broker:5010
-      # On (cutover): Battle's outbox (battle.request_created.v1 for Notification, battle.completed.v1 for the
-      # offline audit queue) is published through the broker. Off, the events wait in Battle's outbox (Battle has
-      # no RabbitMQ publisher any more).
-      BROKER_EVENTS_ENABLED: ${BATTLE_BROKER_EVENTS_ENABLED:-true}
+      # Off until the cutover step: on, Battle's outbox is published through the broker instead of RabbitMQ.
+      BROKER_EVENTS_ENABLED: ${BATTLE_BROKER_EVENTS_ENABLED:-false}
       # On (cutover): one switch for all of Battle's calls, to User Management, Package Registry and Tamagotchi
       # (only the type matrix stays on the Gateway). Tamagotchi serves the broker (BROKER_DELIVERY below).
       # Set BATTLE_BROKER_CALLS_ENABLED=false to call them directly again.
