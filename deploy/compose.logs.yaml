@@ -1,0 +1,186 @@
+---
+services:
+  log-init:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    user: '0:0'
+    entrypoint:
+    - "/bin/sh"
+    - "/setup/init-log-volumes.sh"
+    network_mode: none
+    read_only: true
+    restart: 'no'
+    cap_drop:
+    - ALL
+    cap_add:
+    - CHOWN
+    - DAC_OVERRIDE
+    - FOWNER
+    security_opt:
+    - no-new-privileges:true
+    environment:
+      LOG_READER_GID: "${LOG_READER_GID:-20000}"
+      GATEWAY_LOG_UID: "${GATEWAY_LOG_UID:-1001}"
+      DISCOVERY_LOG_UID: "${DISCOVERY_LOG_UID:-1001}"
+      MAP_LOG_UID: "${MAP_LOG_UID:-1654}"
+      BROKER_LOG_UID: "${BROKER_LOG_UID:-10001}"
+      USER_MANAGEMENT_LOG_UID: "${USER_MANAGEMENT_LOG_UID:?set from the candidate
+        image runtime UID}"
+      BATTLE_LOG_UID: "${BATTLE_LOG_UID:?set from the candidate image runtime UID}"
+      GUILD_LOG_UID: "${GUILD_LOG_UID:?set from the candidate image runtime UID}"
+      REGISTRY_LOG_UID: "${REGISTRY_LOG_UID:?set from the candidate image runtime
+        UID}"
+      TAMAGOTCHI_LOG_UID: "${TAMAGOTCHI_LOG_UID:?set from the candidate image runtime
+        UID}"
+      NOTIFICATION_LOG_UID: "${NOTIFICATION_LOG_UID:?set from the candidate image
+        runtime UID}"
+      MONSTER_RAID_LOG_UID: "${MONSTER_RAID_LOG_UID:-1654}"
+    volumes:
+    - "./init-log-volumes.sh:/setup/init-log-volumes.sh:ro"
+    - gateway-logs:/owned/gateway
+    - service-discovery-logs:/owned/service-discovery
+    - map-logs:/owned/map
+    - message-broker-logs:/owned/message-broker
+    - user-management-logs:/owned/user-management
+    - battle-logs:/owned/battle
+    - guild-logs:/owned/guild
+    - package-registry-logs:/owned/package-registry
+    - tamagotchi-logs:/owned/tamagotchi
+    - notification-logs:/owned/notification
+    - monster-raid-logs:/owned/monster-raid
+  gateway:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - gateway-logs:/logs/gateway
+  service-discovery:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - service-discovery-logs:/logs/service-discovery
+  map:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - map-logs:/logs/map
+  message-broker:
+    environment:
+      LOG_DIR: "/broker-logs"
+      LOG_EXPORT_ROOT: "/logs"
+      LOG_EXPORT_SELF_ROOT: "/broker-logs"
+      LOG_EXPORT_TMP: "/tmp/log-export"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - message-broker-logs:/broker-logs/message-broker
+    - gateway-logs:/logs/gateway:ro
+    - service-discovery-logs:/logs/service-discovery:ro
+    - map-logs:/logs/map:ro
+    - user-management-logs:/logs/user-management:ro
+    - battle-logs:/logs/battle:ro
+    - guild-logs:/logs/guild:ro
+    - package-registry-logs:/logs/package-registry:ro
+    - tamagotchi-logs:/logs/tamagotchi:ro
+    - notification-logs:/logs/notification:ro
+    - monster-raid-logs:/logs/monster-raid:ro
+    tmpfs:
+    - "/tmp/log-export:rw,noexec,nosuid,size=67108864,mode=0700,uid=${BROKER_LOG_UID:-10001},gid=${LOG_READER_GID:-20000}"
+  user-management:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - user-management-logs:/logs/user-management
+  battle:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - battle-logs:/logs/battle
+  guild:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - guild-logs:/logs/guild
+  registry:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - package-registry-logs:/logs/package-registry
+  tamagotchi:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - tamagotchi-logs:/logs/tamagotchi
+  notification:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - notification-logs:/logs/notification
+  monster-raid:
+    environment:
+      LOG_DIR: "/logs"
+    group_add:
+    - "${LOG_READER_GID:-20000}"
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    volumes:
+    - monster-raid-logs:/logs/monster-raid
+volumes:
+  gateway-logs: {}
+  service-discovery-logs: {}
+  map-logs: {}
+  message-broker-logs: {}
+  user-management-logs: {}
+  battle-logs: {}
+  guild-logs: {}
+  package-registry-logs: {}
+  tamagotchi-logs: {}
+  notification-logs: {}
+  monster-raid-logs: {}

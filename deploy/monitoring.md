@@ -62,3 +62,7 @@ identifier.
 
 A visible push on a device is not measurable from the server, so the Notification dashboard shows
 provider acceptance only. The broker's own dashboard is added with its metrics.
+
+The optional [structured log volume overlay](log-volumes.md) gives applications
+service-owned log storage and Broker read-only access for system log export.
+It is separate from metrics scraping and requires the Broker candidate base.
