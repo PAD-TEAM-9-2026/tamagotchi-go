@@ -219,8 +219,18 @@ Use the source-built `deploy/compose.broker.yaml` overlay with private source
 paths and workload material. UM exposes issuer JWKS/bootstrap before Broker
 readiness, avoiding a startup cycle. Producer/caller switches remain off until
 their destination adapters and subscribers pass real checks. Integration
-operators use owner-built candidates or owner-run evidence when source is
-private.
+operators can build exact cuts from read-only owner checkouts, or use immutable
+owner-built candidates/evidence when source access is unavailable.
+
+The overlay includes Map source through `MAP_SOURCE`, without changing the
+published image pin in compose.yaml. Map 4.0.0 requires Broker TLS/bootstrap;
+its outbound Gateway client/breaker and RabbitMQ publisher are removed. Direct
+HTTP probes/assets and verified HTTP handlers remain. Source-built acceptance
+has exercised Gateway → Broker → Map → Broker → UM, real encounter publication,
+durable receipts and one Notification effect per recipient. This is not final
+published-stack acceptance or a switch of unrelated event producers. Supply UM's
+canonical-authority routing fix and account for retained Rabbit work before
+switching a consumer. No image publication is performed by this overlay.
 
 [Structured log volumes](deploy/log-volumes.md) isolate writable service roots
 and read-only Broker export access. [Monitoring](deploy/monitoring.md) documents
@@ -1241,7 +1251,8 @@ Every location write, deletion, raw read and nearby query requires a verified
 user matching `user_id` or the path's `userId`. Nearby is the interface for
 viewing other players. Plain identity headers grant no access.
 
-Map fetches the complete relationships list through Gateway. If any page fails,
+Map source candidates fetch the complete typed relationships list through Broker;
+the older published pin still uses Gateway HTTP. If any page fails,
 it discards classification and returns only fresh six-metre strangers, with
 `partial=true` and `partial_reason=RELATIONSHIPS_UNAVAILABLE`. Reads publish no
 events. Accepted observations persist encounter transitions and outbox facts;
