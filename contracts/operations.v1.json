@@ -1653,6 +1653,28 @@
       }
     },
     {
+      "name": "registry.check_eligibility",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.CheckEligibilityRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.CheckEligibilityResponse",
+        "callers": [
+          {
+            "service": "guild",
+            "scopes": [
+              "registry:check-eligibility"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "name": "registry.get_currency_rules",
       "destination": "package-registry",
       "storage": "DURABLE",
