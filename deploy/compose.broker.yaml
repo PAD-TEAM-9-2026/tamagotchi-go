@@ -171,9 +171,10 @@ services:
       BROKER_GRPC_TARGET: message-broker:5010
       # Off until the cutover step: on, Battle's outbox is published through the broker instead of RabbitMQ.
       BROKER_EVENTS_ENABLED: ${BATTLE_BROKER_EVENTS_ENABLED:-false}
-      # One switch for all of Battle's calls: User Management, Package Registry and Tamagotchi (only the type
-      # matrix stays on the Gateway). Turn it on only once Tamagotchi serves the broker.
-      BROKER_CALLS_ENABLED: ${BATTLE_BROKER_CALLS_ENABLED:-false}
+      # On (cutover): one switch for all of Battle's calls, to User Management, Package Registry and Tamagotchi
+      # (only the type matrix stays on the Gateway). Tamagotchi serves the broker (BROKER_DELIVERY below).
+      # Set BATTLE_BROKER_CALLS_ENABLED=false to call them directly again.
+      BROKER_CALLS_ENABLED: ${BATTLE_BROKER_CALLS_ENABLED:-true}
       TLS_CA_PATH: /run/secrets/tls/ca.crt
       TLS_CERT_PATH: /run/secrets/tls/battle.crt
       TLS_KEY_PATH: /run/secrets/tls/battle.key
