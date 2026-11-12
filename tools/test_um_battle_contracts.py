@@ -73,8 +73,12 @@ class UserManagementAndBattlePublicRoutesTests(unittest.TestCase):
         for name, o in self.slice.items():
             self.assertEqual(name in CREATED, 'location' in o['public']['response_headers'], name)
 
-    def test_relationship_listing_stays_internal_and_service_tokens_keep_their_mappings(self):
-        self.assertNotIn('public', self.ops['users.list_relationships'])
+    def test_relationship_listing_is_public_for_users_and_service_tokens_keep_their_mappings(self):
+        relationships = self.ops['users.list_relationships']
+        self.assertEqual(('SAFE_READ', 'NONE', 'user'), (relationships['failover'], relationships['idempotency'],
+                                                         relationships['public']['access']))
+        self.assertEqual(['accept'], relationships['public']['request_headers'])
+        self.assertEqual([{'service': 'map', 'scopes': ['users:read-relationships']}], relationships['internal']['callers'])
         self.assertEqual('admin', self.ops['users.issue_service_token_as_admin']['public']['access'])
         self.assertNotIn('public', self.ops['users.issue_service_token'])
 

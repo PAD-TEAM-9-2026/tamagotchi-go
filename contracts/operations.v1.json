@@ -1789,6 +1789,24 @@
       "contains_credentials": false,
       "request_max_bytes": 16384,
       "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}/relationships",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      },
       "internal": {
         "request_type": "type.googleapis.com/tamagotchi.user_management.v1.ListRelationshipsRequest",
         "response_type": "type.googleapis.com/tamagotchi.user_management.v1.ListRelationshipsReply",

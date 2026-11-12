@@ -20,7 +20,10 @@ class FirstSliceTests(unittest.TestCase):
         entry = next(o for o in self.catalogue['operations'] if o['name'] == 'users.list_relationships')
         self.assertEqual('user-management', entry['destination'])
         self.assertEqual([{'service': 'map', 'scopes': ['users:read-relationships']}], entry['internal']['callers'])
-        self.assertNotIn('public', entry)
+        # Users read their own list through the Gateway; the typed Map grant is unchanged.
+        self.assertEqual(('GET', '/v1/users/{userId}/relationships', 'user', ['limit', 'cursor']),
+                         (entry['public']['method'], entry['public']['path'], entry['public']['access'],
+                          entry['public']['query_parameters']))
         mapped = [o for o in self.catalogue['operations'] if o['destination'] == 'map']
         self.assertEqual(4, len(mapped))
         self.assertTrue(all(o['public']['access'] == 'user' for o in mapped))
