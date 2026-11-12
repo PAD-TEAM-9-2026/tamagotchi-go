@@ -227,7 +227,10 @@ No missing identity fields or schemas are invented by this catalogue foundation.
 The catalogue now contains four Map public mappings, typed
 users.list_relationships (destination user-management, caller map,
 users:read-relationships), and Victoria's eleven Tamagotchi/eight Notification
-public mappings. Public routes keep the payloads, self/holder checks, errors and
+public mappings. users.list_relationships also has a public user mapping,
+`GET /v1/users/{userId}/relationships` with `limit` and `cursor`, for a user's own
+list (the client's social page); User Management's self check still refuses
+another user's list. Public routes keep the payloads, self/holder checks, errors and
 pagination defined in the main README and docs/field-types.md. These are approved
 migration targets after review, not claims that gRPC adapters are deployed.
 Default bounds are 16 KiB per request and 64 KiB per reply. Creature and
@@ -362,6 +365,26 @@ public API's status and code (for example 404 user_not_found, 422 no_charges,
 `users:read-wallet` has no service caller and stays unmapped. User Management's own
 call to Package Registry (`registry:read-config`) belongs to Registry's slice.
 
+## Package Registry internal operations
+
+Package tamagotchi.package_registry.v1 defines Package Registry's service reads. Every
+caller needs `registry:read-config`, the scope of the matching HTTP routes, and each is a
+safe read. User Management signs its own Registry token in process.
+
+| Operation | Callers | Messages |
+| --- | --- | --- |
+| registry.get_stat_definitions | battle, tamagotchi | GetStatDefinitionsRequest, GetStatDefinitionsResponse |
+| registry.get_stat_bonuses | battle, tamagotchi | GetStatBonusesRequest, GetStatBonusesResponse |
+| registry.get_currency_rules | tamagotchi, user-management | GetCurrencyRulesRequest, GetCurrencyRulesResponse |
+| registry.get_starter_pet | tamagotchi | GetStarterPetRequest, GetStarterPetResponse |
+| registry.read_package | user-management | ReadPackageRequest, ReadPackageResponse |
+
+`registry.read_package` is the service read of a package, separate from the public
+anonymous `registry.get_package`: only Tamagotchi's two reads keep both mappings on one
+operation. `config_version` 0 in a config request means the current version. Business
+refusals are call failures with the public API's status and code (for example 404
+package_not_found, 400 validation_error).
+
 ## User Management and Battle public routes
 
 The public routes of User Management (`users.*`) and Battle (`battle.*`), so the
@@ -391,5 +414,4 @@ Not in this slice:
 - the service-only routes (`/v1/internal/*`, currency credits, membership and the
   relationship check), and the service callers of `users.get_profile` and the
   global wallet, which need typed internal messages;
-- the public mapping of `users.list_relationships`, which stays internal;
 - issuer JWKS, probes and `/status`, which are infrastructure paths.

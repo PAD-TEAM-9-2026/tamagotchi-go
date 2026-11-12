@@ -1670,6 +1670,12 @@
             "scopes": [
               "registry:read-config"
             ]
+          },
+          {
+            "service": "user-management",
+            "scopes": [
+              "registry:read-config"
+            ]
           }
         ]
       }
@@ -1710,6 +1716,12 @@
         "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatBonusesResponse",
         "callers": [
           {
+            "service": "battle",
+            "scopes": [
+              "registry:read-config"
+            ]
+          },
+          {
             "service": "tamagotchi",
             "scopes": [
               "registry:read-config"
@@ -1732,7 +1744,35 @@
         "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatDefinitionsResponse",
         "callers": [
           {
+            "service": "battle",
+            "scopes": [
+              "registry:read-config"
+            ]
+          },
+          {
             "service": "tamagotchi",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.read_package",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.ReadPackageRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.ReadPackageResponse",
+        "callers": [
+          {
+            "service": "user-management",
             "scopes": [
               "registry:read-config"
             ]
@@ -1749,6 +1789,24 @@
       "contains_credentials": false,
       "request_max_bytes": 16384,
       "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}/relationships",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      },
       "internal": {
         "request_type": "type.googleapis.com/tamagotchi.user_management.v1.ListRelationshipsRequest",
         "response_type": "type.googleapis.com/tamagotchi.user_management.v1.ListRelationshipsReply",

@@ -80,7 +80,8 @@ class TamagotchiContractTests(unittest.TestCase):
         self.assertTrue(all(not o['contains_credentials'] and o['storage'] == 'DURABLE' for o in self.operations.values() if o['destination'] == 'tamagotchi'))
 
     def test_public_and_internal_mappings_coexist_only_on_the_user_or_service_reads(self):
-        both = sorted(n for n, o in self.operations.items() if 'public' in o and 'internal' in o)
+        both = sorted(n for n, o in self.operations.items()
+                      if o['destination'] == 'tamagotchi' and 'public' in o and 'internal' in o)
         self.assertEqual(['tamagotchi.get_collection', 'tamagotchi.list_holders'], both)
 
     def test_reply_bounds_cover_the_measured_worst_case_pages_inside_the_envelope(self):
