@@ -1,8 +1,11 @@
 # Monitoring
 
-Prometheus scrapes every service replica and the message broker, and Grafana shows five provisioned dashboards. Jaeger
-collects traces ([Tracing](#tracing)). None of them is part of `compose.yaml` yet: the service definitions below are what
-the Compose owner adds.
+Prometheus discovers service replicas and the message broker, and Grafana shows
+five provisioned dashboards. Use the optional `compose.monitoring.yaml` overlay
+with the reviewed candidate base. A target is accepted only when its actual
+candidate exports metrics; missing targets are not healthy replicas. Optional
+Jaeger tracing is documented in [Tracing](#tracing) and wired separately in the
+broker candidate base.
 
 | Path | Content |
 | --- | --- |
@@ -13,35 +16,17 @@ the Compose owner adds.
 
 ## Compose
 
-```yaml
-  prometheus:
-    image: prom/prometheus:v3.5.0
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=7d
-      - --storage.tsdb.retention.size=2GB
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - shared-prometheus-data:/prometheus
-
-  grafana:
-    image: grafana/grafana:12.2.0
-    depends_on:
-      - prometheus
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-    volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - shared-grafana-data:/var/lib/grafana
-    ports:
-      - "127.0.0.1:3030:3000"
+```sh
+docker compose --env-file /path/to/private/candidate.env \
+  -f compose.yaml -f compose.broker.yaml -f compose.monitoring.yaml config --quiet
+docker compose --env-file /path/to/private/candidate.env \
+  -f compose.yaml -f compose.broker.yaml -f compose.monitoring.yaml up -d prometheus grafana
 ```
 
-Add `shared-prometheus-data` and `shared-grafana-data` under `volumes`. Prometheus publishes no
-port, and the services' metrics port 9090 is reachable only on the Compose network.
+Set `GRAFANA_ADMIN_PASSWORD` in the private environment. Grafana binds to loopback
+port3030 by default (`GRAFANA_PORT` overrides it); Prometheus publishes no host
+port. Their named volumes preserve dashboards/state and seven days of bounded
+metrics. This overlay does not switch domain transports or publish images.
 
 ## Adding a service
 
