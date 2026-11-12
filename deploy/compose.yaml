@@ -83,15 +83,13 @@ services:
       retries: 10
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:3.0.2
+    image: victoriamutruc/tamagotchi:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq-provision:
-        condition: service_completed_successfully
     environment:
       SERVICE_DISCOVERY_URL: http://service-discovery:3009
       GATEWAY_URL: http://gateway:3000
@@ -103,7 +101,6 @@ services:
       SERVICE_CLIENT_SECRET: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET:?set TAMAGOTCHI_SERVICE_CLIENT_SECRET in .env}
       USER_MANAGEMENT_URL: http://gateway:3000/users
       PACKAGE_REGISTRY_URL: http://gateway:3000/registry
-      RABBITMQ_URL: amqp://tamagotchi:${TAMAGOTCHI_RABBITMQ_PASSWORD:?set TAMAGOTCHI_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     healthcheck:
@@ -295,15 +292,13 @@ services:
       retries: 10
 
   notification:
-    image: victoriamutruc/notification:3.0.1
+    image: victoriamutruc/notification:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq-provision:
-        condition: service_completed_successfully
     environment:
       SERVICE_DISCOVERY_URL: http://service-discovery:3009
       GATEWAY_URL: http://gateway:3000
@@ -314,7 +309,6 @@ services:
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       PUSH_PROVIDER: ${NOTIFICATION_PUSH_PROVIDER:-stub}
       FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
-      RABBITMQ_URL: amqp://notification:${NOTIFICATION_RABBITMQ_PASSWORD:?set NOTIFICATION_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
     healthcheck:
@@ -388,7 +382,7 @@ services:
       retries: 10
 
   gateway:
-    image: victoriamutruc/gateway:3.0.1
+    image: victoriamutruc/gateway:4.0.0
     pull_policy: always
     depends_on:
       service-discovery:
