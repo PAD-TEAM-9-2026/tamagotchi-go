@@ -179,7 +179,7 @@ root admission/deadlines and rate limits, matches public routes against a pinned
 operation manifest, signs destination-bound user context and reconstructs the
 public HTTP response. It owns no domain database or event stream.
 
-With `BROKER_DISPATCH=true`, public operations use mTLS `MessageBroker.Call` and
+In the 4.0 Gateway public operations always use mTLS `MessageBroker.Call`, with no switch and no direct path, and
 Broker chooses the actual replica. Internal-only operations have no public
 mapping; domain services use typed calls directly through Broker. Services verify
 Broker context and perform their own business authorization. Common failure
@@ -187,9 +187,10 @@ behavior remains502 upstream_unavailable,503 too_many_tasks for capacity and
 504 task_timeout for root expiry, with existing domain Problem Details preserved.
 The entire Protobuf envelope is bounded to1 MiB, with stricter per-operation limits.
 
-With Broker dispatch disabled, the existing REST proxy retains its earlier
-Discovery routing and signed `X-Gateway-Assertion` behavior for compatibility.
-Service REST callers may still carry `X-Gateway-Context` on that legacy path.
+The earlier 3.x Gateway keeps its REST proxy with Discovery routing and signed
+`X-Gateway-Assertion` behavior, which `compose.yaml` still runs. Service REST callers may
+still carry `X-Gateway-Context` on that legacy path. The 4.0 Gateway forwards directly
+only the Map demo's static assets.
 Do not treat compatibility mode as completion of the broker migration.
 
 For `guild.chat`, Gateway invokes the internal-only volatile

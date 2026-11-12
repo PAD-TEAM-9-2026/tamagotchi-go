@@ -276,7 +276,6 @@ services:
       message-broker:
         condition: service_healthy
     environment:
-      BROKER_DISPATCH: ${GATEWAY_BROKER_DISPATCH:-false}
       BROKER_GRPC_TARGET: message-broker:5010
       TLS_CA_PATH: /run/secrets/tls/ca.crt
       TLS_CERT_PATH: /run/secrets/tls/gateway.crt
