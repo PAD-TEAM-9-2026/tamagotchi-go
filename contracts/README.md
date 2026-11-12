@@ -326,3 +326,35 @@ operations are VOLATILE and contain credentials, and both are UNSAFE: a lost
 reply is not retried on another replica. A wrong secret never falls back to admin. Package Registry and
 Notification have no grants and do not call it; User Management signs its own
 Registry token in-process.
+
+## User Management and Battle public routes
+
+The public routes of User Management (`users.*`) and Battle (`battle.*`), so the
+Gateway can send them through the broker. Paths, methods, access and query keys
+come from each service's endpoint code; the self, participant and scope checks
+stay inside the service. With Gateway dispatch on, a route that is not listed is
+a 404, so these must be listed before the cutover. Each service still needs its
+public HTTP adapter behind `ServiceDelivery.Execute` before the Gateway sends
+them there; until then the Gateway's pinned catalogue keeps them direct.
+
+| Policy | Routes |
+| --- | --- |
+| VOLATILE, contains credentials, anonymous, reply at most 16 KiB | `users.login`, `users.refresh`, `users.logout`, `users.register` |
+| IDEMPOTENT with `COMMAND_KEY` (the service requires `Idempotency-Key`) | `users.register`, `users.join_package`, `users.create_friend_request`, `users.accept_friend_request`, `users.reject_friend_request`, `battle.create_battle`, `battle.accept_battle`, `battle.reject_battle`, `battle.attack`, `battle.forfeit_battle` |
+| SAFE_READ | `users.get_me`, `users.get_profile`, `users.list_my_boosts`, `users.list_friend_requests`, `users.get_global_wallet`, `users.get_local_wallet`, `battle.list_battles`, `battle.get_battle` |
+| UNSAFE, never resent | `users.login`, `users.refresh`, `users.logout`, `users.mark_enemy`, `users.remove_enemy`, `users.remove_friend` |
+
+A second `remove_enemy` or `remove_friend` answers 404, so resending one after an
+uncertain attempt would mislead the client. `mark_enemy` and `logout` repeat
+harmlessly, but stay UNSAFE for now: the catalogue keeps `NATURAL` to
+`notification.mark_read`. Pages take only `limit` and `cursor` (at most 100
+items); reply bounds are 128 KiB for User Management pages and 256 KiB for
+`battle.list_battles`, about twice a full page. Only the routes that answer 201
+keep `location`.
+
+Not in this slice:
+- the service-only routes (`/v1/internal/*`, currency credits, membership and the
+  relationship check), and the service callers of `users.get_profile` and the
+  global wallet, which need typed internal messages;
+- the public mapping of `users.list_relationships`, which stays internal;
+- issuer JWKS, probes and `/status`, which are infrastructure paths.
