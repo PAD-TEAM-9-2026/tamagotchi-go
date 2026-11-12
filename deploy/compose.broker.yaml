@@ -54,6 +54,11 @@ services:
       TLS_CA_PATH: /run/secrets/tls/ca.crt
       TLS_CERT_PATH: /run/secrets/tls/message-broker.crt
       TLS_KEY_PATH: /run/secrets/tls/message-broker.key
+      # Traces to Jaeger (deploy/monitoring.md, Tracing): one span per delivery attempt, in the caller's trace.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
     volumes:
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
       - ./secrets/broker-context.pem:/run/secrets/broker-context.pem:ro
