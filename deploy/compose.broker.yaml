@@ -1,0 +1,117 @@
+# Message-broker candidate, layered on compose.yaml without changing it:
+#
+#   deploy/message-broker/generate-identities.sh
+#   docker compose -f compose.yaml -f compose.broker.yaml up --build
+#
+# It adds the broker with its own database and switches Guild and Package Registry to the
+# broker. Those services and Discovery are built from local source checkouts named in .env
+# (MESSAGE_BROKER_SOURCE, SERVICE_DISCOVERY_SOURCE, GUILD_SOURCE, REGISTRY_SOURCE), so the
+# published images and the existing volumes stay untouched. Identity rules:
+# contracts/identity.md. Startup order: User Management, broker, then the services.
+
+services:
+  broker-database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${BROKER_DB_USER:-message_broker}
+      POSTGRES_PASSWORD: ${BROKER_DB_PASSWORD:?set BROKER_DB_PASSWORD in .env}
+      POSTGRES_DB: ${BROKER_DB_NAME:-message_broker}
+    volumes:
+      - broker-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  message-broker:
+    build: ${MESSAGE_BROKER_SOURCE:?set MESSAGE_BROKER_SOURCE in .env to a message-broker checkout}
+    image: tamagotchi-go/message-broker:candidate
+    pull_policy: build
+    depends_on:
+      broker-database:
+        condition: service_healthy
+      user-management:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    environment:
+      BROKER_LOG_LEVEL: ${BROKER_LOG_LEVEL:-INFO}
+      BROKER_DATABASE_URL: jdbc:postgresql://broker-database:5432/${BROKER_DB_NAME:-message_broker}
+      BROKER_DATABASE_USER: ${BROKER_DB_USER:-message_broker}
+      BROKER_DATABASE_PASSWORD: ${BROKER_DB_PASSWORD}
+      BROKER_GRPC_ENABLED: "true"
+      BROKER_GRPC_PORT: 5010
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      USER_MANAGEMENT_URL: http://user-management:3001
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      BROKER_CONTEXT_PRIVATE_KEY_PATH: /run/secrets/broker-context.pem
+      BROKER_CONTEXT_KEY_ID: ${BROKER_CONTEXT_KEY_ID:-broker-context-1}
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/message-broker.crt
+      TLS_KEY_PATH: /run/secrets/tls/message-broker.key
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
+      - ./secrets/broker-context.pem:/run/secrets/broker-context.pem:ro
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/message-broker.crt:/run/secrets/tls/message-broker.crt:ro
+      - ./secrets/tls/message-broker.key:/run/secrets/tls/message-broker.key:ro
+    ports:
+      - "127.0.0.1:3010:3010"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3010 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | head -1 | grep -q \" 200 \"'"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  # Discovery must return grpc_endpoint and subscriptions (service-discovery #60).
+  service-discovery:
+    build: ${SERVICE_DISCOVERY_SOURCE:?set SERVICE_DISCOVERY_SOURCE in .env to a service-discovery checkout}
+    image: tamagotchi-go/service-discovery:candidate
+    pull_policy: build
+
+  guild:
+    build: ${GUILD_SOURCE:?set GUILD_SOURCE in .env to a guild-service checkout}
+    image: tamagotchi-go/guild-service:candidate
+    pull_policy: build
+    depends_on:
+      message-broker:
+        condition: service_healthy
+    environment:
+      GRPC_PORT: 50051
+      BROKER_GRPC_ENDPOINT: message-broker:5010
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/guild.crt
+      TLS_KEY_PATH: /run/secrets/tls/guild.key
+    volumes:
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/guild.crt:/run/secrets/tls/guild.crt:ro
+      - ./secrets/tls/guild.key:/run/secrets/tls/guild.key:ro
+
+  registry:
+    build: ${REGISTRY_SOURCE:?set REGISTRY_SOURCE in .env to a package-registry-service checkout}
+    image: tamagotchi-go/package-registry-service:candidate
+    pull_policy: build
+    depends_on:
+      message-broker:
+        condition: service_healthy
+    environment:
+      GRPC_PORT: 50051
+      BROKER_GRPC_ENDPOINT: message-broker:5010
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      # The canonical name is package-registry although the compose host is registry.
+      TLS_CERT_PATH: /run/secrets/tls/package-registry.crt
+      TLS_KEY_PATH: /run/secrets/tls/package-registry.key
+    volumes:
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/package-registry.crt:/run/secrets/tls/package-registry.crt:ro
+      - ./secrets/tls/package-registry.key:/run/secrets/tls/package-registry.key:ro
+
+volumes:
+  broker-postgres-data:
