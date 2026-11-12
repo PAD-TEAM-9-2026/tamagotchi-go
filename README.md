@@ -218,8 +218,10 @@ build does not establish authenticated runtime compatibility.
 
 Use the source-built `deploy/compose.broker.yaml` overlay with private source
 paths and workload material. UM exposes issuer JWKS/bootstrap before Broker
-readiness, avoiding a startup cycle. Producer/caller switches remain off until
-their destination adapters and subscribers pass real checks. Integration
+readiness, avoiding a startup cycle. Each switch is described where it is set in
+`compose.broker.yaml`. User Management's and Battle's are on by default; the
+others remain off until their destination adapters and subscribers pass real
+checks. Integration
 operators can build exact cuts from read-only owner checkouts, or use immutable
 owner-built candidates/evidence when source access is unavailable.
 
@@ -229,9 +231,20 @@ its outbound Gateway client/breaker and RabbitMQ publisher are removed. Direct
 HTTP probes/assets and verified HTTP handlers remain. Source-built acceptance
 has exercised Gateway → Broker → Map → Broker → UM, real encounter publication,
 durable receipts and one Notification effect per recipient. This is not final
-published-stack acceptance or a switch of unrelated event producers. Supply UM's
-canonical-authority routing fix and account for retained Rabbit work before
-switching a consumer. No image publication is performed by this overlay.
+published-stack acceptance or a switch of unrelated event producers. UM's
+canonical-authority routing fix is merged (user-management #72, battle #61);
+account for retained Rabbit work before switching a consumer. No image
+publication is performed by this overlay.
+
+User Management and Battle, built from source in the overlay, have no RabbitMQ
+publisher (user-management #73, battle #62): their outbox is published only
+through Broker. With an events switch off, the events wait in the service's
+outbox, and the `RABBITMQ_URL` that compose.yaml gives them is unused. Their
+calls (UM to Package Registry; Battle to UM, Package Registry and Tamagotchi)
+also go through Broker. Their outbox keeps the caller's `traceparent`, so a
+volume created before that column must run the `upgrade.sql` of `deploy/db/user-management` and `deploy/db/battle` (see
+Database schema). The published images in compose.yaml are unchanged and still
+use RabbitMQ until new images are pinned.
 
 [Structured log volumes](deploy/log-volumes.md) isolate writable service roots
 and read-only Broker export access. [Monitoring](deploy/monitoring.md) documents
