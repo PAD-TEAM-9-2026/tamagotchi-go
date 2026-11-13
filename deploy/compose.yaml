@@ -110,7 +110,7 @@ services:
       retries: 10
 
   guild:
-    image: mihaelacatan/guild-service:3.0.2
+    image: mihaelacatan/guild-service:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
@@ -158,7 +158,7 @@ services:
       retries: 10
 
   registry:
-    image: mihaelacatan/package-registry-service:3.0.2
+    image: mihaelacatan/package-registry-service:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
