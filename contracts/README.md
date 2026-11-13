@@ -1,9 +1,8 @@
-# Broker transport proposal
+# Broker transport
 
-**Status: proposed, not an approved or implemented replacement for current
-transport.** Existing deployment/contracts remain authoritative until affected
-owners approve the migration. The broker source is maintained separately in
-`sergedbs/message-broker`.
+**Status: implemented.** The Message Broker (`sergedbs/message-broker`) carries
+every service call and event of the 4.0 release, and the catalogue below is what
+it routes by.
 
 The initial schema is [broker.proto](proto/tamagotchi/messaging/v1/broker.proto),
 package `tamagotchi.messaging.v1`. Service-specific internal operation messages
@@ -23,7 +22,13 @@ method/path/query/headers/body; no absolute URL, arbitrary target or secret-bear
 header may enter generic durable storage. Internal service calls use concrete
 Protobuf messages carried by Any, with operation and type-URL allowlists. Opaque
 bytes are not permission to tunnel internal REST/JSON. Unknown operations/types
-fail closed. Broker adapters reuse application handlers, not loopback HTTP.
+fail closed. Broker adapters reuse application handlers in process. A service whose
+framework cannot dispatch a request in process may hand a public envelope to a
+private loopback listener: the same app on a second server bound to 127.0.0.1 on
+an ephemeral port, never its public port. The adapter keeps four rules: one task
+slot per logical call; the principal only from the verified context, passed in
+process; the effective deadline bounds the handler, cancellation aborts it and a
+timeout answers DEADLINE_EXCEEDED; status mapping per [Error handling](#error-handling).
 
 `message_id`, event/delivery IDs and correlation IDs are canonical UUIDv7.
 `destination` is a canonical logical service name. Retries preserve message and
@@ -58,11 +63,9 @@ than counting an invented handler attempt. Lease fencing is internal broker
 state; a response with an expired lease cannot complete a replacement claim.
 Transport loss before acknowledgement may redeliver an already committed effect.
 
-Subscriptions persist when every replica disconnects. Discovery registration is
-proposed to add an internal gRPC port/endpoint and topic/subscription metadata,
-validated against a reviewed allowed-subscriptions manifest. Exact registration
-fields, manifest and domain operation definitions require owner review. This PR
-does not modify current registration requests or existing endpoint tables.
+Subscriptions persist when every replica disconnects. Services register their
+internal gRPC endpoint and their subscriptions with Discovery, and the Broker
+accepts only subscriptions the catalogue allows.
 
 ## Identity and bootstrap
 
@@ -157,7 +160,8 @@ a required grant; it does not itself issue a token or modify UM's allowlist.
 Operation names are stable identifiers. Destination is a separate canonical
 service field; the selected users.* and registry.* prefixes are not alternate
 service identities. Internal type URLs must name compiled, versioned messages.
-No opaque internal JSON, arbitrary URL dispatch or loopback HTTP adapter.
+No opaque internal JSON or arbitrary URL dispatch; the only loopback HTTP allowed is
+the private listener described in [API and boundaries](#api-and-boundaries).
 
 Request headers are explicitly allowlisted per route. Idempotency-Key is carried
 only in CallRequest.idempotency_key. Strip credentials, assertions, caller identity,
@@ -199,14 +203,15 @@ use that status for message-size and unrelated resource failures.
 The current DeliveryStore.startAttempt marks dispatch and increments attempts;
 DeliveryStore.defer only accepts a lease with no dispatch marker. Therefore the
 worker cannot pass a returned DEFERRED directly to that existing defer method.
-The delivery owner must add a fenced not-executed settlement path: verify the live
+The runtime uses a fenced not-executed settlement path: verify the live
 lease and recorded dispatch, undo only this refused dispatch's provisional attempt
 and target reservation, requeue with a bounded delay and keep capacity reserved.
 It must be idempotent and must not roll back any prior uncertain/failed attempt.
 Cancellation, transport loss or missing acknowledgement cannot prove non-execution
 and must use the uncertain-delivery policy. Do not clear dispatch markers after
 an ambiguous outcome. Test refusal, stale leases and duplicate settlement with
-real PostgreSQL. This required integration is not implemented by the enum change.
+real PostgreSQL. The enum alone is insufficient; the delivery runtime implements
+and tests this settlement separately.
 
 ## Direct and volatile exceptions
 
@@ -459,10 +464,9 @@ docs/field-types.md. Timestamps are `google.protobuf.Timestamp`; Registry
 enumerations stay strings like the file's other messages; an absent
 `defeat_rewards` is JSON null. Raid always sends the occurrence's `boss_version` as
 `config_version`. Business refusals are call failures with the public API's
-status and code. Guild and Package Registry still have to serve these four
-operations; until they do, Raid keeps its existing Gateway client for exactly
-these reads. A separate service-read operation, like `registry.read_package`, is
-an alternative the owners may prefer in review.
+status and code. Guild and Package Registry serve these four operations through typed Broker
+adapters. Raid uses them by default; its deprecated explicit legacy-read setting
+is empty in the tested stack. The contract is approved in Shared; consumers pin an immutable merged revision.
 
 Raid's other dependencies are already listed: Tamagotchi's collection, engagement
 and XP operations, `users.credit_global`, `users.issue_service_token` and, with

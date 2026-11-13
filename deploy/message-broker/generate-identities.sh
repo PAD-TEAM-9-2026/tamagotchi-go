@@ -1,7 +1,7 @@
 #!/bin/sh
 # Creates the stack's mTLS workload identities and the broker's context signing key
-# (contracts/identity.md sections 1 and 6) for the message-broker candidate. Run once,
-# from anywhere, before `docker compose -f compose.yaml -f compose.broker.yaml up`.
+# (contracts/identity.md sections 1 and 6). Run once, from anywhere, before the first
+# `docker compose up`.
 # Everything stays in deploy/secrets/, which is git-ignored. Existing files are kept,
 # so running it again never replaces a working certificate or key.
 set -eu

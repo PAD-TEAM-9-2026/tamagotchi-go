@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Battle",
-    "description": "Authenticated Battle scenario through Gateway. Supply real challenger/opponent/outsider IDs, matching bearer credentials and distinct held primary/secondary creature IDs. Use fresh lineups with no pending challenge or engagement. Probes are direct. Run requests in order; replay and attack are included.",
+    "description": "Authenticated Battle scenario through Gateway. Supply real challenger/opponent/outsider IDs, matching bearer credentials and distinct held primary/secondary creature IDs. Use fresh lineups with no pending challenge or engagement. Probes read Discovery. Run requests in order; replay and attack are included.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -99,9 +99,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{battle_probe_url}}/health",
+              "raw": "{{battle_probe_url}}/instances",
               "host": ["{{battle_probe_url}}"],
-              "path": ["health"]
+              "path": ["instances"]
             }
           },
           "event": [
@@ -110,7 +110,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                  "pm.test('200 with registered instances', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('battle'); pm.expect(body.instances).to.be.an('array').that.is.not.empty; });"
                 ]
               }
             }
@@ -122,9 +122,10 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{battle_probe_url}}/ready",
+              "raw": "{{battle_probe_url}}/instances?routable=true",
               "host": ["{{battle_probe_url}}"],
-              "path": ["ready"]
+              "path": ["instances"],
+              "query": [{ "key": "routable", "value": "true" }]
             }
           },
           "event": [
@@ -133,7 +134,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 READY', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('READY'); });"
+                  "pm.test('200 with a healthy routable instance', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('battle'); pm.expect(body.instances.some((instance) => instance.health === 'healthy')).to.eql(true); });"
                 ]
               }
             }

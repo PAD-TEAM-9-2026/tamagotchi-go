@@ -1,4 +1,5 @@
-# Optional monitoring for the candidate; metrics remain internal to Compose.
+# Optional monitoring, layered on compose.yaml: docker compose -f compose.yaml -f compose.monitoring.yaml up -d
+# Prometheus scrapes every service replica and the broker on METRICS_PORT; metrics stay internal to Compose.
 services:
   prometheus:
     image: prom/prometheus:v3.5.0
