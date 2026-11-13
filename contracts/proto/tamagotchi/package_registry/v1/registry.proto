@@ -6,6 +6,8 @@ option java_multiple_files = true;
 option java_package = "com.tamagotchigo.contracts.packageregistry.v1";
 option csharp_namespace = "Tamagotchi.Contracts.PackageRegistry.V1";
 
+import "google/protobuf/timestamp.proto";
+
 // Requests a specific or latest version of the starter pet configuration
 // for the given package. Called internally by the tamagotchi service when
 // initialising a creature from scratch.
@@ -94,6 +96,39 @@ message CheckEligibilityResponse {
   string reason = 3;
 }
 
+// Reads one raid occurrence as a service. Called internally by Monster Raid when
+// it creates a raid. Mirrors the public Occurrence shape.
+message GetOccurrenceRequest {
+  // UUIDv7 of the occurrence.
+  string occurrence_id = 1;
+}
+
+message GetOccurrenceResponse {
+  string occurrence_id = 1;
+  string boss_id = 2;
+  int32 boss_version = 3;
+  google.protobuf.Timestamp available_from = 4;
+  google.protobuf.Timestamp available_until = 5;
+  // "scheduled", "active", "inactive" or "cancelled".
+  string status = 6;
+  int32 version = 7;
+}
+
+// Reads one boss configuration as a service. Called internally by Monster Raid
+// to snapshot the boss when it creates a raid. Mirrors the public Boss shape.
+message GetBossRequest {
+  // UUIDv7 of the boss.
+  string boss_id = 1;
+  // If non-zero, pin the response to exactly this config version.
+  int32 config_version = 2;
+}
+
+message GetBossResponse {
+  string boss_id = 1;
+  int32 config_version = 2;
+  BossInput definition = 3;
+}
+
 // ── Shared embedded types ──────────────────────────────────────────────────
 
 message StarterPet {
@@ -138,4 +173,30 @@ message BonusRule {
   double threshold = 3;
   string effect = 4;
   int32 value_bps = 5;
+}
+
+message BossInput {
+  string name = 1;
+  string description = 2;
+  string sprite_ref = 3;
+  // FLAME, NATURE, EARTH, ELECTRIC, WATER or SHADOW.
+  string combat_type = 4;
+  int32 max_hp = 5;
+  int32 defense = 6;
+  repeated string weaknesses = 7;
+  repeated string resistances = 8;
+  // Empty today; kept so the shape matches the public definition.
+  SpecialProperties special_properties = 9;
+  int32 duration_seconds = 10;
+  int32 max_participants = 11;
+  RewardAmounts rewards = 12;
+  // Absent when the boss pays nothing on defeat (JSON null).
+  RewardAmounts defeat_rewards = 13;
+}
+
+message SpecialProperties {}
+
+message RewardAmounts {
+  int32 global_currency = 1;
+  int32 xp = 2;
 }

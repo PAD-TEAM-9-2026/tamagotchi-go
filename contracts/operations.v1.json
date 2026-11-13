@@ -984,6 +984,18 @@
           "www-authenticate",
           "cache-control"
         ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.guild.v1.GetGuildRequest",
+        "response_type": "type.googleapis.com/tamagotchi.guild.v1.GetGuildResponse",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "guild:read"
+            ]
+          }
+        ]
       }
     },
     {
@@ -1092,6 +1104,18 @@
           "retry-after",
           "www-authenticate",
           "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.guild.v1.ListMembersRequest",
+        "response_type": "type.googleapis.com/tamagotchi.guild.v1.ListMembersResponse",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "guild:read"
+            ]
+          }
         ]
       }
     },
@@ -1423,6 +1447,18 @@
           "www-authenticate",
           "cache-control"
         ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetBossRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetBossResponse",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "registry:read-bosses"
+            ]
+          }
+        ]
       }
     },
     {
@@ -1449,6 +1485,18 @@
           "retry-after",
           "www-authenticate",
           "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetOccurrenceRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetOccurrenceResponse",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "registry:read-occurrences"
+            ]
+          }
         ]
       }
     },
@@ -1574,7 +1622,7 @@
       "destination": "package-registry",
       "storage": "DURABLE",
       "failover": "UNSAFE",
-      "idempotency": "NONE",
+      "idempotency": "COMMAND_KEY",
       "contains_credentials": false,
       "request_max_bytes": 65536,
       "reply_max_bytes": 65536,
@@ -1602,7 +1650,7 @@
       "destination": "package-registry",
       "storage": "DURABLE",
       "failover": "UNSAFE",
-      "idempotency": "NONE",
+      "idempotency": "COMMAND_KEY",
       "contains_credentials": false,
       "request_max_bytes": 65536,
       "reply_max_bytes": 65536,
@@ -1739,6 +1787,12 @@
         "callers": [
           {
             "service": "battle",
+            "scopes": [
+              "registry:read-config"
+            ]
+          },
+          {
+            "service": "monster-raid",
             "scopes": [
               "registry:read-config"
             ]
@@ -2680,6 +2734,166 @@
         "request_headers": [
           "accept",
           "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.create_raid",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/raids",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "location",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.list_raids",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 262144,
+      "public": {
+        "method": "GET",
+        "path": "/v1/raids",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "guild_id",
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.get_raid",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/raids/{raidId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.attack",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/raids/{raidId}/attack",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.get_leaderboard",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/raids/{raidId}/leaderboard",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.cancel_raid",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/raids/{raidId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
         ],
         "query_parameters": [],
         "response_headers": [
