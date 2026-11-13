@@ -130,7 +130,7 @@ services:
       - notification-logs:/owned/notification
 
   service-discovery:
-    image: patriciamoraru/service-discovery:4.0.0
+    image: patriciamoraru/service-discovery:4.0.0@sha256:3b2564d5069654f765ad5f90acc7f0a32ef7d73569355aeea35fe59924a1404e
     restart: unless-stopped
     pull_policy: always
     <<: *logs
@@ -160,7 +160,7 @@ services:
 
   # User Management starts before the broker, which reads its keys at startup (contracts/identity.md).
   user-management:
-    image: patriciamoraru/user-management:4.0.0
+    image: patriciamoraru/user-management:4.0.0@sha256:df012384516e952c6bfe9878a4239c4583a8276d29befa58ff00ba50ce29e38e
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -213,7 +213,7 @@ services:
       retries: 12
 
   message-broker:
-    image: sergedbs/message-broker:4.0.0
+    image: sergedbs/message-broker:4.0.0@sha256:2f90a0d797a801d2dbf4a9fe7c3f5f5e8e9f76b1c138a0343063047308ddb8b2
     restart: unless-stopped
     pull_policy: always
     <<: *logs
@@ -276,7 +276,7 @@ services:
       retries: 24
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:4.0.0
+    image: victoriamutruc/tamagotchi:4.0.0@sha256:27925856c193d6376dcd6da59e1ecea87ab1e1162d1ec84f9a96258ac0224bfc
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -316,7 +316,7 @@ services:
     healthcheck: *ready-node
 
   notification:
-    image: victoriamutruc/notification:4.0.0
+    image: victoriamutruc/notification:4.0.0@sha256:c2e0a4fa603640d9d6fe8603388ff70949a92b96c84b7258071cc7177f9a2f27
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -353,7 +353,7 @@ services:
     healthcheck: *ready-node
 
   guild:
-    image: mihaelacatan/guild-service:4.0.0
+    image: mihaelacatan/guild-service:4.0.0@sha256:b5636ab96411277abac11e9515edb82534800e802f081e715244def01ba9d138
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -412,7 +412,7 @@ services:
       retries: 10
 
   registry:
-    image: mihaelacatan/package-registry-service:4.0.0
+    image: mihaelacatan/package-registry-service:4.0.0@sha256:d9f9067481beeacaf2beeda512422018b3c91d9f4c8f490c2ba63ca7fc1c91cd
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -452,7 +452,7 @@ services:
     healthcheck: *ready-node
 
   battle:
-    image: patriciamoraru/battle:4.0.0
+    image: patriciamoraru/battle:4.0.0@sha256:ffbbd7e580a89c06b270025168e526e4402f3aee0915d8ff28e2d67b528efaea
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -495,7 +495,7 @@ services:
       retries: 12
 
   map:
-    image: sergedbs/map:4.0.0
+    image: sergedbs/map:4.0.0@sha256:7a059afb016884c3680c5efa0e5d62d871a4b040c871bf092b37903951201bef
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -533,7 +533,7 @@ services:
     healthcheck: *ready-dotnet-8080
 
   monster-raid:
-    image: sergedbs/monster-raid:4.0.0
+    image: sergedbs/monster-raid:4.0.0@sha256:9adce1a500be1571279f26c4a718e32cb50d29f0177fdccfc221651c97014adc
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -569,7 +569,7 @@ services:
     healthcheck: *ready-dotnet-8080
 
   gateway:
-    image: victoriamutruc/gateway:4.0.1
+    image: victoriamutruc/gateway:4.0.1@sha256:95b977df4c8041b8779e339960fef1224708dfeca38750d70036801621992012
     restart: unless-stopped
     pull_policy: always
     <<: *logs

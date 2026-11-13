@@ -1615,23 +1615,23 @@ with its own PostgreSQL, and every domain service, with Guild on two replicas
 behind the `guild-socket` balancer. The other services have their own database
 and role in one PostGIS-enabled PostgreSQL container.
 
-| Service | Image | Host port |
-|---|---|---|
-| Gateway | `victoriamutruc/gateway:4.0.1` | 3000 |
-| Service Discovery | `patriciamoraru/service-discovery:4.0.0` | 3009 (loopback) |
-| Message Broker | `sergedbs/message-broker:4.0.0` | 3010 (loopback) |
-| User Management | `patriciamoraru/user-management:4.0.0` | internal |
-| Tamagotchi | `victoriamutruc/tamagotchi:4.0.0` | internal |
-| Battle | `patriciamoraru/battle:4.0.0` | internal |
-| Guild | `mihaelacatan/guild-service:4.0.0` | internal; socket balancer 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:4.0.0` | internal |
-| Map | `sergedbs/map:4.0.0` | internal |
-| Monster Raid | `sergedbs/monster-raid:4.0.0` | internal |
-| Notification | `victoriamutruc/notification:4.0.0` | internal |
+| Service | Image | Digest | Host port |
+|---|---|---|---|
+| Gateway | `victoriamutruc/gateway:4.0.1` | `sha256:95b977df4c8041b8779e339960fef1224708dfeca38750d70036801621992012` | 3000 |
+| Service Discovery | `patriciamoraru/service-discovery:4.0.0` | `sha256:3b2564d5069654f765ad5f90acc7f0a32ef7d73569355aeea35fe59924a1404e` | 3009 (loopback) |
+| Message Broker | `sergedbs/message-broker:4.0.0` | `sha256:2f90a0d797a801d2dbf4a9fe7c3f5f5e8e9f76b1c138a0343063047308ddb8b2` | 3010 (loopback) |
+| User Management | `patriciamoraru/user-management:4.0.0` | `sha256:df012384516e952c6bfe9878a4239c4583a8276d29befa58ff00ba50ce29e38e` | internal |
+| Tamagotchi | `victoriamutruc/tamagotchi:4.0.0` | `sha256:27925856c193d6376dcd6da59e1ecea87ab1e1162d1ec84f9a96258ac0224bfc` | internal |
+| Battle | `patriciamoraru/battle:4.0.0` | `sha256:ffbbd7e580a89c06b270025168e526e4402f3aee0915d8ff28e2d67b528efaea` | internal |
+| Guild | `mihaelacatan/guild-service:4.0.0` | `sha256:b5636ab96411277abac11e9515edb82534800e802f081e715244def01ba9d138` | internal; socket balancer 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:4.0.0` | `sha256:d9f9067481beeacaf2beeda512422018b3c91d9f4c8f490c2ba63ca7fc1c91cd` | internal |
+| Map | `sergedbs/map:4.0.0` | `sha256:7a059afb016884c3680c5efa0e5d62d871a4b040c871bf092b37903951201bef` | internal |
+| Monster Raid | `sergedbs/monster-raid:4.0.0` | `sha256:9adce1a500be1571279f26c4a718e32cb50d29f0177fdccfc221651c97014adc` | internal |
+| Notification | `victoriamutruc/notification:4.0.0` | `sha256:c2e0a4fa603640d9d6fe8603388ff70949a92b96c84b7258071cc7177f9a2f27` | internal |
 
-Pulling works once these versions are published (see [Image publication](#image-publication));
-until then, the `compose.source.yaml` overlay builds the same stack from local
-checkouts. Requires Docker with Compose v2 and free host ports 3000, 3004, 3009,
+These numeric images are published for AMD64 and ARM64 and pinned by digest.
+The `compose.source.yaml` overlay can instead build reviewed local checkouts.
+See [Image publication](#image-publication) for future releases. Requires Docker with Compose v2 and free host ports 3000, 3004, 3009,
 3010 and 5432.
 
 ```bash
