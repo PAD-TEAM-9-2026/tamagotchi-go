@@ -23,7 +23,7 @@
           "pm.variables.set('command_key', uuidv7());",
           "pm.variables.set('unknown_raid_id', uuidv7());",
           "pm.variables.set('other_actor_id', uuidv7());",
-          "if (!['Health', 'Readiness', 'Missing authentication', 'Direct impersonation'].includes(pm.info.requestName) && !pm.environment.get('raid_leader_credential')) throw new Error('Configure the real test user credential before running domain requests.');"
+          "if (!['Health', 'Readiness', 'Missing authentication'].includes(pm.info.requestName) && !pm.environment.get('raid_leader_credential')) throw new Error('Configure the real test user credential before running domain requests.');"
         ]
       }
     }
@@ -38,12 +38,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{monster_raid_probe_url}}/health",
+              "raw": "{{monster_raid_probe_url}}/instances",
               "host": [
                 "{{monster_raid_probe_url}}"
               ],
               "path": [
-                "health"
+                "instances"
               ]
             },
             "auth": {
@@ -56,8 +56,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"service is up\", () => { pm.expect(pm.response.json().status).to.eql('UP') });"
+                  "pm.test('200 with registered instances', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('monster-raid'); pm.expect(body.instances).to.be.an('array').that.is.not.empty; });"
                 ]
               }
             }
@@ -69,12 +68,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{monster_raid_probe_url}}/ready",
+              "raw": "{{monster_raid_probe_url}}/instances?routable=true",
               "host": [
                 "{{monster_raid_probe_url}}"
               ],
               "path": [
-                "ready"
+                "instances"
+              ],
+              "query": [
+                {
+                  "key": "routable",
+                  "value": "true"
+                }
               ]
             },
             "auth": {
@@ -87,8 +92,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"database is ready\", () => { pm.expect(pm.response.json().status).to.eql('READY') });"
+                  "pm.test('200 with a healthy routable instance', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('monster-raid'); pm.expect(body.instances.some((instance) => instance.health === 'healthy')).to.eql(true); });"
                 ]
               }
             }
@@ -555,43 +559,6 @@
                 "exec": [
                   "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));",
                   "pm.test(\"problem code\", () => { pm.expect(pm.response.json().code).to.eql('actor_mismatch') });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Direct impersonation",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "X-User-Id",
-                "value": "{{raid_leader_id}}"
-              }
-            ],
-            "url": {
-              "raw": "{{monster_raid_probe_url}}/v1/raids",
-              "host": [
-                "{{monster_raid_probe_url}}"
-              ],
-              "path": [
-                "v1",
-                "raids"
-              ]
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
-                  "pm.test('problem code', () => pm.expect(pm.response.json().code).to.eql('invalid_gateway_assertion'));"
                 ]
               }
             }

@@ -20,6 +20,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install contract tooling
+        run: python3 -m pip install -r tools/requirements-contracts.txt
+      - name: Compile and validate broker contracts
+        run: python3 tools/check_broker_contracts.py
       - name: Check contracts
         run: python3 tools/check_contracts.py
       - name: Check broker topology

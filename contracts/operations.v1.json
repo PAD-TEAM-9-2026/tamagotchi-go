@@ -1,0 +1,3024 @@
+{
+  "schema_version": "1.0.0",
+  "operations": [
+    {
+      "name": "map.delete_location",
+      "destination": "map",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/location/{userId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "map.get_location",
+      "destination": "map",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/location/{userId}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "map.list_nearby",
+      "destination": "map",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 524288,
+      "public": {
+        "method": "GET",
+        "path": "/v1/location/nearby/{userId}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "map.upsert_location",
+      "destination": "map",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/location",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "notification.delete_device",
+      "destination": "notification",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/devices/{id}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "notification.get_preferences",
+      "destination": "notification",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}/preferences",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "notification.list_devices",
+      "destination": "notification",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 131072,
+      "public": {
+        "method": "GET",
+        "path": "/v1/devices",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "notification.list_notifications",
+      "destination": "notification",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 131072,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}/notifications",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "notification.mark_read",
+      "destination": "notification",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "NATURAL",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "PATCH",
+        "path": "/v1/notifications/{id}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "notification.put_preferences",
+      "destination": "notification",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "PUT",
+        "path": "/v1/users/{userId}/preferences",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type",
+          "if-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "notification.read_all",
+      "destination": "notification",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/users/{userId}/notifications/read-all",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "notification.register_device",
+      "destination": "notification",
+      "storage": "VOLATILE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/devices",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.award_xp",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.AwardXpRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.AwardXpReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:award-xp"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:award-xp"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.care",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/tamagotchis/{id}/care",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.get_collection",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 786432,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}/collection",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GetCollectionRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GetCollectionReply",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:read-collection"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.get_engagement",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GetEngagementRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.Engagement",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:read-engagement"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:read-engagement"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.get_primary",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}/collection/primary",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.get_tamagotchi",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/tamagotchis/{id}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.get_type_matrix",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/types/matrix",
+        "access": "anonymous",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.grant_access",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GrantAccessRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.GrantAccessReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:grant-access"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.list_holders",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/tamagotchis/{id}/holders",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.ListHoldersRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.ListHoldersReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:read-holders"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.list_tamagotchis",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 786432,
+      "public": {
+        "method": "GET",
+        "path": "/v1/tamagotchis",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "holder_id",
+          "package_id",
+          "type",
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.list_types",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/types",
+        "access": "anonymous",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.release_engagement",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.ReleaseEngagementRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.Engagement",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:release-engagement"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:release-engagement"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.remove_from_collection",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/users/{userId}/collection/{id}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.remove_holder",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/tamagotchis/{id}/holders/{userId}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.reserve_engagement",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.ReserveEngagementRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.Engagement",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:reserve-engagement"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "tamagotchi:reserve-engagement"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.set_primary",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "PUT",
+        "path": "/v1/users/{userId}/collection/primary",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type",
+          "if-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.accept_invitation",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/guilds/{guildId}/invitations/{id}/accept",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.change_role",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "PATCH",
+        "path": "/v1/guilds/{guildId}/members/{userId}/role",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.create_guild",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/guilds",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.create_invitation",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/guilds/{guildId}/invitations",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.decline_invitation",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/guilds/{guildId}/invitations/{id}/decline",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.delete_guild",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/guilds/{guildId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.get_guild",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/guilds/{guildId}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.guild.v1.GetGuildRequest",
+        "response_type": "type.googleapis.com/tamagotchi.guild.v1.GetGuildResponse",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "guild:read"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "guild.issue_chat_ticket",
+      "destination": "guild",
+      "storage": "VOLATILE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.guild.v1.IssueChatTicketRequest",
+        "response_type": "type.googleapis.com/tamagotchi.guild.v1.IssueChatTicketResponse",
+        "callers": [
+          {
+            "service": "gateway",
+            "scopes": [
+              "guild:issue-chat-ticket"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "guild.list_guilds",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 524288,
+      "public": {
+        "method": "GET",
+        "path": "/v1/guilds",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.list_invitations",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 524288,
+      "public": {
+        "method": "GET",
+        "path": "/v1/invitations",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.list_members",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 524288,
+      "public": {
+        "method": "GET",
+        "path": "/v1/guilds/{guildId}/members",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.guild.v1.ListMembersRequest",
+        "response_type": "type.googleapis.com/tamagotchi.guild.v1.ListMembersResponse",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "guild:read"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "guild.list_messages",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 1048576,
+      "public": {
+        "method": "GET",
+        "path": "/v1/guilds/{guildId}/messages",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.remove_member",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/guilds/{guildId}/members/{userId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.revoke_invitation",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/guilds/{guildId}/invitations/{id}/revoke",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "guild.transfer_leadership",
+      "destination": "guild",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/guilds/{guildId}/leadership",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.activate_occurrence",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/raid-occurrences/{id}/activate",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.cancel_occurrence",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/raid-occurrences/{id}/cancel",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.create_boss",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 65536,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/bosses",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.create_occurrence",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/raid-occurrences",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.create_package",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 65536,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/packages",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.deactivate_occurrence",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/raid-occurrences/{id}/deactivate",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.get_assets",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 524288,
+      "public": {
+        "method": "GET",
+        "path": "/v1/packages/{packageId}/assets",
+        "access": "anonymous",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "config_version"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.get_boss",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/bosses/{bossId}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "config_version"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetBossRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetBossResponse",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "registry:read-bosses"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.get_occurrence",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/raid-occurrences/{id}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetOccurrenceRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetOccurrenceResponse",
+        "callers": [
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "registry:read-occurrences"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.get_package",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/packages/{packageId}",
+        "access": "anonymous",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.list_bosses",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 524288,
+      "public": {
+        "method": "GET",
+        "path": "/v1/bosses",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.list_occurrences",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 524288,
+      "public": {
+        "method": "GET",
+        "path": "/v1/raid-occurrences",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.list_packages",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 524288,
+      "public": {
+        "method": "GET",
+        "path": "/v1/packages",
+        "access": "anonymous",
+        "request_headers": [
+          "accept",
+          "if-none-match"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.update_boss",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 65536,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "PUT",
+        "path": "/v1/bosses/{bossId}",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "content-type",
+          "if-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.update_package",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 65536,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "PATCH",
+        "path": "/v1/packages/{packageId}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type",
+          "if-match"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.write_stats",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 65536,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "PUT",
+        "path": "/v1/packages/{packageId}/stats",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "etag",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "registry.check_eligibility",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.CheckEligibilityRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.CheckEligibilityResponse",
+        "callers": [
+          {
+            "service": "guild",
+            "scopes": [
+              "registry:check-eligibility"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.get_currency_rules",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetCurrencyRulesRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetCurrencyRulesResponse",
+        "callers": [
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "registry:read-config"
+            ]
+          },
+          {
+            "service": "user-management",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.get_starter_pet",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStarterPetRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStarterPetResponse",
+        "callers": [
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.get_stat_bonuses",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatBonusesRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatBonusesResponse",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "registry:read-config"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "registry:read-config"
+            ]
+          },
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.get_stat_definitions",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatDefinitionsRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.GetStatDefinitionsResponse",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "registry:read-config"
+            ]
+          },
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "registry.read_package",
+      "destination": "package-registry",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.package_registry.v1.ReadPackageRequest",
+        "response_type": "type.googleapis.com/tamagotchi.package_registry.v1.ReadPackageResponse",
+        "callers": [
+          {
+            "service": "user-management",
+            "scopes": [
+              "registry:read-config"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.list_relationships",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}/relationships",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      },
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.ListRelationshipsRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.ListRelationshipsReply",
+        "callers": [
+          {
+            "service": "map",
+            "scopes": [
+              "users:read-relationships"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.issue_service_token_as_admin",
+      "destination": "user-management",
+      "storage": "VOLATILE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "public": {
+        "method": "POST",
+        "path": "/v1/service-tokens",
+        "access": "admin",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.issue_service_token",
+      "destination": "user-management",
+      "storage": "VOLATILE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.IssueServiceTokenRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.IssueServiceTokenReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": []
+          },
+          {
+            "service": "guild",
+            "scopes": []
+          },
+          {
+            "service": "map",
+            "scopes": []
+          },
+          {
+            "service": "monster-raid",
+            "scopes": []
+          },
+          {
+            "service": "tamagotchi",
+            "scopes": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.login",
+      "destination": "user-management",
+      "storage": "VOLATILE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "public": {
+        "method": "POST",
+        "path": "/v1/users/login",
+        "access": "anonymous",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.refresh",
+      "destination": "user-management",
+      "storage": "VOLATILE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "public": {
+        "method": "POST",
+        "path": "/v1/auth/refresh",
+        "access": "anonymous",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.logout",
+      "destination": "user-management",
+      "storage": "VOLATILE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "public": {
+        "method": "POST",
+        "path": "/v1/auth/logout",
+        "access": "anonymous",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.register",
+      "destination": "user-management",
+      "storage": "VOLATILE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": true,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "public": {
+        "method": "POST",
+        "path": "/v1/users/register",
+        "access": "anonymous",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "location",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.get_me",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/me",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.get_profile",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.join_package",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/users/me/packages",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.list_my_boosts",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 131072,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/me/boosts",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.create_friend_request",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/friend-requests",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "location",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.list_friend_requests",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 131072,
+      "public": {
+        "method": "GET",
+        "path": "/v1/friend-requests",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.accept_friend_request",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/friend-requests/{id}/accept",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.reject_friend_request",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/friend-requests/{id}/reject",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.mark_enemy",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "PUT",
+        "path": "/v1/users/{userId}/enemies/{otherId}",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.remove_enemy",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/users/{userId}/enemies/{otherId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.remove_friend",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/users/{userId}/friends/{otherId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.get_global_wallet",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}/currency/global",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.get_local_wallet",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/users/{userId}/currency/local/{packageId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "users.read_profile",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.GetUserProfileRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.UserProfile",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:read-profile"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.settle_battle",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.SettleBattleRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.BattleSettlement",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:settle-battle"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.consume_boost",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.ConsumeBoostRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.BoostReceipt",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:consume-boost"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.credit_global",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.CreditGlobalRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.CreditReceipt",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:credit-global"
+            ]
+          },
+          {
+            "service": "monster-raid",
+            "scopes": [
+              "users:credit-global"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.credit_local",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.CreditLocalRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.CreditReceipt",
+        "callers": [
+          {
+            "service": "tamagotchi",
+            "scopes": [
+              "users:credit-local"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.get_relationship",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.GetRelationshipRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.GetRelationshipReply",
+        "callers": [
+          {
+            "service": "guild",
+            "scopes": [
+              "users:check-relationship"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.get_membership",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.GetMembershipRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.MembershipSnapshot",
+        "callers": [
+          {
+            "service": "guild",
+            "scopes": [
+              "users:read-membership"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "battle.create_battle",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/battles",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "location",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "battle.list_battles",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 262144,
+      "public": {
+        "method": "GET",
+        "path": "/v1/battles",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "battle.get_battle",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/battles/{battleId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "battle.accept_battle",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/battles/{battleId}/accept",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "battle.reject_battle",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/battles/{battleId}/reject",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "battle.attack",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/battles/{battleId}/attack",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "battle.forfeit_battle",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/battles/{battleId}/forfeit",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.create_raid",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/raids",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "location",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.list_raids",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 262144,
+      "public": {
+        "method": "GET",
+        "path": "/v1/raids",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "guild_id",
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.get_raid",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/raids/{raidId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.attack",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "POST",
+        "path": "/v1/raids/{raidId}/attack",
+        "access": "user",
+        "request_headers": [
+          "accept",
+          "content-type"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.get_leaderboard",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "SAFE_READ",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "GET",
+        "path": "/v1/raids/{raidId}/leaderboard",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [
+          "limit",
+          "cursor"
+        ],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    },
+    {
+      "name": "raid.cancel_raid",
+      "destination": "monster-raid",
+      "storage": "DURABLE",
+      "failover": "UNSAFE",
+      "idempotency": "NONE",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 65536,
+      "public": {
+        "method": "DELETE",
+        "path": "/v1/raids/{raidId}",
+        "access": "user",
+        "request_headers": [
+          "accept"
+        ],
+        "query_parameters": [],
+        "response_headers": [
+          "content-type",
+          "retry-after",
+          "www-authenticate",
+          "cache-control"
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "topic": "battle.completed.v1",
+      "producer": "battle"
+    },
+    {
+      "topic": "battle.request_created.v1",
+      "producer": "battle"
+    },
+    {
+      "topic": "guild.chat_message.v1",
+      "producer": "guild"
+    },
+    {
+      "topic": "guild.invitation_created.v1",
+      "producer": "guild"
+    },
+    {
+      "topic": "guild.member_joined.v1",
+      "producer": "guild"
+    },
+    {
+      "topic": "guild.member_left.v1",
+      "producer": "guild"
+    },
+    {
+      "topic": "map.proximity_detected.v1",
+      "producer": "map"
+    },
+    {
+      "topic": "raid.completed.v1",
+      "producer": "monster-raid"
+    },
+    {
+      "topic": "raid.started.v1",
+      "producer": "monster-raid"
+    },
+    {
+      "topic": "registry.occurrence_changed.v1",
+      "producer": "package-registry"
+    },
+    {
+      "topic": "tamagotchi.access_granted.v1",
+      "producer": "tamagotchi"
+    },
+    {
+      "topic": "tamagotchi.created.v1",
+      "producer": "tamagotchi"
+    },
+    {
+      "topic": "tamagotchi.leveled_up.v1",
+      "producer": "tamagotchi"
+    },
+    {
+      "topic": "user.friend_request_created.v1",
+      "producer": "user-management"
+    },
+    {
+      "topic": "user.package_joined.v1",
+      "producer": "user-management"
+    }
+  ],
+  "subscriptions": [
+    {
+      "subscriber": "audit",
+      "kind": "LOGICAL",
+      "topics": [
+        "battle.completed.v1",
+        "guild.member_joined.v1",
+        "guild.member_left.v1",
+        "raid.completed.v1",
+        "tamagotchi.created.v1",
+        "tamagotchi.leveled_up.v1"
+      ]
+    },
+    {
+      "subscriber": "monster-raid",
+      "kind": "LOGICAL",
+      "topics": [
+        "registry.occurrence_changed.v1"
+      ]
+    },
+    {
+      "subscriber": "notification",
+      "kind": "LOGICAL",
+      "topics": [
+        "battle.request_created.v1",
+        "guild.invitation_created.v1",
+        "map.proximity_detected.v1",
+        "raid.started.v1",
+        "tamagotchi.access_granted.v1",
+        "user.friend_request_created.v1"
+      ]
+    },
+    {
+      "subscriber": "package-registry",
+      "kind": "LOGICAL",
+      "topics": [
+        "user.package_joined.v1"
+      ]
+    },
+    {
+      "subscriber": "tamagotchi",
+      "kind": "LOGICAL",
+      "topics": [
+        "user.package_joined.v1"
+      ]
+    },
+    {
+      "subscriber": "guild",
+      "kind": "INSTANCE",
+      "topics": [
+        "guild.chat_message.v1"
+      ]
+    }
+  ]
+}
