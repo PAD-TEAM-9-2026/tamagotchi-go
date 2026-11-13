@@ -203,14 +203,15 @@ use that status for message-size and unrelated resource failures.
 The current DeliveryStore.startAttempt marks dispatch and increments attempts;
 DeliveryStore.defer only accepts a lease with no dispatch marker. Therefore the
 worker cannot pass a returned DEFERRED directly to that existing defer method.
-The delivery owner must add a fenced not-executed settlement path: verify the live
+The runtime uses a fenced not-executed settlement path: verify the live
 lease and recorded dispatch, undo only this refused dispatch's provisional attempt
 and target reservation, requeue with a bounded delay and keep capacity reserved.
 It must be idempotent and must not roll back any prior uncertain/failed attempt.
 Cancellation, transport loss or missing acknowledgement cannot prove non-execution
 and must use the uncertain-delivery policy. Do not clear dispatch markers after
 an ambiguous outcome. Test refusal, stale leases and duplicate settlement with
-real PostgreSQL. This required integration is not implemented by the enum change.
+real PostgreSQL. The enum alone is insufficient; the delivery runtime implements
+and tests this settlement separately.
 
 ## Direct and volatile exceptions
 
@@ -463,10 +464,10 @@ docs/field-types.md. Timestamps are `google.protobuf.Timestamp`; Registry
 enumerations stay strings like the file's other messages; an absent
 `defeat_rewards` is JSON null. Raid always sends the occurrence's `boss_version` as
 `config_version`. Business refusals are call failures with the public API's
-status and code. Guild and Package Registry still have to serve these four
-operations; until they do, Raid keeps its existing Gateway client for exactly
-these reads. A separate service-read operation, like `registry.read_package`, is
-an alternative the owners may prefer in review.
+status and code. Guild and Package Registry serve these four operations through typed Broker
+adapters. Raid uses them by default; its deprecated explicit legacy-read setting
+is empty in the tested stack. The snapshot remains proposed until independent
+contract review and merge.
 
 Raid's other dependencies are already listed: Tamagotchi's collection, engagement
 and XP operations, `users.credit_global`, `users.issue_service_token` and, with
