@@ -260,9 +260,9 @@ Named patterns we use:
 | Database per Service | Eight databases, separate credentials |
 | Transactional Outbox | Every publisher, so a state change and its event commit together |
 | Idempotent Consumer | Every consumer, dedupe on `event_id` |
-| Dead Letter Channel | Three attempts, then the message parks for the owner to replay |
-| Competing Consumers | Replicas of one service share its work queue |
-| Correlation Identifier | One ID follows a battle through HTTP, the broker and the push |
+| Dead Letter Channel | Three attempts (at once, after 5 s, after 30 s), then a dead letter that admins list at the Broker |
+| Competing Consumers | Replicas of one service share its logical subscription |
+| Correlation Identifier | One ID follows a request through the Gateway, the Broker, every service, their events and the push |
 | Optimistic Offline Lock | `ETag` and `If-Match` on edits |
 
 
@@ -355,24 +355,25 @@ The limits are Service Discovery settings, listed in its README.
 Browser/local clients use `http://localhost:3000`; containers use
 `http://gateway:3000`. These are local deployment addresses, not production URLs.
 
-| Prefix | Service | Container upstream |
+| Prefix | Service | Broker destination |
 |---|---|---|
-| `/users` | User Management | `http://user-management:3001` |
-| `/tamagotchi` | Tamagotchi | `http://tamagotchi:3000` |
-| `/battle` | Battle | `http://battle:3003` |
-| `/guild` | Guild | `http://guild:3000` |
-| `/registry` | Package Registry | `http://registry:3000` |
-| `/map` | Map | `http://map:8080` |
-| `/raid` | Monster Raid | `http://monster-raid:8080` |
-| `/notification` | Notification | `http://notification:3000` |
+| `/users` | User Management | `user-management` |
+| `/tamagotchi` | Tamagotchi | `tamagotchi` |
+| `/battle` | Battle | `battle` |
+| `/guild` | Guild | `guild` |
+| `/registry` | Package Registry | `package-registry` |
+| `/map` | Map | `map` |
+| `/raid` | Monster Raid | `monster-raid` |
+| `/notification` | Notification | `notification` |
 
-Client and service REST calls traverse Gateway. Strip the prefix exactly once;
-preserve method, path/query, body, upstream status and end-to-end headers,
-including replay, conditional-request and correlation headers. Remove hop-by-hop
-headers and the caller's Authorization before dispatch. For example,
-`GET /map/v1/location/{userId}` reaches Map as `GET /v1/location/{userId}`.
-Unknown prefixes return `404 unknown_route`; connection/protocol failures return
-`502 upstream_unavailable`. Valid upstream error responses remain unchanged.
+The Gateway matches each request against the public operations of the catalogue
+and sends it through the Broker; it never forwards to a service address. Method,
+path parameters, query, body, status and end-to-end headers (replay, conditional
+request, correlation) are preserved; the caller's Authorization is replaced by a
+signed assertion. For example, `GET /map/v1/location/{userId}` becomes the Map
+operation for that route. Routes outside the catalogue return `404 unknown_route`;
+a Broker that cannot be reached returns `502 upstream_unavailable`. Domain error
+responses pass through unchanged.
 
 Direct health/readiness probes, Gateway's configured bootstrap JWKS lookup,
 database/broker connections, provider assets and negotiated Guild sockets are
@@ -389,12 +390,11 @@ Gateway also serves Prometheus metrics at `GET /metrics` on a separate monitorin
 port, `METRICS_PORT` (default 9090), from the first image after `2.0.2`. It is not part
 of the public route table above: it carries request counts, latencies and work-pool
 usage, no domain data, and needs no assertion. Deployments publish it only to the
-monitoring network, never to clients. The shared Compose file does not publish or
-scrape it yet. The Gateway README lists the metric names.
+monitoring network, never to clients. Prometheus scrapes it in the monitoring
+overlay. The Gateway README lists the metric names.
 
-Only `guild.chat` is supported. Gateway forwards negotiation
-to Guild; the exact internal negotiation endpoint must be agreed with Mihaela
-before implementation. Guild issues and validates a single-use 30-second ticket.
+Only `guild.chat` is supported. The Gateway asks Guild for a ticket through the
+Broker (`guild.issue_chat_ticket`). Guild issues and validates a single-use 30-second ticket.
 The browser connects directly to Guild, using a configured browser-reachable
 URL, not container DNS. Gateway does not hold the socket open.
 
@@ -465,16 +465,16 @@ that is a single space-separated string, and lasts 300 seconds. It carries no ro
 Clients keep one token per destination and scope set, and renew it about 30 seconds
 before it expires.
 
-The route is public at the Gateway, because a service has no token before its first one.
-The caller proves who it is in one of two ways, and a wrong credential never falls back
-to the other:
+A service has no token before its first one, so this call needs only its workload
+certificate and its secret. The caller proves who it is in one of two ways, and a wrong
+credential never falls back to the other:
 
-- Its own client secret, in the header `X-Service-Secret`. The Gateway forwards that
-  header unchanged and does not treat it as a bearer token. Each service that calls another
-  service holds its own secret as `SERVICE_CLIENT_SECRET` and never sends it anywhere else.
-  User Management verifies it against the secret configured for `service_name`. Registry
-  and Notification call no other service and have none.
-- An admin user, with no secret.
+- A service calls `users.issue_service_token` through the Broker with its own client
+  secret as `x-service-secret` call metadata, never as a bearer token. Each service that
+  calls another service holds its own secret as `SERVICE_CLIENT_SECRET` and never sends it
+  anywhere else. User Management verifies it against the secret configured for
+  `service_name`. Registry and Notification call no other service and have none.
+- An admin user calls the public route `POST /users/v1/service-tokens`, with no secret.
 
 The issuer checks a configured allowlist of destinations and scopes for that service.
 Requesting a scope does not grant it: if any scope asked for is not on the allowlist,
@@ -540,8 +540,8 @@ Guild's is:
 |---|---|---|
 | `guild:read` | `GET /v1/guilds/{guildId}` and `GET /v1/guilds/{guildId}/members`, both user or service | Monster Raid |
 
-Monster Raid calls both Guild routes through Gateway for leader and membership
-checks. Its `guild:read` grant belongs to caller `monster-raid`.
+Monster Raid reads both through the Broker as typed calls (`guild.get_guild`,
+`guild.list_members`) for leader and membership checks. Its `guild:read` grant belongs to caller `monster-raid`.
 
 Registry's are:
 
@@ -618,11 +618,9 @@ Never log bearer tokens, assertions, key material or refresh credentials.
 
 ### Work limits
 
-Gateway, Map and
-Monster Raid integration source enforces admission, deadlines and cancellation.
-The values below are initial policy defaults, not measured throughput. Other
-service implementations and the selected deployed images need their own
-acceptance evidence.
+The Gateway, the Broker, Discovery, Map and Monster Raid enforce admission,
+deadlines and cancellation; each owner service documents its own limits. The
+values below are defaults, not measured throughput.
 
 | Component | Local timeout | Per-process admission |
 |---|---|---|
@@ -662,9 +660,8 @@ replay and durable reward effects handle uncertain outcomes.
 
 ### Command replay and pagination
 
-Map/Raid integration branches implement command replay and cursors. The pinned
-published images predate this work. Affected-owner compatibility review and real
-deployment validation remain required; successful response shapes stay unchanged.
+Map and Monster Raid implement command replay and cursors as below; successful
+response shapes are unchanged.
 
 Replay covers `POST /map/v1/location`, `POST /raid/v1/raids` and
 `POST /raid/v1/raids/{raidId}/attack`, the nine User Management commands
@@ -774,7 +771,7 @@ pagination. Raid list creation/deletion can likewise change the live result set.
 | `POST /v1/users/login` | Login | 200 Tokens | public |
 | `POST /v1/auth/refresh` | Refresh | 200 Tokens | public |
 | `POST /v1/auth/logout` | Refresh | 204 | public |
-| `POST /v1/service-tokens` | ServiceTokenRequest, X-Service-Secret | 200 ServiceToken | service client secret or admin |
+| `POST /v1/service-tokens` | ServiceTokenRequest | 200 ServiceToken | admin (services use `users.issue_service_token` through the Broker) |
 | `GET /v1/jwks` | none | 200 Jwks | public |
 | `GET /v1/users/me` | none | 200 User | user |
 | `GET /v1/users/{userId}` | none | 200 UserProfile | user or service |
@@ -1323,15 +1320,16 @@ It has no authentication and is reachable only on the internal network.
 | `POST /v1/instances` | InstanceRegistration | 201 Instance, or 200 Instance when the id is already registered | direct, the instance itself |
 | `GET /v1/instances/{instance_id}` | none | 200 Instance | direct, the instance itself |
 | `DELETE /v1/instances/{instance_id}` | none | 204 | direct, the instance itself |
-| `GET /v1/services` | none | 200 ServiceList | direct, Gateway and developers |
-| `GET /v1/services/{service_name}/instances` | query routable | 200 InstanceList | direct, Gateway |
-| `POST /v1/instances/{instance_id}/failures` | FailureReport | 202 FailureResult | direct, Gateway |
+| `GET /v1/services` | none | 200 ServiceList | direct, Broker and developers |
+| `GET /v1/services/{service_name}/instances` | query routable | 200 InstanceList | direct, Broker |
+| `POST /v1/instances/{instance_id}/failures` | FailureReport | 202 FailureResult | direct, Broker |
 | `GET /v1/failures` | none | 200 FailureWindowList | direct, developers |
 
 Registration rules:
 
 1. A new id is added with `health` `unknown`.
-2. The same id again updates `host`, `port`, `status_path` and `version`, keeps
+2. The same id again updates `host`, `port`, `status_path`, `version`, `grpc_endpoint`
+   and `subscriptions`, keeps
    `registered_at`, and resets `health` to `unknown`. Its failure window is kept.
 3. The same id under another `service_name` is refused with `409 instance_conflict`.
 4. A new id on an address another instance holds (a restarted container) removes
@@ -1350,11 +1348,10 @@ Error codes: `invalid_request` (400, the detail names the invalid fields),
 
 ### Events
 
-Seven durable topic exchanges, one per publisher. Notification publishes
-nothing. Each event payload is an `...Event` shape in
+Seven publishers, each with its own topics. Notification publishes nothing. Each event payload is an `...Event` shape in
 [field-types.md](docs/field-types.md).
 
-| Routing key | Publisher | Consumer | Purpose |
+| Topic | Publisher | Subscriber | Purpose |
 |---|---|---|---|
 | `user.package_joined.v1` | User Management | Tamagotchi, Package Registry | Grant the package starter if the user has none for it. Update the membership projection |
 | `user.friend_request_created.v1` | User Management | Notification | FRIEND_REQUEST, carries `from_username` |

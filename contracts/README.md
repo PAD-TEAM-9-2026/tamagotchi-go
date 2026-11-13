@@ -160,7 +160,8 @@ a required grant; it does not itself issue a token or modify UM's allowlist.
 Operation names are stable identifiers. Destination is a separate canonical
 service field; the selected users.* and registry.* prefixes are not alternate
 service identities. Internal type URLs must name compiled, versioned messages.
-No opaque internal JSON, arbitrary URL dispatch or loopback HTTP adapter.
+No opaque internal JSON or arbitrary URL dispatch; the only loopback HTTP allowed is
+the private listener described in [API and boundaries](#api-and-boundaries).
 
 Request headers are explicitly allowlisted per route. Idempotency-Key is carried
 only in CallRequest.idempotency_key. Strip credentials, assertions, caller identity,

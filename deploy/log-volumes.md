@@ -21,7 +21,7 @@ read-only and its own volume writable under a separate root. No Docker socket or
 service database is mounted into the initializer or exporter.
 
 Writers must use the agreed service/instance/date layout, redact before writing
-and enforce their own storage/rotation limits. This overlay cannot provide file
+and enforce their own storage/rotation limits. Compose cannot provide file
 logging for an image that does not implement it. The Broker's export temporary
 filesystem is limited to 64 MiB; exceeding its storage bound must refuse the
 export, never truncate it. Existing exporter limits and admin checks still apply.

@@ -113,7 +113,7 @@ Returned by `POST /v1/guilds/{guildId}/chat-tickets` (user access).
 
 ### GatewayAssertion
 
-Proposed JWT claims carried in X-Gateway-Assertion. The JWT header requires
+JWT claims carried in X-Gateway-Assertion. The JWT header requires
 alg=RS256, typ=gateway-assertion+jwt and a configured kid. This is not a JSON
 request body. Anonymous has no permissions; service roles are empty and service
 scope comes from its access token. Every destination is a canonical service name
@@ -331,7 +331,7 @@ Two users with no relationship are `stranger` both ways at `version` 1, never 0:
 
 ### ServiceTokenRequest
 
-The caller proves who it is with the `X-Service-Secret` header, or as an admin user. The
+The caller proves who it is with its secret as `x-service-secret` metadata on its Broker call, or as an admin user. The
 header is not part of the body. A scope has no whitespace, because the token carries the
 scopes as one space-separated string.
 
@@ -935,7 +935,7 @@ defeat payout. Monster Raid currently implements timeout, not a wipe mechanism.
 Pending admissions and cancelled raids receive no rewards. XP goes to the
 participant's contributed creature; existing raids retain their pinned amounts.
 Both reward objects are restricted to the two currencies every Tamagotchi has
-regardless of package — global currency and XP — never a package-defined stat
+regardless of package (global currency and XP), never a package-defined stat
 key, so a reward never references an attribute a participant's package does
 not define.
 
@@ -1486,7 +1486,7 @@ Response to `GET /v1/services`.
 
 ### FailureReport
 
-Sent by the Gateway (or any caller) to `POST /v1/instances/{instance_id}/failures`.
+Sent by the Broker (or any caller) to `POST /v1/instances/{instance_id}/failures`.
 
 | Field | Type / constraint | Required |
 |---|---|---|
@@ -1504,9 +1504,9 @@ Response to `POST /v1/instances/{instance_id}/failures`.
 | `failures_in_window` | integer [1..] | yes |
 | `threshold` | integer [1..], default 3 | yes |
 | `window_seconds` | number [0..], default 17.5 | yes |
-| `removed` | boolean — true when the threshold was reached and the instance was removed | yes |
+| `removed` | boolean, true when the threshold was reached and the instance was removed | yes |
 
-**Removal rule**: `failures_in_window >= threshold` within a sliding window of `TASK_TIMEOUT_MS / 1000 × FAILURE_WINDOW_MULTIPLIER` seconds (default 5000 ms × 3.5 = **17.5 s**). The health checker reports `health_check_failed` after each failed poll, so an unreachable instance is removed after three consecutive polls (~10–15 s at the default 5 s interval). A removed instance that keeps running can come back by calling `POST /v1/instances` again.
+**Removal rule**: `failures_in_window >= threshold` within a sliding window of `TASK_TIMEOUT_MS / 1000 × FAILURE_WINDOW_MULTIPLIER` seconds (default 5000 ms × 3.5 = **17.5 s**). The health checker reports `health_check_failed` after each failed poll, so an unreachable instance is removed after three consecutive polls (about 10 to 15 s at the default 5 s interval). A removed instance that keeps running can come back by calling `POST /v1/instances` again.
 
 ### FailureWindow
 
