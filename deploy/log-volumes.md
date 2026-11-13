@@ -25,5 +25,3 @@ and enforce their own storage/rotation limits. Compose cannot provide file
 logging for an image that does not implement it. The Broker's export temporary
 filesystem is limited to 64 MiB; exceeding its storage bound must refuse the
 export, never truncate it. Existing exporter limits and admin checks still apply.
-
-
