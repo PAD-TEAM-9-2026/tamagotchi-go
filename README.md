@@ -111,23 +111,6 @@ acceptance and published replacement images are tracked separately. Base
 `deploy/compose.yaml` retains the earlier published HTTP/RabbitMQ deployment.
 Candidate overlays build reviewed source without silently replacing that release.
 
-```mermaid
-flowchart LR
-    Client[Client] -->|HTTP / JSON| Gateway
-    Gateway -->|mTLS Call / user assertion| Broker[Message Broker]
-    Broker -->|Execute / signed context| Services[Domain replicas]
-    Services -->|Typed Call / service token| Broker
-    Services -->|Outbox Publish| Broker
-    Broker -->|Deliver / receipt deduplication| Subscribers[Subscriber replicas]
-    Broker --> BrokerDB[(Broker PostgreSQL)]
-    Broker -->|Instances and load| Discovery[Service Discovery]
-    Services -->|Status and subscriptions| Discovery
-    Discovery -->|Health / load alerts| Discord
-    Client -->|Negotiated WebSocket| Guild[Guild replicas / socket ingress]
-    Prometheus -->|Internal metrics| Broker
-    Grafana --> Prometheus
-```
-
 Each domain service owns its database, effects and authorization. Synchronous
 service dependencies become typed gRPC calls through Broker; committed facts
 use durable topic subscriptions. Destination queues support public Gateway calls,
@@ -140,9 +123,7 @@ failover. Discovery supplies addresses, process IDs, load and approved subscript
 metadata; it does not forward application requests. Breakers and delivery outcomes
 belong to Broker on migrated paths, rather than a second Gateway routing layer.
 
-The previous HTTP/RabbitMQ topology remains documented by
-[the earlier architecture diagram](docs/img/lab3_architecture_diagram.jpg).
-It is compatibility evidence, not the custom-broker target. Unmigrated services
+Unmigrated services
 keep their existing transport until coordinated replacement acceptance and
 retained-work handover pass. No automatic dual publication is supported.
 
