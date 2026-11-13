@@ -1436,6 +1436,8 @@ Sent by each service on startup to `POST /v1/instances`.
 | `port` | integer [1..65535] | yes |
 | `status_path` | string starting with `/`, default `/status` | no |
 | `version` | string, e.g. `1.0.0` | no |
+| `grpc_endpoint` | host:port string without scheme, or null | no |
+| `subscriptions` | up to32 objects with `topic` and `mode` (`logical` or `instance`); unique topics | no |
 
 The kit generates `instance_id` as uuid v7. Any valid UUID is accepted by the service.
 
@@ -1452,6 +1454,8 @@ Returned by `POST /v1/instances` and `GET /v1/instances/{instance_id}`, and list
 | `base_url` | string, `http://{host}:{port}` | yes |
 | `status_path` | string, as registered | yes |
 | `version` | string, or null when not registered | yes |
+| `grpc_endpoint` | registered host:port, or null | yes |
+| `subscriptions` | registered topic/mode objects, empty when omitted | yes |
 | `health` | `unknown` / `healthy` / `unhealthy` | yes |
 | `registered_at` | timestamp, first registration, kept when the id registers again | yes |
 | `last_checked_at` | timestamp, or null before the first health check | yes |

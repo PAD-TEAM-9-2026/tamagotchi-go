@@ -3,7 +3,7 @@
 This document records the registration shape accepted by Service Discovery
 (merged in service-discovery #60). All registering services must conform to it.
 
-## Registration body — `POST /v1/instances`
+## Registration body: `POST /v1/instances`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -14,7 +14,7 @@ This document records the registration shape accepted by Service Discovery
 | `status_path` | string | no | Health-check path; defaults to `/status` |
 | `version` | string or null | no | Semver image version |
 | `grpc_endpoint` | `host:port` string or null | no | gRPC `ServiceDelivery` listener; TLS required at the endpoint |
-| `subscriptions` | array of Subscription (max 32) | no | Topics this instance consumes; validated against the operations manifest |
+| `subscriptions` | array of Subscription (max 32) | no | Topics this instance consumes; the Broker authorizes them against the operations manifest |
 
 ## Subscription object
 
@@ -23,14 +23,14 @@ This document records the registration shape accepted by Service Discovery
 | `topic` | string | Event topic matching `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*\.v[1-9][0-9]*$` (e.g. `user.package_joined.v1`) |
 | `mode` | `"logical"` or `"instance"` | `"logical"`: competing consumers across replicas (normal services); `"instance"`: bounded expiring per-replica queue (Guild chat relay only) |
 
-## Instance response — `GET /v1/services/{name}/instances`
+## Instance response: `GET /v1/services/{name}/instances`
 
 The same fields are returned, plus:
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `base_url` | string | `http://{host}:{port}` |
-| `health` | `"healthy"` / `"degraded"` / `"unhealthy"` | Most recent health-check result |
+| `health` | `"unknown"` / `"healthy"` / `"unhealthy"` | Most recent health-check result |
 | `last_load` | object or null | Load snapshot from the last status response (see below) |
 | `registered_at` | ISO-8601 timestamp | |
 | `last_checked_at` | ISO-8601 timestamp or null | Time of the most recent health poll |
