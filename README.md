@@ -1708,18 +1708,21 @@ one account per publishing or consuming service (see below).
 |---|---|---|---|
 | Gateway | `victoriamutruc/gateway:4.0.0` | `sha256:10b432d7b79c4360d6e99330915fb3ab83b85a33fd9452c6a074deccde6dfa7a` | 3000 |
 | Service Discovery | `patriciamoraru/service-discovery:3.0.1` | `sha256:dba12a0c80e5d9631ce0e9a87a5075351c3209efd11a66d95b8c330f8d1153a0` | 3009 (loopback) |
-| User Management | `patriciamoraru/user-management:3.0.1` | `sha256:dfe48dd9eaab794594db16de5fa1181bea77190cccaed2def1c828f9d8086ab8` | internal |
+| User Management | `patriciamoraru/user-management:4.0.0` | `sha256:df012384516e952c6bfe9878a4239c4583a8276d29befa58ff00ba50ce29e38e` | internal |
 | Tamagotchi | `victoriamutruc/tamagotchi:4.0.0` | `sha256:27925856c193d6376dcd6da59e1ecea87ab1e1162d1ec84f9a96258ac0224bfc` | internal |
-| Battle | `patriciamoraru/battle:3.0.1` | `sha256:52f934088460ef38d0c4157cd3879c268eb4df316203e359bc4993b7de5d5f4e` | internal |
+| Battle | `patriciamoraru/battle:4.0.0` | `sha256:ffbbd7e580a89c06b270025168e526e4402f3aee0915d8ff28e2d67b528efaea` | internal |
 | Guild | `mihaelacatan/guild-service:3.0.1` | `sha256:0cd0780d5e6dab54c8ab5b4246ccacb539ef0b2d451cb9319b1ec13312b41487` | internal; socket balancer 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:3.0.0` | `sha256:6c5f0564f43125869e7367ecad4c09b8e4843a875552d5436728ab20a95f7baa` | internal |
 | Map | `sergedbs/map:3.0.0` | `sha256:ed133aeef707c19ecef0765ee712ece3eb6c2b88e9bdbfad591860f20791e23d` | internal |
 | Monster Raid | `sergedbs/monster-raid:3.0.0` | `sha256:15955f3cf3fd6967bf9b5f0728e2bdb910cfe5c68c92ad7ddd8143e0494924ae` | internal |
 | Notification | `victoriamutruc/notification:4.0.0` | `sha256:c2e0a4fa603640d9d6fe8603388ff70949a92b96c84b7258071cc7177f9a2f27` | internal |
 
-Gateway, Tamagotchi and Notification are the 4.0.0 images. They reach every service through the
-message broker and no longer use RabbitMQ: the Gateway does not start without a broker and the
-other two receive their events only from it. Run them with the broker overlay
+Gateway, Tamagotchi, Notification, User Management and Battle are the 4.0.0 images. They reach every
+service through the message broker and no longer use RabbitMQ: the Gateway does not start without a
+broker, Tamagotchi and Notification receive their events only from it, and User Management and Battle
+publish their events only through it (with no broker configured, their events wait in the outbox).
+User Management and Battle 4.0.0 were published by hand from `develop` for the Lab 4 presentation,
+without moving `latest`; their release to `main` will be 4.0.1. Run them with the broker overlay
 (`deploy/compose.broker.yaml`, see below); the services still on 3.x keep using RabbitMQ.
 
 To test unpublished source, use a local Compose override that builds Map, Monster Raid

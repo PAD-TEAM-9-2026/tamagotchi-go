@@ -6,6 +6,8 @@ option java_multiple_files = true;
 option java_package = "com.tamagotchigo.contracts.guild.v1";
 option csharp_namespace = "Tamagotchi.Contracts.Guild.V1";
 
+import "google/protobuf/timestamp.proto";
+
 // Issued by the Gateway on behalf of an authenticated user to obtain a
 // short-lived ticket for the Guild WebSocket chat endpoint.
 // The user principal and guild membership are verified from the broker
@@ -22,4 +24,50 @@ message IssueChatTicketResponse {
   string ticket = 1;
   // Unix millisecond timestamp after which the ticket is invalid.
   int64 expires_at_unix_ms = 2;
+}
+
+// Reads one guild as a service. Called internally by Monster Raid to check the
+// leader before it creates or cancels a raid. Mirrors the public Guild shape.
+message GetGuildRequest {
+  // UUIDv7 of the guild.
+  string guild_id = 1;
+}
+
+message GetGuildResponse {
+  string guild_id = 1;
+  string name = 2;
+  string description = 3;
+  // UUIDv7 of the guild leader.
+  string leader_id = 4;
+  // 1 to 100.
+  int32 member_count = 5;
+  int32 version = 6;
+}
+
+// Lists a guild's members as a service. Called internally by Monster Raid for
+// membership checks and raid start recipients. Mirrors the public Members shape.
+message ListMembersRequest {
+  // UUIDv7 of the guild.
+  string guild_id = 1;
+}
+
+message ListMembersResponse {
+  string guild_id = 1;
+  // 1 to 100 members.
+  repeated Member members = 2;
+  int32 version = 3;
+  google.protobuf.Timestamp retrieved_at = 4;
+}
+
+message Member {
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    LEADER = 1;
+    OFFICER = 2;
+    MEMBER = 3;
+  }
+
+  // UUIDv7 of the member.
+  string user_id = 1;
+  Role role = 2;
 }
