@@ -1,0 +1,38 @@
+# Optional tracing with Jaeger (deploy/monitoring.md, Tracing), layered on compose.yaml:
+#
+#   docker compose -f compose.yaml -f compose.tracing.yaml up -d
+#
+# Memory storage only; the UI is on loopback, OTLP only on the Compose network. Services without
+# OTEL_EXPORTER_OTLP_ENDPOINT start no tracing at all.
+
+x-traced: &traced
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+
+services:
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0
+    command: ["--config", "/etc/jaeger/config.yaml"]
+    volumes:
+      - ./jaeger/config.yaml:/etc/jaeger/config.yaml:ro
+    ports:
+      - "127.0.0.1:16686:16686"
+    mem_limit: 768m
+  message-broker:
+    environment: *traced
+  gateway:
+    environment: *traced
+  user-management:
+    environment: *traced
+  battle:
+    environment: *traced
+  tamagotchi:
+    environment: *traced
+  notification:
+    environment: *traced
+  guild:
+    environment: *traced
+  registry:
+    environment: *traced

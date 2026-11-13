@@ -58,3 +58,35 @@ scrape_configs:
         type: A
         port: 9090
         refresh_interval: 15s
+
+  - job_name: guild
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [guild]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: registry
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [registry]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: map
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [map]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: monster-raid
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [monster-raid]
+        type: A
+        port: 9090
+        refresh_interval: 15s

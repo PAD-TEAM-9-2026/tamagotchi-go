@@ -1,4 +1,31 @@
+# Tamagotchi Go on published images. Every client request goes Gateway -> message broker -> service,
+# and every service call and event goes through the broker. Once, before the first start:
+#
+#   ./user-management/generate-keys.sh && ./gateway/generate-keys.sh && ./message-broker/generate-identities.sh
+#   cp .env.example .env   # then fill in the secrets
+#   docker compose up -d
+#
+# Optional overlays: compose.monitoring.yaml (Prometheus, Grafana), compose.tracing.yaml (Jaeger),
+# compose.source.yaml (build every service from local checkouts instead of pulling its image).
+# Startup order: databases and log volumes, Discovery, User Management, broker, services, Gateway.
+
 name: tamagotchi-go
+
+x-logs: &logs
+  group_add:
+    - "${LOG_READER_GID:-20000}"
+
+x-ready-node: &ready-node
+  test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
+  interval: 5s
+  timeout: 3s
+  retries: 12
+
+x-ready-dotnet-8080: &ready-dotnet-8080
+  test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q \"200 OK\"'"]
+  interval: 5s
+  timeout: 3s
+  retries: 12
 
 services:
   database:
@@ -45,102 +72,318 @@ services:
       timeout: 3s
       retries: 20
 
+  broker-database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${BROKER_DB_USER:-message_broker}
+      POSTGRES_PASSWORD: ${BROKER_DB_PASSWORD:?set BROKER_DB_PASSWORD in .env}
+      POSTGRES_DB: ${BROKER_DB_NAME:-message_broker}
+    volumes:
+      - broker-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Gives each service's log volume to that service's user and to the reader group the broker
+  # exports from. It sees only the log volumes.
+  log-init:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/setup/init-log-volumes.sh"]
+    network_mode: none
+    read_only: true
+    restart: "no"
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, FSETID]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      LOG_READER_GID: "${LOG_READER_GID:-20000}"
+      GATEWAY_LOG_UID: "${GATEWAY_LOG_UID:-1001}"
+      DISCOVERY_LOG_UID: "${DISCOVERY_LOG_UID:-1001}"
+      BROKER_LOG_UID: "${BROKER_LOG_UID:-10001}"
+      USER_MANAGEMENT_LOG_UID: "${USER_MANAGEMENT_LOG_UID:-1654}"
+      BATTLE_LOG_UID: "${BATTLE_LOG_UID:-1654}"
+      MAP_LOG_UID: "${MAP_LOG_UID:-1654}"
+      MONSTER_RAID_LOG_UID: "${MONSTER_RAID_LOG_UID:-1654}"
+      GUILD_LOG_UID: "${GUILD_LOG_UID:-1000}"
+      REGISTRY_LOG_UID: "${REGISTRY_LOG_UID:-1000}"
+      TAMAGOTCHI_LOG_UID: "${TAMAGOTCHI_LOG_UID:-1000}"
+      NOTIFICATION_LOG_UID: "${NOTIFICATION_LOG_UID:-1000}"
+    volumes:
+      - ./init-log-volumes.sh:/setup/init-log-volumes.sh:ro
+      - gateway-logs:/owned/gateway
+      - service-discovery-logs:/owned/service-discovery
+      - message-broker-logs:/owned/message-broker
+      - user-management-logs:/owned/user-management
+      - battle-logs:/owned/battle
+      - map-logs:/owned/map
+      - monster-raid-logs:/owned/monster-raid
+      - guild-logs:/owned/guild
+      - package-registry-logs:/owned/package-registry
+      - tamagotchi-logs:/owned/tamagotchi
+      - notification-logs:/owned/notification
+
+  service-discovery:
+    image: patriciamoraru/service-discovery:4.0.0
+    pull_policy: always
+    <<: *logs
+    depends_on:
+      log-init:
+        condition: service_completed_successfully
+    environment:
+      PORT: 3009
+      LOG_LEVEL: ${SERVICE_DISCOVERY_LOG_LEVEL:-info}
+      LOG_DIR: /logs
+      TASK_TIMEOUT_MS: 5000
+      FAILURE_THRESHOLD: 3
+      FAILURE_WINDOW_MULTIPLIER: 3.5
+      HEALTH_CHECK_INTERVAL_SECONDS: 5
+      HEALTH_CHECK_TIMEOUT_MS: 2000
+      ALERT_COOLDOWN_SECONDS: ${ALERT_COOLDOWN_SECONDS:-300}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+    volumes:
+      - service-discovery-logs:/logs/service-discovery
+    ports:
+      - "127.0.0.1:3009:3009"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request as r; r.urlopen('http://127.0.0.1:3009/ready', timeout=2)\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # User Management starts before the broker, which reads its keys at startup (contracts/identity.md).
   user-management:
-    image: patriciamoraru/user-management:3.0.1
+    image: patriciamoraru/user-management:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
+    <<: *logs
     depends_on:
       database:
         condition: service_healthy
+      log-init:
+        condition: service_completed_successfully
     environment:
-      SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      GATEWAY_URL: http://gateway:3000
-      GATEWAY_TIMEOUT_MS: "2500"
       PORT: 3001
       LOG_LEVEL: ${USER_MANAGEMENT_LOG_LEVEL:-info}
+      LOG_DIR: /logs
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
       ConnectionStrings__UserManagementDb: Host=database;Port=5432;Database=${USER_MANAGEMENT_DB_NAME:-user_management};Username=${USER_MANAGEMENT_DB_USER:-user_management};Password=${USER_MANAGEMENT_DB_PASSWORD}
       ACCESS_TOKEN_PRIVATE_KEY_PATH: /run/secrets/access-token.pem
       ACCESS_TOKEN_KEY_ID: ${USER_MANAGEMENT_ACCESS_TOKEN_KEY_ID:-user-management-access-1}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       CURSOR_SIGNING_KEY: ${USER_MANAGEMENT_CURSOR_SIGNING_KEY:?set USER_MANAGEMENT_CURSOR_SIGNING_KEY in .env (openssl rand -base64 32)}
-      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
-      RABBITMQ_URL: amqp://user-management:${USER_MANAGEMENT_RABBITMQ_PASSWORD:?set USER_MANAGEMENT_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      # Each calling service authenticates its broker token requests with its own secret.
       SERVICE_CLIENT_SECRET: ${USER_MANAGEMENT_SERVICE_CLIENT_SECRET:?set USER_MANAGEMENT_SERVICE_CLIENT_SECRET in .env}
       SERVICE_CLIENT_SECRET_USER_MANAGEMENT: ${USER_MANAGEMENT_SERVICE_CLIENT_SECRET}
-      SERVICE_CLIENT_SECRET_TAMAGOTCHI: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET}
-      SERVICE_CLIENT_SECRET_BATTLE: ${BATTLE_SERVICE_CLIENT_SECRET}
-      SERVICE_CLIENT_SECRET_GUILD: ${GUILD_SERVICE_CLIENT_SECRET}
-      SERVICE_CLIENT_SECRET_MAP: ${MAP_SERVICE_CLIENT_SECRET}
-      SERVICE_CLIENT_SECRET_MONSTER_RAID: ${MONSTER_RAID_SERVICE_CLIENT_SECRET}
+      SERVICE_CLIENT_SECRET_TAMAGOTCHI: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET:?set TAMAGOTCHI_SERVICE_CLIENT_SECRET in .env}
+      SERVICE_CLIENT_SECRET_BATTLE: ${BATTLE_SERVICE_CLIENT_SECRET:?set BATTLE_SERVICE_CLIENT_SECRET in .env}
+      SERVICE_CLIENT_SECRET_GUILD: ${GUILD_SERVICE_CLIENT_SECRET:?set GUILD_SERVICE_CLIENT_SECRET in .env}
+      SERVICE_CLIENT_SECRET_MAP: ${MAP_SERVICE_CLIENT_SECRET:?set MAP_SERVICE_CLIENT_SECRET in .env}
+      SERVICE_CLIENT_SECRET_MONSTER_RAID: ${MONSTER_RAID_SERVICE_CLIENT_SECRET:?set MONSTER_RAID_SERVICE_CLIENT_SECRET in .env}
+      BROKER_GRPC_TARGET: message-broker:5010
+      BROKER_DELIVERY_ENABLED: "true"
+      BROKER_DELIVERY_PORT: 5001
+      BROKER_EVENTS_ENABLED: "true"
+      BROKER_CALLS_ENABLED: "true"
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/user-management.crt
+      TLS_KEY_PATH: /run/secrets/tls/user-management.key
     volumes:
+      - user-management-logs:/logs/user-management
       - ./secrets/access-token.pem:/run/secrets/access-token.pem:ro
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/user-management.crt:/run/secrets/tls/user-management.crt:ro
+      - ./secrets/tls/user-management.key:/run/secrets/tls/user-management.key:ro
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3001 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q READY'"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 12
+
+  message-broker:
+    image: sergedbs/message-broker:4.0.0
+    pull_policy: always
+    <<: *logs
+    depends_on:
+      broker-database:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+      user-management:
+        condition: service_healthy
+      log-init:
+        condition: service_completed_successfully
+    environment:
+      BROKER_LOG_LEVEL: ${BROKER_LOG_LEVEL:-INFO}
+      BROKER_DATABASE_URL: jdbc:postgresql://broker-database:5432/${BROKER_DB_NAME:-message_broker}
+      BROKER_DATABASE_USER: ${BROKER_DB_USER:-message_broker}
+      BROKER_DATABASE_PASSWORD: ${BROKER_DB_PASSWORD}
+      BROKER_GRPC_ENABLED: "true"
+      BROKER_GRPC_PORT: 5010
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      USER_MANAGEMENT_URL: http://user-management:3001
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      BROKER_CONTEXT_PRIVATE_KEY_PATH: /run/secrets/broker-context.pem
+      BROKER_CONTEXT_KEY_ID: ${BROKER_CONTEXT_KEY_ID:-broker-context-1}
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/message-broker.crt
+      TLS_KEY_PATH: /run/secrets/tls/message-broker.key
+      # Its own logs, and every service's log volume read-only for GET /v1/logs/download.
+      LOG_DIR: /broker-logs
+      LOG_EXPORT_ROOT: /logs
+      LOG_EXPORT_SELF_ROOT: /broker-logs
+      LOG_EXPORT_TMP: /tmp/log-export
+    volumes:
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
+      - ./secrets/broker-context.pem:/run/secrets/broker-context.pem:ro
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/message-broker.crt:/run/secrets/tls/message-broker.crt:ro
+      - ./secrets/tls/message-broker.key:/run/secrets/tls/message-broker.key:ro
+      - message-broker-logs:/broker-logs/message-broker
+      - gateway-logs:/logs/gateway:ro
+      - service-discovery-logs:/logs/service-discovery:ro
+      - user-management-logs:/logs/user-management:ro
+      - battle-logs:/logs/battle:ro
+      - map-logs:/logs/map:ro
+      - monster-raid-logs:/logs/monster-raid:ro
+      - guild-logs:/logs/guild:ro
+      - package-registry-logs:/logs/package-registry:ro
+      - tamagotchi-logs:/logs/tamagotchi:ro
+      - notification-logs:/logs/notification:ro
+    tmpfs:
+      - "/tmp/log-export:rw,noexec,nosuid,size=67108864,mode=0700,uid=${BROKER_LOG_UID:-10001},gid=${LOG_READER_GID:-20000}"
+    ports:
+      - "127.0.0.1:3010:3010"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3010 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | head -1 | grep -q \" 200 \"'"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
 
   tamagotchi:
     image: victoriamutruc/tamagotchi:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
+    <<: *logs
     depends_on:
       database:
         condition: service_healthy
+      message-broker:
+        condition: service_healthy
     environment:
-      SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      GATEWAY_URL: http://gateway:3000
       PORT: 3000
       LOG_LEVEL: ${TAMAGOTCHI_LOG_LEVEL:-info}
+      LOG_DIR: /logs
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
       STORAGE: postgres
       DATABASE_URL: postgres://${TAMAGOTCHI_DB_USER:-tamagotchi}:${TAMAGOTCHI_DB_PASSWORD}@database:5432/${TAMAGOTCHI_DB_NAME:-tamagotchi}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
-      SERVICE_CLIENT_SECRET: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET:?set TAMAGOTCHI_SERVICE_CLIENT_SECRET in .env}
-      USER_MANAGEMENT_URL: http://gateway:3000/users
-      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
+      SERVICE_CLIENT_SECRET: ${TAMAGOTCHI_SERVICE_CLIENT_SECRET}
+      # The image defaults both to false; with them off, events and calls are not sent through the broker.
+      BROKER_PUBLISH: "true"
+      BROKER_CALLS: "true"
+      BROKER_DELIVERY: "true"
+      GRPC_PORT: 50051
+      BROKER_GRPC_TARGET: message-broker:5010
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/tamagotchi.crt
+      TLS_KEY_PATH: /run/secrets/tls/tamagotchi.key
     volumes:
+      - tamagotchi-logs:/logs/tamagotchi
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/tamagotchi.crt:/run/secrets/tls/tamagotchi.crt:ro
+      - ./secrets/tls/tamagotchi.key:/run/secrets/tls/tamagotchi.key:ro
+    healthcheck: *ready-node
 
-  guild:
-    image: mihaelacatan/guild-service:3.0.2
+  notification:
+    image: victoriamutruc/notification:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
+    <<: *logs
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq-provision:
-        condition: service_completed_successfully
+      message-broker:
+        condition: service_healthy
     environment:
-      SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      GATEWAY_URL: http://gateway:3000
       PORT: 3000
+      LOG_LEVEL: ${NOTIFICATION_LOG_LEVEL:-info}
+      LOG_DIR: /logs
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      STORAGE: postgres
+      DATABASE_URL: postgres://${NOTIFICATION_DB_USER:-notification}:${NOTIFICATION_DB_PASSWORD}@database:5432/${NOTIFICATION_DB_NAME:-notification}
+      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
+      PUSH_PROVIDER: ${NOTIFICATION_PUSH_PROVIDER:-stub}
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
+      BROKER_DELIVERY: "true"
+      GRPC_PORT: 50051
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/notification.crt
+      TLS_KEY_PATH: /run/secrets/tls/notification.key
+    volumes:
+      - notification-logs:/logs/notification
+      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/notification.crt:/run/secrets/tls/notification.crt:ro
+      - ./secrets/tls/notification.key:/run/secrets/tls/notification.key:ro
+    healthcheck: *ready-node
+
+  guild:
+    image: mihaelacatan/guild-service:4.0.0
+    pull_policy: always
+    deploy:
+      replicas: 2
+    <<: *logs
+    depends_on:
+      database:
+        condition: service_healthy
+      message-broker:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      # Guild reads LOGS_DIR; LOG_DIR is the name every other service uses.
+      LOG_DIR: /logs
+      LOGS_DIR: /logs
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
       DB_HOST: database
       DB_PORT: 5432
       POSTGRES_USER: ${GUILD_DB_USER:-guild}
-      POSTGRES_PASSWORD: ${GUILD_DB_PASSWORD:?set GUILD_DB_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${GUILD_DB_PASSWORD}
       POSTGRES_DB: ${GUILD_DB_NAME:-guild}
-      USER_MANAGEMENT_URL: http://gateway:3000/users
-      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
-      RABBITMQ_URL: amqp://guild:${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
-      SERVICE_CLIENT_SECRET: ${GUILD_SERVICE_CLIENT_SECRET:?set GUILD_SERVICE_CLIENT_SECRET in .env}
+      SERVICE_CLIENT_SECRET: ${GUILD_SERVICE_CLIENT_SECRET}
+      GRPC_PORT: 50051
+      BROKER_GRPC_ENDPOINT: message-broker:5010
+      BROKER_CALLS_ENABLED: "true"
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/guild.crt
+      TLS_KEY_PATH: /run/secrets/tls/guild.key
     volumes:
+      - guild-logs:/logs/guild
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/guild.crt:/run/secrets/tls/guild.crt:ro
+      - ./secrets/tls/guild.key:/run/secrets/tls/guild.key:ro
+    healthcheck: *ready-node
 
+  # Browser sockets reach a Guild replica through this ingress; the ticket names the replica.
   guild-socket:
     image: nginx:1.28.0-alpine@sha256:30f1c0d78e0ad60901648be663a710bdadf19e4c10ac6782c235200619158284
     pull_policy: always
@@ -158,271 +401,207 @@ services:
       retries: 10
 
   registry:
-    image: mihaelacatan/package-registry-service:3.0.2
+    image: mihaelacatan/package-registry-service:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
+    <<: *logs
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq-provision:
-        condition: service_completed_successfully
+      message-broker:
+        condition: service_healthy
     environment:
-      SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      GATEWAY_URL: http://gateway:3000
       PORT: 3000
+      # Package Registry reads LOGS_DIR; LOG_DIR is the name every other service uses.
+      LOG_DIR: /logs
+      LOGS_DIR: /logs
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
       DB_HOST: database
       DB_PORT: 5432
       POSTGRES_USER: ${REGISTRY_DB_USER:-registry}
-      POSTGRES_PASSWORD: ${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${REGISTRY_DB_PASSWORD}
       POSTGRES_DB: ${REGISTRY_DB_NAME:-registry}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
-      RABBITMQ_URL: amqp://registry:${REGISTRY_RABBITMQ_PASSWORD:?set REGISTRY_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
+      GRPC_PORT: 50051
+      BROKER_GRPC_ENDPOINT: message-broker:5010
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      # The workload name is package-registry although the Compose host is registry.
+      TLS_CERT_PATH: /run/secrets/tls/package-registry.crt
+      TLS_KEY_PATH: /run/secrets/tls/package-registry.key
     volumes:
+      - package-registry-logs:/logs/package-registry
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/package-registry.crt:/run/secrets/tls/package-registry.crt:ro
+      - ./secrets/tls/package-registry.key:/run/secrets/tls/package-registry.key:ro
+    healthcheck: *ready-node
 
   battle:
-    image: patriciamoraru/battle:3.0.1
+    image: patriciamoraru/battle:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
+    <<: *logs
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq-provision:
-        condition: service_completed_successfully
+      message-broker:
+        condition: service_healthy
     environment:
-      SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      GATEWAY_URL: http://gateway:3000
-      GATEWAY_TIMEOUT_MS: "2500"
       PORT: 3003
       LOG_LEVEL: ${BATTLE_LOG_LEVEL:-info}
+      LOG_DIR: /logs
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
       ConnectionStrings__BattleDb: Host=database;Port=5432;Database=${BATTLE_DB_NAME:-battle};Username=${BATTLE_DB_USER:-battle};Password=${BATTLE_DB_PASSWORD}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       CURSOR_SIGNING_KEY: ${BATTLE_CURSOR_SIGNING_KEY:?set BATTLE_CURSOR_SIGNING_KEY in .env (openssl rand -base64 32)}
-      USER_MANAGEMENT_URL: http://gateway:3000/users
-      TAMAGOTCHI_URL: http://gateway:3000/tamagotchi
-      PACKAGE_REGISTRY_URL: http://gateway:3000/registry
-      RABBITMQ_URL: amqp://battle:${BATTLE_RABBITMQ_PASSWORD:?set BATTLE_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
-      SERVICE_CLIENT_SECRET: ${BATTLE_SERVICE_CLIENT_SECRET:?set BATTLE_SERVICE_CLIENT_SECRET in .env}
+      SERVICE_CLIENT_SECRET: ${BATTLE_SERVICE_CLIENT_SECRET}
+      BROKER_GRPC_TARGET: message-broker:5010
+      BROKER_DELIVERY_ENABLED: "true"
+      BROKER_DELIVERY_PORT: 5001
+      BROKER_EVENTS_ENABLED: "true"
+      BROKER_CALLS_ENABLED: "true"
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/battle.crt
+      TLS_KEY_PATH: /run/secrets/tls/battle.key
     volumes:
+      - battle-logs:/logs/battle
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/battle.crt:/run/secrets/tls/battle.crt:ro
+      - ./secrets/tls/battle.key:/run/secrets/tls/battle.key:ro
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3003 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q READY'"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 12
 
   map:
-    image: sergedbs/map:3.0.0
+    image: sergedbs/map:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
+    <<: *logs
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq-provision:
-        condition: service_completed_successfully
+      message-broker:
+        condition: service_healthy
     environment:
-      SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      GATEWAY_URL: http://gateway:3000
-      GATEWAY_TIMEOUT_MS: 2500
       PORT: 8080
+      GRPC_PORT: 5010
       Logging__LogLevel__Default: ${MAP_LOG_LEVEL:-Information}
+      LOG_DIR: /logs
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
       LOCATION_FRESHNESS_SECONDS: 60
       PROXIMITY_THRESHOLD_METRES: 6
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MAP_DB_NAME:-map};Username=${MAP_DB_USER:-map};Password=${MAP_DB_PASSWORD};GSS Encryption Mode=Disable;Maximum Pool Size=10
-      SERVICE_CLIENT_SECRET: ${MAP_SERVICE_CLIENT_SECRET:?set MAP_SERVICE_CLIENT_SECRET in .env}
-      GATEWAY_BASE_URL: http://gateway:3000
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       CURSOR_SIGNING_KEY: ${MAP_CURSOR_SIGNING_KEY:?set MAP_CURSOR_SIGNING_KEY in .env}
-      RABBITMQ_URL: amqp://map:${MAP_RABBITMQ_PASSWORD:?set MAP_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
-      USERS_RELATIONSHIP_SCOPES: ${MAP_USERS_RELATIONSHIP_SCOPES:-users:read-relationships}
+      SERVICE_CLIENT_SECRET: ${MAP_SERVICE_CLIENT_SECRET}
+      BROKER_URL: https://message-broker:5010
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/map.crt
+      TLS_KEY_PATH: /run/secrets/tls/map.key
     volumes:
+      - map-logs:/logs/map
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q \"200 OK\"'"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/map.crt:/run/secrets/tls/map.crt:ro
+      - ./secrets/tls/map.key:/run/secrets/tls/map.key:ro
+    healthcheck: *ready-dotnet-8080
 
   monster-raid:
-    image: sergedbs/monster-raid:3.0.0
+    image: sergedbs/monster-raid:4.0.0
     pull_policy: always
     deploy:
       replicas: 2
+    <<: *logs
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq-provision:
-        condition: service_completed_successfully
+      message-broker:
+        condition: service_healthy
     environment:
-      SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      GATEWAY_URL: http://gateway:3000
-      GATEWAY_TIMEOUT_MS: 2500
       PORT: 8080
+      GRPC_PORT: 5010
       Logging__LogLevel__Default: ${MONSTER_RAID_LOG_LEVEL:-Information}
+      LOG_DIR: /logs
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
       ConnectionStrings__Default: Host=database;Port=5432;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD};GSS Encryption Mode=Disable;Maximum Pool Size=10
-      SERVICE_CLIENT_SECRET: ${MONSTER_RAID_SERVICE_CLIENT_SECRET:?set MONSTER_RAID_SERVICE_CLIENT_SECRET in .env}
-      GATEWAY_BASE_URL: http://gateway:3000
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       CURSOR_SIGNING_KEY: ${MONSTER_RAID_CURSOR_SIGNING_KEY:?set MONSTER_RAID_CURSOR_SIGNING_KEY in .env}
-      RABBITMQ_URL: amqp://monster-raid:${MONSTER_RAID_RABBITMQ_PASSWORD:?set MONSTER_RAID_RABBITMQ_PASSWORD in .env}@rabbitmq:5672
-      GUILD_READ_SCOPES: ${MONSTER_RAID_GUILD_READ_SCOPES:-guild:read}
-      REGISTRY_OCCURRENCE_SCOPES: ${MONSTER_RAID_REGISTRY_OCCURRENCE_SCOPES:-registry:read-occurrences}
-      REGISTRY_BOSS_SCOPES: ${MONSTER_RAID_REGISTRY_BOSS_SCOPES:-registry:read-bosses}
-      REGISTRY_CONFIG_SCOPES: ${MONSTER_RAID_REGISTRY_CONFIG_SCOPES:-registry:read-config}
-      TAMAGOTCHI_COLLECTION_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_COLLECTION_SCOPES:-tamagotchi:read-collection}
-      TAMAGOTCHI_RESERVE_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_RESERVE_SCOPES:-tamagotchi:reserve-engagement}
-      TAMAGOTCHI_READ_ENGAGEMENT_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_READ_ENGAGEMENT_SCOPES:-tamagotchi:read-engagement}
-      TAMAGOTCHI_RELEASE_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_RELEASE_SCOPES:-tamagotchi:release-engagement}
-      TAMAGOTCHI_XP_SCOPES: ${MONSTER_RAID_TAMAGOTCHI_XP_SCOPES:-tamagotchi:award-xp}
-      USERS_CREDIT_SCOPES: ${MONSTER_RAID_USERS_CREDIT_SCOPES:-users:credit-global}
+      SERVICE_CLIENT_SECRET: ${MONSTER_RAID_SERVICE_CLIENT_SECRET}
+      BROKER_URL: https://message-broker:5010
+      BROKER_CONTEXT_JWKS_PATH: /run/secrets/broker-context-jwks.json
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/monster-raid.crt
+      TLS_KEY_PATH: /run/secrets/tls/monster-raid.key
     volumes:
+      - monster-raid-logs:/logs/monster-raid
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /ready HTTP/1.0\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | grep -q \"200 OK\"'"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  notification:
-    image: victoriamutruc/notification:4.0.0
-    pull_policy: always
-    deploy:
-      replicas: 2
-    depends_on:
-      database:
-        condition: service_healthy
-    environment:
-      SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      GATEWAY_URL: http://gateway:3000
-      PORT: 3000
-      LOG_LEVEL: ${NOTIFICATION_LOG_LEVEL:-info}
-      STORAGE: postgres
-      DATABASE_URL: postgres://${NOTIFICATION_DB_USER:-notification}:${NOTIFICATION_DB_PASSWORD}@database:5432/${NOTIFICATION_DB_NAME:-notification}
-      GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
-      PUSH_PROVIDER: ${NOTIFICATION_PUSH_PROVIDER:-stub}
-      FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
-    volumes:
-      - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ready >/dev/null || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  rabbitmq:
-    image: rabbitmq:4.1-management-alpine
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?set RABBITMQ_USER in .env}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
-    ports:
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
-    volumes:
-      - shared-rabbitmq-data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-
-  rabbitmq-provision:
-    image: python:3.13-alpine
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      RABBITMQ_USER: ${RABBITMQ_USER:?set RABBITMQ_USER in .env}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
-      GUILD_RABBITMQ_PASSWORD: ${GUILD_RABBITMQ_PASSWORD:?set GUILD_RABBITMQ_PASSWORD in .env}
-      REGISTRY_RABBITMQ_PASSWORD: ${REGISTRY_RABBITMQ_PASSWORD:?set REGISTRY_RABBITMQ_PASSWORD in .env}
-      USER_MANAGEMENT_RABBITMQ_PASSWORD: ${USER_MANAGEMENT_RABBITMQ_PASSWORD:?set USER_MANAGEMENT_RABBITMQ_PASSWORD in .env}
-      TAMAGOTCHI_RABBITMQ_PASSWORD: ${TAMAGOTCHI_RABBITMQ_PASSWORD:?set TAMAGOTCHI_RABBITMQ_PASSWORD in .env}
-      BATTLE_RABBITMQ_PASSWORD: ${BATTLE_RABBITMQ_PASSWORD:?set BATTLE_RABBITMQ_PASSWORD in .env}
-      MAP_RABBITMQ_PASSWORD: ${MAP_RABBITMQ_PASSWORD:?set MAP_RABBITMQ_PASSWORD in .env}
-      MONSTER_RAID_RABBITMQ_PASSWORD: ${MONSTER_RAID_RABBITMQ_PASSWORD:?set MONSTER_RAID_RABBITMQ_PASSWORD in .env}
-      NOTIFICATION_RABBITMQ_PASSWORD: ${NOTIFICATION_RABBITMQ_PASSWORD:?set NOTIFICATION_RABBITMQ_PASSWORD in .env}
-    volumes:
-      - ./rabbitmq/provision.sh:/provision.sh:ro
-      - ./rabbitmq/provision.py:/provision.py:ro
-    entrypoint: ["sh", "/provision.sh"]
-    restart: "no"
-
-  service-discovery:
-    image: patriciamoraru/service-discovery:3.0.1
-    pull_policy: always
-    environment:
-      PORT: 3009
-      SERVICE_VERSION: 3.0.1
-      LOG_LEVEL: ${SERVICE_DISCOVERY_LOG_LEVEL:-info}
-      TASK_TIMEOUT_MS: 5000
-      FAILURE_THRESHOLD: 3
-      FAILURE_WINDOW_MULTIPLIER: 3.5
-      HEALTH_CHECK_INTERVAL_SECONDS: 5
-      HEALTH_CHECK_TIMEOUT_MS: 2000
-      CRITICAL_IN_FLIGHT_REQUESTS: 20
-      CRITICAL_REQUESTS_PER_MINUTE: 600
-      CRITICAL_AVG_RESPONSE_MS: 2500
-      STATUS_SLOW_MS: 1500
-      ALERT_COOLDOWN_SECONDS: ${ALERT_COOLDOWN_SECONDS:-300}
-      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
-    ports:
-      - "127.0.0.1:3009:3009"
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request as r; r.urlopen('http://127.0.0.1:3009/ready', timeout=2)\""]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - ./secrets/broker-context-jwks.json:/run/secrets/broker-context-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/monster-raid.crt:/run/secrets/tls/monster-raid.crt:ro
+      - ./secrets/tls/monster-raid.key:/run/secrets/tls/monster-raid.key:ro
+    healthcheck: *ready-dotnet-8080
 
   gateway:
-    image: victoriamutruc/gateway:4.0.0
+    image: victoriamutruc/gateway:4.0.1
     pull_policy: always
+    <<: *logs
     depends_on:
       service-discovery:
         condition: service_healthy
-      user-management:
-        condition: service_healthy
-      tamagotchi:
-        condition: service_healthy
-      guild:
-        condition: service_healthy
-      registry:
-        condition: service_healthy
-      battle:
-        condition: service_healthy
-      map:
-        condition: service_healthy
-      monster-raid:
-        condition: service_healthy
-      notification:
+      message-broker:
         condition: service_healthy
     environment:
       PORT: 3000
       LOG_LEVEL: ${GATEWAY_LOG_LEVEL:-info}
+      LOG_DIR: /logs
       GATEWAY_ASSERTION_PRIVATE_KEY_PATH: /run/secrets/gateway-assertion.pem
-      GATEWAY_ASSERTION_KEY_ID: ${GATEWAY_ASSERTION_KEY_ID:?set GATEWAY_ASSERTION_KEY_ID in .env (run deploy/gateway/generate-keys.sh)}
+      GATEWAY_ASSERTION_KEY_ID: ${GATEWAY_ASSERTION_KEY_ID:?set GATEWAY_ASSERTION_KEY_ID in .env (run gateway/generate-keys.sh)}
       GATEWAY_ASSERTION_JWKS_PATH: /run/secrets/gateway-assertion-jwks.json
       SERVICE_DISCOVERY_URL: http://service-discovery:3009
-      DISCOVERY_STATIC_FALLBACK: "false"
+      USER_MANAGEMENT_URL: http://user-management:3001
       WS_GUILD_PUBLIC_URL: ${WS_GUILD_PUBLIC_URL:-ws://localhost:3004}
+      BROKER_GRPC_TARGET: message-broker:5010
+      TLS_CA_PATH: /run/secrets/tls/ca.crt
+      TLS_CERT_PATH: /run/secrets/tls/gateway.crt
+      TLS_KEY_PATH: /run/secrets/tls/gateway.key
     volumes:
+      - gateway-logs:/logs/gateway
       - ./secrets/gateway-assertion.pem:/run/secrets/gateway-assertion.pem:ro
       - ./secrets/gateway-assertion-jwks.json:/run/secrets/gateway-assertion-jwks.json:ro
+      - ./secrets/tls/ca.crt:/run/secrets/tls/ca.crt:ro
+      - ./secrets/tls/gateway.crt:/run/secrets/tls/gateway.crt:ro
+      - ./secrets/tls/gateway.key:/run/secrets/tls/gateway.key:ro
     ports:
       - "3000:3000"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request as r; r.urlopen('http://127.0.0.1:3000/ready', timeout=2)\""]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 12
 
 volumes:
   shared-postgres-data:
-  shared-rabbitmq-data:
+  broker-postgres-data:
+  gateway-logs:
+  service-discovery-logs:
+  message-broker-logs:
+  user-management-logs:
+  battle-logs:
+  map-logs:
+  monster-raid-logs:
+  guild-logs:
+  package-registry-logs:
+  tamagotchi-logs:
+  notification-logs:
