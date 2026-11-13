@@ -66,7 +66,7 @@ Jaeger by trace ID.
 | `jaeger/config.yaml` | OTLP receivers on 4317 (gRPC) and 4318 (HTTP), memory storage capped at 50,000 traces, and a processor that deletes query strings, URL paths, SQL text, headers and gRPC metadata from spans |
 | `grafana/provisioning/datasources/jaeger.yml` | The `Jaeger` datasource at `http://jaeger:16686`, not editable |
 
-`compose.tracing.yaml` adds Jaeger and sets the OTLP variables on every service:
+`compose.tracing.yaml` adds Jaeger and sets the OTLP variables on instrumented services:
 
 ```sh
 docker compose -f compose.yaml -f compose.tracing.yaml up -d
@@ -87,3 +87,15 @@ hold tokens, headers, bodies, query strings, SQL text or user IDs.
 
 [Structured log volumes](log-volumes.md) give each service its own log storage and the
 Broker read-only access for the system log export.
+
+Map and Monster Raid require 4.0.1 or newer for tracing. Their spans cover inbound
+requests, nested Broker calls, PostgreSQL work and outbox publication. They export
+the gRPC client activity source, retain the originating W3C parent in the outbox
+and remove sensitive attributes before export. Probe/static routes and background
+polls do not start traces. Service Discovery does not export traces.
+
+Use Jaeger's own UI at `http://localhost:16686` for the timeline and service graph.
+The current image exposes `/api/v3/services` and `/api/v3/traces`; its legacy
+`/api/services` endpoint is not a readiness probe. Traces use in-memory storage
+and disappear on restart. Log correlation IDs and Jaeger trace IDs are different
+identifiers; the active span's `trace_id` links a JSON log line to its trace.
