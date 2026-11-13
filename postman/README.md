@@ -57,9 +57,9 @@ reports can contain tokens and must also stay private.
 
 Guild and Registry collections require real fixture IDs matching their supplied
 credentials. Set Guild leader, officer-to-be, decliner, revokee, kicked-user and
-outsider IDs; set Registry developer, moderator and outsider IDs. The Registry
-occurrence read and the Guild service read use `monster_raid_service_credential`,
-a Monster Raid token; occurrence reads require registry:read-occurrences. Do not add Battle grants for these collection calls.
+outsider IDs; set Registry developer, moderator and outsider IDs. The public Registry occurrence read uses the admin user fixture. Typed Monster
+Raid reads of Guild and Registry are exercised through Broker integration, not
+a service token on a user-only public mapping. Do not broaden service grants.
 
 Battle requires real `challenger_id`, `opponent_id` and `outsider_id`, with matching
 `challenger_credential`, `opponent_credential` and `outsider_credential`. Supply

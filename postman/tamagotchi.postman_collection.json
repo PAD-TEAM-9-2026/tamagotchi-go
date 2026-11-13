@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Tamagotchi",
-    "description": "A scenario of the Tamagotchi service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry and registers and logs in two fresh users. Each registration publishes user.package_joined.v1, and Tamagotchi mints the package starter from it, so the creatures are polled for rather than minted: no service is allowed tamagotchi:mint.\n\nNeeds the shared stack with the broker, a seeded Registry and tamagotchi_fixture_package_id identifying the configured Dragon Tamers fixture (FEED adds 20 hunger and 5 XP). XP awards, engagements and holder grants are service-only operations called through the broker, so they are not here. The holder and collection requests that expect the rival to co-hold the owner's creature need a grant that only a finished battle makes; with fresh users they fail. Care expectations follow the seeded Dragon Tamers rules: feed adds 20 hunger, capped at 100, and 5 xp.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
+    "description": "A scenario of the Tamagotchi service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry and registers and logs in two fresh users. Each registration publishes user.package_joined.v1, and Tamagotchi mints the package starter from it, so the creatures are polled for rather than minted: no service is allowed tamagotchi:mint.\n\nNeeds the shared stack with the broker, a seeded Registry and tamagotchi_fixture_package_id identifying the configured Dragon Tamers fixture (FEED adds 20 hunger and 5 XP). XP awards, engagements and holder grants are service-only operations called through the broker, so they are not here. Holder and collection scenarios establish co-ownership through a real public Battle. Supply tamagotchi_secondary_package_id for a distinct configured starter package; the two users join it and fight with real lineups. The setup is repeated after the first holder deletion, so both deletion routes run independently. No internal service grant is exposed. Care expectations follow the seeded Dragon Tamers rules: feed adds 20 hunger, capped at 100, and 5 xp.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -120,6 +120,64 @@
           "",
           "if (!OPEN.includes(pm.info.requestName) && !pm.collectionVariables.get('winner_credential')) {",
           "  throw new Error('Run the Setup folder first: it registers and logs in the users.');",
+          "}",
+          "",
+          "// Holder scenarios establish their prerequisite through the public Battle API.",
+          "// No internal grant, service credential, direct database write or mutation retry.",
+          "if (['Read the holder set', 'Read the collection'].includes(pm.info.requestName)) {",
+          "  async function holderFixture() {",
+          "    const vars = pm.collectionVariables;",
+          "    const secondaryPackage = pm.environment.get('tamagotchi_secondary_package_id');",
+          "    if (!secondaryPackage) throw new Error('Set tamagotchi_secondary_package_id to a distinct configured starter package.');",
+          "    const base = key => pm.variables.replaceIn('{{' + key + '}}');",
+          "    async function api(method, url, credential, body, expected) {",
+          "      const header = {Authorization: 'Bearer ' + vars.get(credential)};",
+          "      if (method !== 'GET') header['Idempotency-Key'] = uuidv7();",
+          "      if (body !== undefined) header['Content-Type'] = 'application/json';",
+          "      const request = {method, url, header};",
+          "      if (body !== undefined) request.body = {mode:'raw', raw:JSON.stringify(body)};",
+          "      const response = await new Promise((resolve,reject) => pm.sendRequest(request, (e,r) => e ? reject(e) : resolve(r)));",
+          "      if (!expected.includes(response.code)) throw new Error(method + ' fixture request returned ' + response.code);",
+          "      return response.code === 204 ? null : response.json();",
+          "    }",
+          "    const collection = (user, token) => api('GET',base('tamagotchi_base_url')+'/v1/users/'+user+'/collection',token,undefined,[200]);",
+          "    const owner = vars.get('owner_id'), winner = vars.get('winner_id'), pet = vars.get('pet_id');",
+          "    let won = await collection(winner,'winner_credential');",
+          "    if ((won.secondary || []).some(p => p.id === pet) || won.primary?.id === pet) return;",
+          "    async function secondary(user, credential) {",
+          "      let current = await collection(user,credential);",
+          "      const find = () => (current.secondary || []).find(p => p.origin_package_id === secondaryPackage);",
+          "      if (!find()) {",
+          "        await api('POST',base('user_management_base_url')+'/v1/users/me/packages',credential,{package_id:secondaryPackage},[200,201]);",
+          "        const until = Date.now()+15000;",
+          "        while (!find() && Date.now()<until) {",
+          "          await new Promise(resolve => setTimeout(resolve,500));",
+          "          current = await collection(user,credential);",
+          "        }",
+          "      }",
+          "      if (!find()) throw new Error('Secondary starter did not arrive within15 seconds.');",
+          "      return find().id;",
+          "    }",
+          "    const ownerSecondary = await secondary(owner,'owner_credential');",
+          "    const winnerSecondary = await secondary(winner,'winner_credential');",
+          "    vars.set('winner_secondary_id',winnerSecondary);",
+          "    const challenge = await api('POST',base('battle_base_url')+'/v1/battles','winner_credential',",
+          "      {opponent_id:owner,primary_id:vars.get('winner_pet_id'),secondary_id:winnerSecondary,boost_ids:[]},[201]);",
+          "    const path = base('battle_base_url')+'/v1/battles/'+challenge.battle_id;",
+          "    await api('POST',path+'/accept','owner_credential',{primary_id:pet,secondary_id:ownerSecondary,boost_ids:[]},[202]);",
+          "    await api('POST',path+'/forfeit','owner_credential',undefined,[200]);",
+          "    const until=Date.now()+15000;",
+          "    while (Date.now()<until) {",
+          "      const battle=await api('GET',path,'winner_credential',undefined,[200]);",
+          "      if (battle.settlement_status === 'DELIVERED' && ['GRANTED','ALREADY_HOLDER'].includes(battle.access_grant_status)) break;",
+          "      await new Promise(resolve => setTimeout(resolve,500));",
+          "    }",
+          "    won=await collection(winner,'winner_credential');",
+          "    if (!(won.secondary || []).some(p => p.id === pet)) throw new Error('Finished Battle did not grant the creature within15 seconds.');",
+          "    const updated=await api('GET',base('tamagotchi_base_url')+'/v1/tamagotchis/'+pet,'owner_credential',undefined,[200]);",
+          "    vars.set('pet_version',updated.version);",
+          "  }",
+          "  holderFixture().catch(error => { pm.test('Public Battle establishes the holder fixture', () => { throw error; }); });",
           "}"
         ]
       }
@@ -1011,17 +1069,18 @@
           }
         },
         {
-          "name": "The rival now holds two creatures",
+          "name": "The rival holds two starters and the won creature",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 with the starter and the won creature', () => {",
+                  "pm.test('200 with two starters and the won creature', () => {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().items.map((p) => p.id)).to.have.members([",
                   "    pm.collectionVariables.get('winner_pet_id'),",
+                  "    pm.collectionVariables.get('winner_secondary_id'),",
                   "    pm.collectionVariables.get('pet_id'),",
                   "  ]);",
                   "});"
@@ -1244,9 +1303,9 @@
                 "exec": [
                   "pm.test('200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
-                  "pm.test('the owner holds only their starter', () => {",
+                  "pm.test('the owner retains both own starters', () => {",
                   "  pm.expect(body.primary.id).to.eql(pm.collectionVariables.get('pet_id'));",
-                  "  pm.expect(body.secondary).to.eql([]);",
+                  "  pm.expect(body.secondary).to.have.lengthOf(1); pm.expect(body.secondary[0].origin_package_id).to.eql(pm.environment.get('tamagotchi_secondary_package_id'));",
                   "});"
                 ]
               }
@@ -1287,7 +1346,7 @@
                   "pm.test('the primary is split out from the rest', () => {",
                   "  pm.expect(body.primary.id).to.eql(pm.collectionVariables.get('winner_pet_id'));",
                   "  pm.expect(body.primary.role).to.eql('PRIMARY');",
-                  "  pm.expect(body.secondary.map((p) => p.id)).to.eql([pm.collectionVariables.get('pet_id')]);",
+                  "  pm.expect(body.secondary.map((p) => p.id)).to.have.members([pm.collectionVariables.get('pet_id'), pm.collectionVariables.get('winner_secondary_id')]);",
                   "});"
                 ]
               }

@@ -747,7 +747,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{monster_raid_service_credential}}",
+                "value": "Bearer {{admin_credential}}",
                 "type": "text"
               }
             ],
@@ -950,7 +950,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('403 admin_required', () => { pm.response.to.have.status(403); pm.expect(pm.response.json().code).to.eql('admin_required'); });"
+                  "pm.test('403 admin_required', () => { pm.response.to.have.status(403); pm.expect(pm.response.json().code).to.eql('forbidden'); });"
                 ]
               }
             }

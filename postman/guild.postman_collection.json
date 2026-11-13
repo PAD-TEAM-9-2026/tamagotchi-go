@@ -314,41 +314,6 @@
               }
             }
           ]
-        },
-        {
-          "name": "Read the guild as a service",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{monster_raid_service_credential}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}",
-              "host": [
-                "{{guild_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "guilds",
-                "{{guild_id}}"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('services may read guilds too', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
         }
       ]
     },
@@ -1118,9 +1083,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('400 idempotency_key_required', () => {",
+                  "pm.test('400 invalid_idempotency_key', () => {",
                   "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().code).to.eql('idempotency_key_required');",
+                  "  pm.expect(pm.response.json().code).to.eql('invalid_idempotency_key');",
                   "});"
                 ]
               }

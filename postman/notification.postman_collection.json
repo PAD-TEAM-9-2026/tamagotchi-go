@@ -2146,7 +2146,7 @@
                 "exec": [
                   "pm.test('400 key required', () => pm.response.to.have.status(400));",
                   "pm.test('names the problem', () => {",
-                  "  pm.expect(pm.response.json().code).to.eql('idempotency_key_required');",
+                  "  pm.expect(pm.response.json().code).to.eql('invalid_idempotency_key');",
                   "});"
                 ]
               }
