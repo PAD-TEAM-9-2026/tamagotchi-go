@@ -1,4 +1,3 @@
-import importlib.util
 import unittest
 
 from google.protobuf import descriptor_pool, message_factory
@@ -10,6 +9,30 @@ import tempfile
 import grpc_tools
 
 from check_broker_contracts import ROOT, load_json
+
+# Durable subscriptions of the RabbitMQ topology the Broker replaced, as (producer, topic)
+# per subscriber. The catalogue must keep every one of them with the same producer.
+PRE_BROKER_CONSUMERS = {
+    'tamagotchi': [('user-management', 'user.package_joined.v1')],
+    'package-registry': [('user-management', 'user.package_joined.v1')],
+    'monster-raid': [('package-registry', 'registry.occurrence_changed.v1')],
+    'notification': [
+        ('user-management', 'user.friend_request_created.v1'),
+        ('tamagotchi', 'tamagotchi.access_granted.v1'),
+        ('battle', 'battle.request_created.v1'),
+        ('guild', 'guild.invitation_created.v1'),
+        ('map', 'map.proximity_detected.v1'),
+        ('monster-raid', 'raid.started.v1'),
+    ],
+    'audit': [
+        ('tamagotchi', 'tamagotchi.created.v1'),
+        ('tamagotchi', 'tamagotchi.leveled_up.v1'),
+        ('battle', 'battle.completed.v1'),
+        ('guild', 'guild.member_joined.v1'),
+        ('guild', 'guild.member_left.v1'),
+        ('monster-raid', 'raid.completed.v1'),
+    ],
+}
 
 
 class FirstSliceTests(unittest.TestCase):
@@ -59,15 +82,11 @@ class FirstSliceTests(unittest.TestCase):
         self.assertEqual('UNSAFE', delete['failover'])
 
     def test_all_existing_durable_subscriptions_and_publishers_preserved(self):
-        spec = importlib.util.spec_from_file_location('topology', ROOT / 'deploy/rabbitmq/provision.py')
-        topology = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(topology)
         actual = {(s['subscriber'], topic) for s in self.catalogue['subscriptions'] if s['kind'] == 'LOGICAL' for topic in s['topics']}
-        expected = {(subscriber, topic) for subscriber, bindings in topology.CONSUMERS.items() for _, topic in bindings}
+        expected = {(subscriber, topic) for subscriber, bindings in PRE_BROKER_CONSUMERS.items() for _, topic in bindings}
         self.assertEqual(expected, actual)
-        producers = {exchange: ('package-registry' if account == 'registry' else account) for account, exchange in topology.PUBLISHERS.items()}
         durable_topics = {topic for _, topic in expected}
-        self.assertEqual({topic: producers[exchange] for bindings in topology.CONSUMERS.values() for exchange, topic in bindings}, {e['topic']: e['producer'] for e in self.catalogue['events'] if e['topic'] in durable_topics})
+        self.assertEqual({topic: producer for bindings in PRE_BROKER_CONSUMERS.values() for producer, topic in bindings}, {e['topic']: e['producer'] for e in self.catalogue['events'] if e['topic'] in durable_topics})
         notifications = next(s for s in self.catalogue['subscriptions'] if s['subscriber'] == 'notification')
         self.assertEqual(6, len(notifications['topics']))
         self.assertNotIn('raid.completed.v1', notifications['topics'])
