@@ -14,7 +14,7 @@ Service Discovery and a custom Java message broker.
 | Mihaela | Guild, Package Registry | TypeScript, Node.js |
 | Sergiu | Map, Monster Raid | C#, ASP.NET Core |
 | All four | Gateway, Service Discovery | Python, FastAPI |
-| Sergiu maintains; all four contribute | Message Broker | Java 21, Spring Boot |
+| All four | Message Broker | Java 21, Spring Boot |
 
 
 ## Repository
@@ -33,8 +33,8 @@ Each service has its own private repository. They are linked here as submodules.
 | Monster Raid | `services/monster-raid` | Sergiu |
 | Gateway | `services/gateway` | Shared by the team |
 | Service Discovery | `services/service-discovery` | Shared by the team |
+| Message Broker | `services/message-broker` | Shared by the team |
 
-Message Broker is maintained in [its standalone repository](https://github.com/sergedbs/message-broker).
 
 ## Service boundaries
 
