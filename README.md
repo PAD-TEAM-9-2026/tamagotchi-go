@@ -103,11 +103,10 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
-The custom-broker candidate is an incremental migration. The runtime, contracts
-and several service adapters are implemented on development branches; complete-stack
-acceptance and published replacement images are tracked separately. Base
-`deploy/compose.yaml` retains the earlier published HTTP/RabbitMQ deployment.
-Candidate overlays build reviewed source without silently replacing that release.
+Every client request goes Client → Gateway → Message Broker → service, and
+services call each other and publish events only through the Broker. There is no
+RabbitMQ and no service-to-service HTTP. `deploy/compose.yaml` runs this stack on
+published images; see [Deployment](#deployment).
 
 ```mermaid
 flowchart LR
@@ -122,7 +121,9 @@ flowchart LR
     Services -->|Status and subscriptions| Discovery
     Discovery -->|Health / load alerts| Discord
     Client -->|Negotiated WebSocket| Guild[Guild replicas / socket ingress]
-    Prometheus -->|Internal metrics| Broker
+    Prometheus -->|Metrics| Broker
+    Prometheus -->|Metrics| Services
+    Broker -->|Log export, read only| Logs[(Service log volumes)]
     Grafana --> Prometheus
 ```
 
@@ -138,17 +139,11 @@ failover. Discovery supplies addresses, process IDs, load and approved subscript
 metadata; it does not forward application requests. Breakers and delivery outcomes
 belong to Broker on migrated paths, rather than a second Gateway routing layer.
 
-The previous HTTP/RabbitMQ topology remains documented by
-[the earlier architecture diagram](docs/img/lab3_architecture_diagram.jpg).
-It is compatibility evidence, not the custom-broker target. Unmigrated services
-keep their existing transport until coordinated replacement acceptance and
-retained-work handover pass. No automatic dual publication is supported.
-
-Direct probes, Discovery, metrics, configured issuer JWKS bootstrap, external
-providers and negotiated Guild sockets remain infrastructure exceptions.
-Narrowly allowlisted Map assets retain Discovery-aware HTTP forwarding; they do
-not provide an application API fallback. Guild replica relay does not replay
-messages missed during a broker gap: clients recover them from stored history.
+Direct probes, Discovery, metrics, issuer JWKS bootstrap, external providers and
+negotiated Guild sockets remain infrastructure paths. Narrowly allowlisted Map
+demo assets keep Discovery-aware HTTP forwarding inside the `/map/demo/` prefix;
+they are not an application API fallback. Guild replica relay does not replay
+messages missed during a Broker gap: clients recover them from stored history.
 
 ### Service Discovery
 
@@ -158,12 +153,12 @@ instance listing and failure-report APIs, polls registered status endpoints and
 removes failing instances. Developer alerts use an optional Discord webhook.
 The implementation and API are documented in [its README](https://github.com/PatriciaMoraru/service-discovery#readme).
 
-Compose pins `patriciamoraru/service-discovery:3.0.1` and the submodule records
-its reviewed source. Published image metadata is separate from runtime acceptance.
-Gateway starts after Discovery is healthy and uses its internal URL explicitly.
-Static fallback remains enabled during migration; disable it after every domain
-service registers and routing passes. Adding Discovery alone does not establish
-scaled service acceptance.
+Compose pins `patriciamoraru/service-discovery:4.0.0`. The Broker reads instances
+and load from it and reports failed calls to it; Discovery removes instances that
+fail their status checks or reach the failure threshold. Its API answers a full
+task pool with 503 `too_many_tasks` and `Retry-After`, and a slow task with 504
+`task_timeout`. The registry is in memory: after a Discovery restart, lookups are
+empty until every service registers again, which takes up to about 30 seconds.
 
 Inside Compose, use `http://service-discovery:3009`. Local diagnostics use
 `http://localhost:3009`; the published port is loopback-only. No Gateway prefix or
@@ -179,27 +174,23 @@ root admission/deadlines and rate limits, matches public routes against a pinned
 operation manifest, signs destination-bound user context and reconstructs the
 public HTTP response. It owns no domain database or event stream.
 
-In the 4.0 Gateway public operations always use mTLS `MessageBroker.Call`, with no switch and no direct path, and
-Broker chooses the actual replica. Internal-only operations have no public
-mapping; domain services use typed calls directly through Broker. Services verify
-Broker context and perform their own business authorization. Common failure
-behavior remains502 upstream_unavailable,503 too_many_tasks for capacity and
-504 task_timeout for root expiry, with existing domain Problem Details preserved.
-The entire Protobuf envelope is bounded to1 MiB, with stricter per-operation limits.
-
-The earlier 3.x Gateway keeps its REST proxy with Discovery routing and signed
-`X-Gateway-Assertion` behavior, which `compose.yaml` still runs. Service REST callers may
-still carry `X-Gateway-Context` on that legacy path. The 4.0 Gateway forwards directly
-only the Map demo's static assets.
-Do not treat compatibility mode as completion of the broker migration.
+Public operations always use mTLS `MessageBroker.Call`, and the Broker chooses the
+replica. Internal-only operations have no public mapping; domain services call
+each other through the Broker with typed messages. Services verify the Broker
+context and do their own business authorization. Common failures are 502
+`upstream_unavailable`, 503 `too_many_tasks` with `Retry-After` for capacity and
+504 `task_timeout` when the root deadline expires; domain Problem Details pass
+through unchanged. The whole Protobuf envelope is bounded to 1 MiB, with stricter
+per-operation limits. Gateway readiness includes its Broker connection. The only
+direct forwarding left is the Map demo's static assets.
 
 For `guild.chat`, Gateway invokes the internal-only volatile
 `guild.issue_chat_ticket` operation as authenticated workload gateway with a
-user assertion. Guild verifies membership and returns the single-use30-second
+user assertion. Guild verifies membership and returns the single-use 30-second
 ticket. The browser connects to the negotiated public WebSocket ingress; Gateway
 does not hold the socket. Transient relay gaps require history catch-up.
 
-Gateway logs completed requests with correlation, route, status and duration;
+Gateway logs completed requests with correlation, operation, route, status and duration;
 metrics remain on its internal monitoring port. Its source, published image and
 validated deployment are separate evidence. See
 [the Gateway README](https://github.com/victoriaaa111/gateway#readme).
@@ -209,36 +200,17 @@ Failure reports and status polling remain direct internal APIs; see
 [docs/field-types.md](docs/field-types.md). Registry state is in memory and
 replicas re-register after Discovery restart.
 
-### Broker contracts and candidate deployment
+### Broker contracts
 
-[contracts/README.md](contracts/README.md) defines the approved operation manifest,
+[contracts/README.md](contracts/README.md) defines the operation catalogue,
 Protobuf transport and identity rules. Consumers pin immutable Shared commits and
-per-file checksums; generated contracts are build output. A successful schema
-build does not establish authenticated runtime compatibility.
+per-file checksums; generated code is build output.
 
-Use the source-built `deploy/compose.broker.yaml` overlay with private source
-paths and workload material. UM exposes issuer JWKS/bootstrap before Broker
-readiness, avoiding a startup cycle. Producer/caller switches remain off until
-their destination adapters and subscribers pass real checks. Integration
-operators can build exact cuts from read-only owner checkouts, or use immutable
-owner-built candidates/evidence when source access is unavailable.
-
-The overlay includes Map source through `MAP_SOURCE`, without changing the
-published image pin in compose.yaml. Map 4.0.0 requires Broker TLS/bootstrap;
-its outbound Gateway client/breaker and RabbitMQ publisher are removed. Direct
-HTTP probes/assets and verified HTTP handlers remain. Source-built acceptance
-has exercised Gateway → Broker → Map → Broker → UM, real encounter publication,
-durable receipts and one Notification effect per recipient. This is not final
-published-stack acceptance or a switch of unrelated event producers. Supply UM's
-canonical-authority routing fix and account for retained Rabbit work before
-switching a consumer. No image publication is performed by this overlay.
-
-[Structured log volumes](deploy/log-volumes.md) isolate writable service roots
-and read-only Broker export access. [Monitoring](deploy/monitoring.md) documents
-Prometheus and Grafana provisioning. Broker's management port3010 exposes health,
-readiness/status and admin-only topics, dead letters and bounded ZIP log export;
-its internal gRPC listener defaults to5010 and metrics to9090. Configure host
-port mappings per candidate and keep credentials out of committed files.
+The Broker's management port 3010 serves health, readiness and status, and for
+admins the active topics, dead letters and the bounded ZIP log export of every
+service (`GET /v1/logs/download?from=&to=&correlation_id=`). Its internal gRPC
+listener is 5010 and its metrics port 9090. [Structured log volumes](deploy/log-volumes.md)
+and [Monitoring](deploy/monitoring.md) describe the log and metrics setup.
 
 ## Technologies
 
@@ -272,7 +244,7 @@ How services talk:
 |---|---|---|---|
 | Public request and response | One to one, synchronous | HTTP/JSON then mTLS gRPC Call/Execute | Client → Gateway → Broker → destination |
 | Internal request and response | Typed synchronous call | mTLS gRPC Call/Execute | Service → Broker → destination |
-| Publish and subscribe | One to many, asynchronous | Broker Publish/Deliver and durable logical queues | Committed domain facts; RabbitMQ remains only on unmigrated paths |
+| Publish and subscribe | One to many, asynchronous | Broker Publish/Deliver and durable logical queues | Committed domain facts |
 | Bidirectional stream | One to one, asynchronous, both sides send | WebSocket | Guild chat |
 | One way notification | One to one, asynchronous, through a third party | Firebase Cloud Messaging | Push to a phone that is not running the app |
 
@@ -1252,8 +1224,7 @@ Every location write, deletion, raw read and nearby query requires a verified
 user matching `user_id` or the path's `userId`. Nearby is the interface for
 viewing other players. Plain identity headers grant no access.
 
-Map source candidates fetch the complete typed relationships list through Broker;
-the older published pin still uses Gateway HTTP. If any page fails,
+Map fetches the complete typed relationships list through the Broker. If any page fails,
 it discards classification and returns only fresh six-metre strangers, with
 `partial=true` and `partial_reason=RELATIONSHIPS_UNAVAILABLE`. Reads publish no
 events. Accepted observations persist encounter transitions and outbox facts;
@@ -1404,84 +1375,37 @@ nothing. Each event payload is an `...Event` shape in
 
 #### Broker delivery
 
-Shared provisioning owns queue, exchange and binding declarations. Services
-check existing topology before consuming instead of redeclaring it with their
-own arguments; they wait for `rabbitmq-provision` where startup requires queues.
-Missing topology fails startup/readiness clearly. Preserve existing broker data.
-Sergiu coordinates topology; Mihaela owns broker deployment. Provisioning does
-not prove consumer effects or all services' runtime compatibility.
+The Broker owns delivery; services declare no queues. A producer commits its
+state and an outbox row together and publishes with `MessageBroker.Publish` after
+the commit. The Broker acknowledges only once the event and every subscriber's
+delivery state are stored in its PostgreSQL. Each logical subscriber in the
+catalogue's `subscriptions` has its own durable queue, and its replicas compete
+for deliveries.
 
-| Publisher | Durable topic exchange |
+| Subscriber | Topics |
 |---|---|
-| User Management | `user-management.events` |
-| Tamagotchi | `tamagotchi.events` |
-| Battle | `battle.events` |
-| Guild | `guild.events` |
-| Package Registry | `package-registry.events` |
-| Map | `map.events` |
-| Monster Raid | `monster-raid.events` |
+| Tamagotchi | user.package_joined.v1 |
+| Package Registry | user.package_joined.v1 |
+| Monster Raid | registry.occurrence_changed.v1 |
+| Notification | the six Notification events in the table above |
+| audit | all events marked audit above, kept for inspection; no service consumes them |
 
-Use each event's existing routing key and envelope; no event payload changes.
-Bindings follow the Events table above, with exact keys rather than wildcards.
+Delivery is at least once. A transient failure is retried after 5 seconds, then
+after 30 seconds, then the delivery becomes a dead letter; a permanent failure
+becomes one directly. Missing capacity or no eligible replica defers a delivery
+without counting an attempt. Consumers store the event_id receipt with their
+effects in one transaction and answer DUPLICATE for a repeat, so a redelivery
+after a crash causes no second effect. Admins list topics and dead letters at
+`GET /v1/topics` and `GET /v1/dead-letters` on the Broker management port.
 
-| Consumer | Work queue | Subscriptions |
-|---|---|---|
-| Tamagotchi | `tamagotchi.work` | user.package_joined.v1 |
-| Package Registry | `package-registry.work` | user.package_joined.v1 |
-| Monster Raid | `monster-raid.work` | registry.occurrence_changed.v1 |
-| Notification | `notification.work` | the six Notification events in the table above |
-| Passive audit destination | `audit.work` | all events marked audit above |
-
-Map has no consumer/inbox under this contract. Notification publishes nothing.
-The passive audit queue retains events for broker-coordinator inspection; it
-does not introduce an audit service or a processing consumer.
-
-Each active consumer has `<consumer>.work`, `<consumer>.retry.5s`,
-`<consumer>.retry.30s` and `<consumer>.dlq`. Use durable quorum queues and
-persistent messages (`delivery_mode=2`, content type application/json).
-Guild chat uses a separate durable topic exchange, `guild.chat`, declared by
-Guild, with one exclusive, non-durable, auto-delete `amq.gen-*` queue per
-instance. The Guild account can configure/publish that exchange, bind its
-generated queues and consume them; lifecycle exchange permissions are preserved.
-These transient subscriptions are not part of the durable event retry ladder.
-Chat messages remain in Guild PostgreSQL history for catch-up after relay gaps.
-
-Retry queues use queue TTLs of 5000/30000 ms and dead-letter to the default
-exchange with routing key `<consumer>.work`. Configure at-least-once
-dead-lettering and reject-publish overflow on the retry queues; verify support
-in the deployed RabbitMQ version before implementation. No work-queue TTL is
-applied.
-
-Producers set `x-attempt=1`. A failed first delivery publishes to the consumer's
-five-second retry queue with x-attempt=2; a failed second delivery publishes to
-its thirty-second queue with x-attempt=3. A failed third delivery publishes to
-its DLQ. Publish retries directly through the default exchange, addressed to
-that queue, so other subscribers do not receive the retry. Preserve event_id,
-correlation, body and `x-original-routing-key`; never reset the attempt on
-redelivery. Owner-driven DLQ replay resets x-attempt=1 and retains event_id.
-
-Commit domain state and an outbox row together. Publish after commit with
-publisher confirms and mandatory routing; an unroutable return or missing
-confirmation leaves delivery pending. Record outbox delivery only after a
-positive confirmation with no return. Consumers persist event_id deduplication
-with their effects, then acknowledge. Duplicate deliveries cause no new effect.
-For retry/DLQ transfer, confirm the new persistent message before acknowledging
-the original. If transfer fails, retain/requeue the original without a busy
-retry loop. Crash recovery may redeliver; deduplication must tolerate it.
-Publisher confirms do not establish that a consumer processed the message.
-See [acknowledgements](https://www.rabbitmq.com/docs/confirms) and
-[dead-lettering](https://www.rabbitmq.com/docs/dlx).
-
-Use `RABBITMQ_URL` with service-specific credentials and least-privilege broker
-permissions. Keep its value in untracked configuration or secrets; examples
-name the variable without credentials. Gateway and database credentials are
-separate. Validate outage/recovery, redelivery, poison-message retries/DLQ,
-consumer restart and unroutable publication before claiming real delivery.
+Guild chat relay uses one expiring subscription per live Guild replica. It is
+not part of the durable retry ladder; Guild's stored history stays authoritative.
 
 ## Shared kits
 
-Code every service of one language needs for the Lab 3 contracts lives here once and is
-copied into each service. It is not built in this repository: each service runs the
+Code every service of one language needs for the shared contracts lives here once and is
+copied into each service. Routing, failover and circuit breaking of service calls belong to
+the Broker; the breaker kits only cover direct calls a service still makes. It is not built in this repository: each service runs the
 kit's tests in its own CI after copying.
 
 ### TypeScript discovery kit
@@ -1686,120 +1610,80 @@ and GitHub Release on its tested `main` merge. See [CONTRIBUTING.md](CONTRIBUTIN
 
 ## Deployment
 
-`deploy/compose.yaml` pulls versioned service images under the `tamagotchi-go`
-Compose project. Each service has its own credentials and database in one
-PostGIS-enabled PostgreSQL container. A RabbitMQ broker runs alongside it, with
-one account per publishing or consuming service (see below).
+`deploy/compose.yaml` runs the whole system on published images under the
+`tamagotchi-go` Compose project: Gateway, Service Discovery, the Message Broker
+with its own PostgreSQL, and every domain service, with Guild on two replicas
+behind the `guild-socket` balancer. The other services have their own database
+and role in one PostGIS-enabled PostgreSQL container.
 
-| Service | Image | Digest | Host port |
-|---|---|---|---|
-| Gateway | `victoriamutruc/gateway:4.0.0` | `sha256:10b432d7b79c4360d6e99330915fb3ab83b85a33fd9452c6a074deccde6dfa7a` | 3000 |
-| Service Discovery | `patriciamoraru/service-discovery:3.0.1` | `sha256:dba12a0c80e5d9631ce0e9a87a5075351c3209efd11a66d95b8c330f8d1153a0` | 3009 (loopback) |
-| User Management | `patriciamoraru/user-management:3.0.1` | `sha256:dfe48dd9eaab794594db16de5fa1181bea77190cccaed2def1c828f9d8086ab8` | internal |
-| Tamagotchi | `victoriamutruc/tamagotchi:4.0.0` | `sha256:27925856c193d6376dcd6da59e1ecea87ab1e1162d1ec84f9a96258ac0224bfc` | internal |
-| Battle | `patriciamoraru/battle:3.0.1` | `sha256:52f934088460ef38d0c4157cd3879c268eb4df316203e359bc4993b7de5d5f4e` | internal |
-| Guild | `mihaelacatan/guild-service:3.0.1` | `sha256:0cd0780d5e6dab54c8ab5b4246ccacb539ef0b2d451cb9319b1ec13312b41487` | internal; socket balancer 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:3.0.0` | `sha256:6c5f0564f43125869e7367ecad4c09b8e4843a875552d5436728ab20a95f7baa` | internal |
-| Map | `sergedbs/map:3.0.0` | `sha256:ed133aeef707c19ecef0765ee712ece3eb6c2b88e9bdbfad591860f20791e23d` | internal |
-| Monster Raid | `sergedbs/monster-raid:3.0.0` | `sha256:15955f3cf3fd6967bf9b5f0728e2bdb910cfe5c68c92ad7ddd8143e0494924ae` | internal |
-| Notification | `victoriamutruc/notification:4.0.0` | `sha256:c2e0a4fa603640d9d6fe8603388ff70949a92b96c84b7258071cc7177f9a2f27` | internal |
+| Service | Image | Host port |
+|---|---|---|
+| Gateway | `victoriamutruc/gateway:4.0.1` | 3000 |
+| Service Discovery | `patriciamoraru/service-discovery:4.0.0` | 3009 (loopback) |
+| Message Broker | `sergedbs/message-broker:4.0.0` | 3010 (loopback) |
+| User Management | `patriciamoraru/user-management:4.0.0` | internal |
+| Tamagotchi | `victoriamutruc/tamagotchi:4.0.0` | internal |
+| Battle | `patriciamoraru/battle:4.0.0` | internal |
+| Guild | `mihaelacatan/guild-service:4.0.0` | internal; socket balancer 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:4.0.0` | internal |
+| Map | `sergedbs/map:4.0.0` | internal |
+| Monster Raid | `sergedbs/monster-raid:4.0.0` | internal |
+| Notification | `victoriamutruc/notification:4.0.0` | internal |
 
-Gateway, Tamagotchi and Notification are the 4.0.0 images. They reach every service through the
-message broker and no longer use RabbitMQ: the Gateway does not start without a broker and the
-other two receive their events only from it. Run them with the broker overlay
-(`deploy/compose.broker.yaml`, see below); the services still on 3.x keep using RabbitMQ.
-
-To test unpublished source, use a local Compose override that builds Map, Monster Raid
-and Gateway from their standalone checkouts, with distinct local image names
-and `pull_policy: never`. Keep the override outside Git. Replace canonical pins
-only after the corresponding numeric images are published and validated.
-
-Requires Docker with Compose v2 and free host ports 3000, 3004, 3009 and
-5432. The Gateway starts last, after all eight services report healthy, so a
-healthy Gateway only proves its registered checks passed; it does not establish
-routing, authentication or continuing downstream availability. PostgreSQL listens on
-`127.0.0.1:5432` for local administration. Use
-`postgres` as the admin user and database, with `DATABASE_ADMIN_PASSWORD` from
-`deploy/.env`.
-
-If `deploy/.env` already exists, keep it. Otherwise, create it before startup:
+Pulling works once these versions are published (see [Image publication](#image-publication));
+until then, the `compose.source.yaml` overlay builds the same stack from local
+checkouts. Requires Docker with Compose v2 and free host ports 3000, 3004, 3009,
+3010 and 5432.
 
 ```bash
 cd deploy
-test -f .env || cp .env.example .env
-# Set every database password, the RabbitMQ passwords and the other values marked in .env.example.
-./gateway/generate-keys.sh   # once: creates secrets/ for the Gateway signing keys
-./user-management/generate-keys.sh   # once: creates the key User Management signs access tokens with
-docker compose --env-file .env up -d --wait
+test -f .env || cp .env.example .env     # then fill in every empty value
+./user-management/generate-keys.sh       # once: the access token signing key
+./gateway/generate-keys.sh               # once: the Gateway assertion keys
+./message-broker/generate-identities.sh  # once: workload certificates and the Broker context key
+docker compose up -d --wait
 ```
 
-Use distinct URL-safe passwords in the untracked `.env`.
+| Overlay | Adds |
+|---|---|
+| `compose.source.yaml` | Builds every service from the `*_SOURCE` checkouts in `.env` as `tamagotchi-go/<service>:local` |
+| `compose.monitoring.yaml` | Prometheus and Grafana, see [Monitoring](deploy/monitoring.md) |
+| `compose.tracing.yaml` | Jaeger and the OpenTelemetry settings of every service |
 
-### Broker and accounts
+Combine them with repeated `-f`, for example
+`docker compose -f compose.yaml -f compose.monitoring.yaml up -d`.
 
-`rabbitmq` runs with the management plugin, bound to `127.0.0.1` (AMQP `5672`,
-management `15672`). `rabbitmq-provision` runs once after the broker is healthy:
-it merges service accounts, all seven exchanges, exact subscription bindings
-and quorum work/retry/DLQ queues through `deploy/rabbitmq/provision.py`.
-It includes User Management's publisher account and preserves existing broker
-data and Guild/Registry account names. Retry queues
-use five-/thirty-second message TTLs and an at-least-once dead-letter policy.
-The passive audit queue has no processing service.
+Startup order is databases and log volumes, Discovery, User Management (it
+serves the issuer keys the Broker checks), the Broker, the domain services and
+the Gateway last. A healthy Gateway means its own checks pass, including its
+Broker connection; it does not prove every route. PostgreSQL listens on
+`127.0.0.1:5432` for administration with the `postgres` user and
+`DATABASE_ADMIN_PASSWORD` from `deploy/.env`. Use distinct URL-safe passwords.
 
-The provisioning step uses the admin account. Publishers can write only their
-exchange; consumers can read their subscribed exchanges/queues and transfer
-retries through the default exchange. Set every broker password named in
-`deploy/.env.example`; no credentials are committed. Provisioning does not
-prove consumer delivery. Runtime validation
-against RabbitMQ 4.1 remains required before deployment acceptance.
+### Identity and service tokens
 
-Gateway signing keys: `deploy/gateway/generate-keys.sh` creates the Gateway's
-private signing key and the public key set in `deploy/secrets/`, which Git ignores.
-The Gateway mounts both files; Guild, Registry, Map and Monster Raid mount the
-public key set. Usable keys are required for authenticated requests. Run the
-script once before the first start, and keep the private key on your machine.
+The key scripts write into the git-ignored `deploy/secrets/` and never overwrite
+existing material; see [Reusing identities](#reusing-identities).
+User Management signs access tokens and publishes its keys at `GET /users/v1/jwks`;
+the Gateway signs a user assertion for every request; the Broker signs the
+request context it hands to each service. Every service reaches the Broker over
+mTLS with its own workload certificate.
 
-User Management keys: `deploy/user-management/generate-keys.sh` creates the
-private key it signs access tokens with, `deploy/secrets/access-token.pem`,
-which Git ignores and which is never overwritten. Its public key is published at
-`GET /users/v1/jwks`. The service also mounts the Gateway's public key set to
-verify `X-Gateway-Assertion`. Set `USER_MANAGEMENT_CURSOR_SIGNING_KEY`
-(`openssl rand -base64 32`) in `.env`: it signs the page cursors, so every
-instance must share it. User Management writes its events to an outbox and
-publishes them when the broker is reachable, so it does not wait for the broker
-in Compose either.
+A service that calls another service asks User Management for a service token
+through the Broker (`users.issue_service_token`), sending its secret as
+`x-service-secret` metadata. Set the six `*_SERVICE_CLIENT_SECRET` values in
+`.env`; Registry and Notification call nothing. Compose gives each secret to its
+service and to User Management. A matching secret authenticates the caller; the
+issuer allowlist still decides which destinations and scopes it gets.
 
-### Service tokens
+The `*_CURSOR_SIGNING_KEY` values (`openssl rand -base64 32`) sign page cursors;
+all replicas of a service share one key. Services write events to an outbox and
+publish them when the Broker is reachable.
 
-A service that calls another service fetches its own token from
-`POST /users/v1/service-tokens`, with `X-Service-Secret: <its secret>`. Set
-`USER_MANAGEMENT_SERVICE_CLIENT_SECRET`, `TAMAGOTCHI_SERVICE_CLIENT_SECRET`,
-`BATTLE_SERVICE_CLIENT_SECRET`, `GUILD_SERVICE_CLIENT_SECRET`,
-`MAP_SERVICE_CLIENT_SECRET` and `MONSTER_RAID_SERVICE_CLIENT_SECRET` in `.env`.
-Registry and Notification call no other service, so they have no secret.
-
-Compose registers each caller secret with User Management using the same local
-variable. For a fresh local setup, choose distinct values; preserve existing
-credentials when updating it. Matching secrets authenticate the client but do
-not grant scopes: the issuer allowlist must permit each requested destination
-and scope.
-
-Map and Monster Raid call `http://gateway:3000`. Configure their distinct
-base64 cursor keys and broker credentials from `.env.example`; Raid's broker
-account is `monster-raid`. Both wait for broker provisioning before startup.
-Scope overrides must match the issuer policy; their defaults are requested
-grants, not evidence of permission. Existing database volumes are preserved.
-
-Tamagotchi calls User Management and Package Registry through
-`http://gateway:3000` with its own service tokens. Tamagotchi and Notification
-use the broker accounts `tamagotchi` and `notification` and wait for broker
-provisioning before startup.
-
-On first start, the
-database initializer creates eight databases and roles, applies the User
-Management and Battle SQL, and enables PostGIS for Map. The remaining services
-create their own schema at startup. The shared volume is separate from each
-service's standalone volume. Initialization does not rerun on an existing volume.
+On first start, the database initializer creates the databases and roles,
+applies the User Management and Battle SQL and enables PostGIS for Map. The
+other services create their own schema at startup. Initialization does not run
+again on an existing volume.
 
 ### Seed data
 
@@ -1828,8 +1712,8 @@ docker compose exec -T database sh -c 'psql -U "$BATTLE_DB_USER" -d "$BATTLE_DB_
 User Management 2.0.1 needs the three tables of its once-only ledgers (`CurrencyCredits`, `SettledBattles`, `ConsumedBoosts`), and Battle 2.0.1
 needs the outbox, the idempotency receipts, the combat snapshot columns and the settlement retry columns, so an old volume must be upgraded
 before the new images start. If a migration was applied by hand earlier, add its row to `__EFMigrationsHistory` first.
-The message-broker candidate's User Management and Battle (built from source) also need the nullable `OutboxMessages.TraceParent`
-column (`AddOutboxTraceParent`), so a volume created before it must run the same `upgrade.sql`. The published images ignore the column.
+User Management and Battle 4.0.0 also need the nullable `OutboxMessages.TraceParent` column (`AddOutboxTraceParent`), so a volume
+created before it must run the same `upgrade.sql`.
 
 Map and Monster Raid seed through Gateway using Python 3. From each standalone
 repository, run `scripts/seed.sh` after configuring real fixtures in your
@@ -1847,16 +1731,14 @@ seeding. Mutations carry command keys and are not automatically retried.
 
 ### API collections
 
-Import the eight collections in `postman/` and select
-`postman/tamagotchi-go.postman_environment.json`. The environment defines one
-base URL per service, and all of them now point at the Gateway
-(`http://localhost:3000/<prefix>`). The Gateway and the services must be running
-first. Registry's admin-only requests need a caller whose token carries the
-`admin` role; otherwise they are refused. Map requests prepare locations for two
-supplied real accounts. Raid requests require a supplied real Guild, leader,
-active occurrence and eligible primary creature; they do not create those
-external prerequisites.
-Run the other service collections in order when a request depends on a previous
+Import the collections in `postman/` and select
+`postman/tamagotchi-go.postman_environment.json`. Every base URL points at the
+Gateway (`http://localhost:3000/<prefix>`), so the collections hold only the
+operations the Gateway exposes; service-only operations run through the Broker.
+Registry's admin requests need a token with the `admin` role. Map requests
+prepare locations for two supplied real accounts. Raid requests need a real
+Guild, leader, active occurrence and eligible primary creature; they do not
+create those. Run each collection in order when a request depends on an earlier
 response. See [Postman instructions](postman/README.md).
 
 ## GitHub workflow
@@ -1880,68 +1762,56 @@ service can be read on its own.
 
 ### Runtime logging
 
-Map/Raid log each domain request once with method, path, status, duration and
-correlation ID. Routine SQL/framework messages and successful probes are quiet
-at the default level. Configure MAP_LOG_LEVEL and MONSTER_RAID_LOG_LEVEL using
-.NET levels such as Debug, Information, Warning or Error. GATEWAY_LOG_LEVEL uses
-debug, info, warn or error. Restart the affected service after changing its level.
+Every service writes one JSON object per line to stdout and to
+`<LOG_DIR>/<service>/<instance>/<day>.log`, bounded in size and kept for seven
+days. Lines carry `time`, `level`, `service`, `instance_id`, `message` and, for
+request work, `correlation_id`. Authorization values, tokens, secrets, assertions
+and message contents are never logged. Each service mounts only its own log
+volume writable; the Broker mounts all of them read-only for the system log
+export.
 
-Gateway logs HTTP requests and Guild negotiation; direct WebSocket activity
-belongs to Guild. Its owner should log socket open/close, rejected upgrades,
-message outcomes and errors, without tickets or message contents. Never log
-Authorization, service secrets, assertions or query strings containing credentials.
+The Gateway accepts or creates `X-Correlation-Id` (UUIDv7) and returns it. The
+Broker carries it in the signed request context to every service and nested
+call, and producers copy it into their events. The export filter
+`GET /v1/logs/download?correlation_id=<id>` therefore returns one request's lines
+from every service it reached, in order: Gateway, Broker, the destination, its
+nested calls and events, and the reply.
 
-Map/Raid's supplied database pools are capped at 10 connections each, independently
-of their 64-task admission limits. Account for every service pool when sizing the
-shared PostgreSQL connection budget. Pool waits inherit request cancellation.
+Set each service's level with its `*_LOG_LEVEL` in `.env` and restart the
+service. Map and Raid database pools are capped at 10 connections each,
+independently of their 64-task limits; size the shared PostgreSQL connection
+budget for every service pool.
 
 ## Replicated deployment
 
-The target topology runs two instances of every domain service, one Gateway and
-one Discovery, with one database/broker/provisioning service. Each service's
-replicas share only its own database and signing/cursor configuration. Domain
-REST ports are internal; use Gateway. Diagnostic probes may be published on
-private ephemeral loopback ports during acceptance.
+Compose runs one replica of each service except Guild, which runs two. Scale a
+domain service from `deploy/` with
+`docker compose up -d --no-deps --scale <service>=<n> <service>`. Replicas
+register with Discovery, and the Broker spreads calls and deliveries across them
+by reported load. Replicas of a service share only its database and its signing
+and cursor configuration. Domain ports are internal; use the Gateway.
 
-User Management, Battle, Map and Monster Raid explicitly use
-`GATEWAY_TIMEOUT_MS=2500`, with an 8.75-second breaker window, inside their
-three-second local work budget. Their published 3.0.0 images already support
-this setting. Other services retain their own settings; do not infer a uniform
-timeout from the copied kit defaults.
-
-Guild uses one `guild` Compose service with two replicas, all registering as
-`guild` for balanced REST. `guild-socket` is a separate Nginx WebSocket load
-balancer on port 3004. Gateway still returns the configured public socket URL and never owns sockets.
-All Guild replicas redeem shared PostgreSQL tickets. The RabbitMQ chat relay
-fans committed messages to each instance's local sockets. Failed handshakes can
-try another available instance; an established socket cannot migrate. Clients
-negotiate fresh tickets on reconnect and merge paginated history by message ID.
-
-Nginx resolves the `guild` Docker DNS name to the current replica addresses and
-refreshes them without an ingress restart. Scale REST and new socket connections
-together from `deploy/`:
+All Guild replicas register as `guild` and redeem shared PostgreSQL tickets.
+`guild-socket` is an Nginx WebSocket balancer on port 3004; the Gateway returns
+the configured public socket URL (`WS_GUILD_PUBLIC_URL`) and never holds sockets.
+Each replica relays committed chat messages to its own sockets through its
+Broker relay subscription. A failed handshake can try another replica; an
+established socket cannot move. Nginx follows the `guild` DNS name, so scaling
+needs no ingress restart:
 
 ```sh
 docker compose up -d --no-deps --scale guild=3 guild
 docker compose up -d --no-deps --scale guild=2 guild
 ```
 
-Allow DNS and Discovery/cache convergence. Scale-down closes sockets on a removed
-replica; clients obtain fresh tickets, reconnect and recover from history. When
-upgrading an older deployment, stop and remove only its obsolete `guild-rest`
-container after the new `guild` replicas are healthy. Preserve all volumes.
+Scale-down closes the sockets of a removed replica; clients take fresh tickets,
+reconnect and merge paginated history by message ID. Messages missed during a
+relay gap come from history, so a client with an open socket also refreshes
+history periodically or on focus. Remote HTTPS clients need a TLS socket
+endpoint. Every logical domain service must register before every route works;
+readiness alone does not prove it.
 
-Relay queues are transient: messages missed during a broker gap are recovered
-from PostgreSQL history, not replayed by RabbitMQ. A client whose socket stays
-open must also refresh history periodically or on focus. The public socket URL
-must be reachable by the browser; remote HTTPS clients require a TLS endpoint.
-
-Map/Raid use the tested multi-platform 3.0.0 images; Gateway uses 3.0.1.
-Static fallback is disabled. All eight logical domain services must register
-before application routing is usable; readiness alone does not prove every route.
-Use `WS_GUILD_PUBLIC_URL` for the browser-reachable socket ingress address.
-
-### Reusing candidate identities
+### Reusing identities
 
 Identity preparation validates existing key/certificate pairs, workload names,
 certificate validity and the Broker signer/JWKS before generating missing files.

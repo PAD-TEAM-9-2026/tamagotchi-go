@@ -4,7 +4,7 @@ Every request and response shape used by the eight domain services and Gateway, 
 service that uses it, then alphabetically. Referenced from the contract section
 of the [README](../README.md).
 
-These are JSON shapes sent over HTTP and RabbitMQ, not database tables. A shape
+These are JSON shapes sent over HTTP and carried in Broker messages, not database tables. A shape
 in the first section is one that appears in more than one service's API, so both
 sides agree on the JSON. Each service still stores its own data in its own
 database.

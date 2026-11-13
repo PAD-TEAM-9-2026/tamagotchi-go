@@ -1,11 +1,8 @@
 # Monitoring
 
-Prometheus discovers service replicas and the message broker, and Grafana shows
-five provisioned dashboards. Use the optional `compose.monitoring.yaml` overlay
-with the reviewed candidate base. A target is accepted only when its actual
-candidate exports metrics; missing targets are not healthy replicas. Optional
-Jaeger tracing is documented in [Tracing](#tracing) and wired separately in the
-broker candidate base.
+Prometheus discovers every service's replicas and the message broker, and Grafana
+shows five provisioned dashboards. Add them with the `compose.monitoring.yaml`
+overlay; tracing is the separate `compose.tracing.yaml` overlay, see [Tracing](#tracing).
 
 | Path | Content |
 | --- | --- |
@@ -17,16 +14,14 @@ broker candidate base.
 ## Compose
 
 ```sh
-docker compose --env-file /path/to/private/candidate.env \
-  -f compose.yaml -f compose.broker.yaml -f compose.monitoring.yaml config --quiet
-docker compose --env-file /path/to/private/candidate.env \
-  -f compose.yaml -f compose.broker.yaml -f compose.monitoring.yaml up -d prometheus grafana
+docker compose -f compose.yaml -f compose.monitoring.yaml config --quiet
+docker compose -f compose.yaml -f compose.monitoring.yaml up -d prometheus grafana
 ```
 
 Set `GRAFANA_ADMIN_PASSWORD` in the private environment. Grafana binds to loopback
-port3030 by default (`GRAFANA_PORT` overrides it); Prometheus publishes no host
+port 3030 by default (`GRAFANA_PORT` overrides it); Prometheus publishes no host
 port. Their named volumes preserve dashboards/state and seven days of bounded
-metrics. This overlay does not switch domain transports or publish images.
+metrics.
 
 ## Adding a service
 
@@ -71,19 +66,13 @@ Jaeger by trace ID.
 | `jaeger/config.yaml` | OTLP receivers on 4317 (gRPC) and 4318 (HTTP), memory storage capped at 50,000 traces, and a processor that deletes query strings, URL paths, SQL text, headers and gRPC metadata from spans |
 | `grafana/provisioning/datasources/jaeger.yml` | The `Jaeger` datasource at `http://jaeger:16686`, not editable |
 
-```yaml
-  jaeger:
-    image: jaegertracing/jaeger:2.23.0
-    command: ["--config", "/etc/jaeger/config.yaml"]
-    volumes:
-      - ./jaeger/config.yaml:/etc/jaeger/config.yaml:ro
-    ports:
-      - "127.0.0.1:16686:16686"
-    mem_limit: 768m
+`compose.tracing.yaml` adds Jaeger and sets the OTLP variables on every service:
+
+```sh
+docker compose -f compose.yaml -f compose.tracing.yaml up -d
 ```
 
-The UI is on `127.0.0.1:16686` only; OTLP is reachable only on the Compose network. The message-broker
-candidate (`compose.broker.yaml`) already contains this service. Each traced service gets:
+The UI is on `127.0.0.1:16686` only; OTLP is reachable only on the Compose network. Each traced service gets:
 
 ```yaml
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
@@ -96,6 +85,5 @@ candidate (`compose.broker.yaml`) already contains this service. Each traced ser
 service itself. Probes, metrics endpoints and calls to Service Discovery are not traced, and spans never
 hold tokens, headers, bodies, query strings, SQL text or user IDs.
 
-The optional [structured log volume overlay](log-volumes.md) gives applications
-service-owned log storage and Broker read-only access for system log export.
-It is separate from metrics scraping and requires the Broker candidate base.
+[Structured log volumes](log-volumes.md) give each service its own log storage and the
+Broker read-only access for the system log export.

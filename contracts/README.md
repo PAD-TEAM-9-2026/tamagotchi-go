@@ -1,9 +1,8 @@
-# Broker transport proposal
+# Broker transport
 
-**Status: proposed, not an approved or implemented replacement for current
-transport.** Existing deployment/contracts remain authoritative until affected
-owners approve the migration. The broker source is maintained separately in
-`sergedbs/message-broker`.
+**Status: implemented.** The Message Broker (`sergedbs/message-broker`) carries
+every service call and event of the 4.0 release, and the catalogue below is what
+it routes by.
 
 The initial schema is [broker.proto](proto/tamagotchi/messaging/v1/broker.proto),
 package `tamagotchi.messaging.v1`. Service-specific internal operation messages
@@ -23,7 +22,13 @@ method/path/query/headers/body; no absolute URL, arbitrary target or secret-bear
 header may enter generic durable storage. Internal service calls use concrete
 Protobuf messages carried by Any, with operation and type-URL allowlists. Opaque
 bytes are not permission to tunnel internal REST/JSON. Unknown operations/types
-fail closed. Broker adapters reuse application handlers, not loopback HTTP.
+fail closed. Broker adapters reuse application handlers in process. A service whose
+framework cannot dispatch a request in process may hand a public envelope to a
+private loopback listener: the same app on a second server bound to 127.0.0.1 on
+an ephemeral port, never its public port. The adapter keeps four rules: one task
+slot per logical call; the principal only from the verified context, passed in
+process; the effective deadline bounds the handler, cancellation aborts it and a
+timeout answers DEADLINE_EXCEEDED; status mapping per [Error handling](#error-handling).
 
 `message_id`, event/delivery IDs and correlation IDs are canonical UUIDv7.
 `destination` is a canonical logical service name. Retries preserve message and
@@ -58,11 +63,9 @@ than counting an invented handler attempt. Lease fencing is internal broker
 state; a response with an expired lease cannot complete a replacement claim.
 Transport loss before acknowledgement may redeliver an already committed effect.
 
-Subscriptions persist when every replica disconnects. Discovery registration is
-proposed to add an internal gRPC port/endpoint and topic/subscription metadata,
-validated against a reviewed allowed-subscriptions manifest. Exact registration
-fields, manifest and domain operation definitions require owner review. This PR
-does not modify current registration requests or existing endpoint tables.
+Subscriptions persist when every replica disconnects. Services register their
+internal gRPC endpoint and their subscriptions with Discovery, and the Broker
+accepts only subscriptions the catalogue allows.
 
 ## Identity and bootstrap
 
