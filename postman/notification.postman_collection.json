@@ -1,13 +1,13 @@
 {
   "info": {
     "name": "Notification",
-    "description": "A scenario of the Notification service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry and registers and logs in three fresh users. A notification is only ever created by consuming an event, and the contract exposes no route to inject one, so the Events folder makes real ones: friend requests sent through User Management are published as user.friend_request_created.v1, and the scenario waits for each to arrive.\n\nNeeds the shared stack with the broker, with User Management publishing and Notification consuming. Probes go straight to the service, because the Gateway routes only /v1/ paths.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
+    "description": "A scenario of the Notification service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry and registers and logs in three fresh users. A notification is only ever created by consuming an event, and the contract exposes no route to inject one, so the Events folder makes real ones: friend requests sent through User Management are published as user.friend_request_created.v1, and the scenario waits for each to arrive.\n\nNeeds the shared stack with the broker, with User Management publishing and Notification consuming. Probes read the service's instances from Discovery, because service ports are not published.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "notification_direct_url",
-      "value": "http://localhost:3008"
+      "value": "http://127.0.0.1:3009/v1/services/notification"
     },
     {
       "key": "package_id",
@@ -231,8 +231,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 up', () => pm.response.to.have.status(200));",
-                  "pm.test('reports UP', () => pm.expect(pm.response.json()).to.eql({ status: 'UP' }));"
+                  "pm.test('200 with registered instances', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('notification'); pm.expect(body.instances).to.be.an('array').that.is.not.empty; });"
                 ]
               }
             }
@@ -241,12 +240,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{notification_direct_url}}/health",
+              "raw": "{{notification_direct_url}}/instances",
               "host": [
                 "{{notification_direct_url}}"
               ],
               "path": [
-                "health"
+                "instances"
               ]
             }
           }
@@ -259,8 +258,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 ready', () => pm.response.to.have.status(200));",
-                  "pm.test('reports READY', () => pm.expect(pm.response.json()).to.eql({ status: 'READY' }));"
+                  "pm.test('200 with a healthy routable instance', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('notification'); pm.expect(body.instances.some((instance) => instance.health === 'healthy')).to.eql(true); });"
                 ]
               }
             }
@@ -269,12 +267,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{notification_direct_url}}/ready",
+              "raw": "{{notification_direct_url}}/instances?routable=true",
               "host": [
                 "{{notification_direct_url}}"
               ],
               "path": [
-                "ready"
+                "instances"
+              ],
+              "query": [
+                {
+                  "key": "routable",
+                  "value": "true"
+                }
               ]
             }
           }

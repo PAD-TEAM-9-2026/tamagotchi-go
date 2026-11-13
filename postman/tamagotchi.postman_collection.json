@@ -1,20 +1,16 @@
 {
   "info": {
     "name": "Tamagotchi",
-    "description": "A scenario of the Tamagotchi service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry, registers and logs in two fresh users, and fetches a Battle service token. Each registration publishes user.package_joined.v1, and Tamagotchi mints the package starter from it, so the creatures are polled for rather than minted: no service is allowed tamagotchi:mint.\n\nNeeds the shared stack with the broker, a seeded Registry, tamagotchi_fixture_package_id identifying the configured Dragon Tamers fixture (FEED adds 20 hunger and 5 XP), Tamagotchi with USER_MANAGEMENT_URL and PACKAGE_REGISTRY_URL set, and battle_service_secret set as a current value to BATTLE_SERVICE_CLIENT_SECRET from deploy/.env. Never save that value in the collection. Care expectations follow the seeded Dragon Tamers rules: feed adds 20 hunger, capped at 100, and 5 xp.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
+    "description": "A scenario of the Tamagotchi service through the Gateway, with real User Management accounts and tokens. Run the whole collection in order with the Collection Runner: every request feeds the next.\n\nSetup finds the active package in Registry and registers and logs in two fresh users. Each registration publishes user.package_joined.v1, and Tamagotchi mints the package starter from it, so the creatures are polled for rather than minted: no service is allowed tamagotchi:mint.\n\nNeeds the shared stack with the broker, a seeded Registry and tamagotchi_fixture_package_id identifying the configured Dragon Tamers fixture (FEED adds 20 hunger and 5 XP). XP awards, engagements and holder grants are service-only operations called through the broker, so they are not here. The holder and collection requests that expect the rival to co-hold the owner's creature need a grant that only a finished battle makes; with fresh users they fail. Care expectations follow the seeded Dragon Tamers rules: feed adds 20 hunger, capped at 100, and 5 xp.\n\nUUID v7 is generated in the collection pre-request script because Postman's {{$guid}} is v4 and the contract rejects it.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "tamagotchi_direct_url",
-      "value": "http://localhost:3002"
+      "value": "http://127.0.0.1:3009/v1/services/tamagotchi"
     },
     {
       "key": "package_id",
-      "value": ""
-    },
-    {
-      "key": "service_credential",
       "value": ""
     },
     {
@@ -42,23 +38,7 @@
       "value": ""
     },
     {
-      "key": "battle_id",
-      "value": ""
-    },
-    {
-      "key": "engagement_id",
-      "value": ""
-    },
-    {
       "key": "idempotency_key",
-      "value": ""
-    },
-    {
-      "key": "replay_key",
-      "value": ""
-    },
-    {
-      "key": "replay_source_id",
       "value": ""
     },
     {
@@ -75,10 +55,6 @@
     },
     {
       "key": "second_uuid",
-      "value": ""
-    },
-    {
-      "key": "battle_service_secret",
       "value": ""
     },
     {
@@ -141,14 +117,9 @@
           "  'Register the rival',",
           "  'Log in the rival',",
           "];",
-          "const NEEDS_SECRET = ['Fetch a Battle service token', 'No service may be issued tamagotchi:mint'];",
           "",
-          "if (NEEDS_SECRET.includes(pm.info.requestName) && !pm.variables.get('battle_service_secret')) {",
-          "  throw new Error('Set battle_service_secret to BATTLE_SERVICE_CLIENT_SECRET from deploy/.env as a current value.');",
-          "}",
-          "",
-          "if (!OPEN.includes(pm.info.requestName) && !NEEDS_SECRET.includes(pm.info.requestName) && !pm.collectionVariables.get('service_credential')) {",
-          "  throw new Error('Run the Setup folder first: it creates the users and fetches the service token.');",
+          "if (!OPEN.includes(pm.info.requestName) && !pm.collectionVariables.get('winner_credential')) {",
+          "  throw new Error('Run the Setup folder first: it registers and logs in the users.');",
           "}"
         ]
       }
@@ -166,13 +137,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 UP', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().status).to.eql('UP');",
-                  "});",
-                  "pm.test('correlation id is echoed back', () => {",
-                  "  pm.expect(pm.response.headers.get('X-Correlation-Id')).to.be.a('string');",
-                  "});"
+                  "pm.test('200 with registered instances', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('tamagotchi'); pm.expect(body.instances).to.be.an('array').that.is.not.empty; });"
                 ]
               }
             }
@@ -181,12 +146,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{tamagotchi_direct_url}}/health",
+              "raw": "{{tamagotchi_direct_url}}/instances",
               "host": [
                 "{{tamagotchi_direct_url}}"
               ],
               "path": [
-                "health"
+                "instances"
               ]
             }
           }
@@ -199,10 +164,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 READY', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().status).to.eql('READY');",
-                  "});"
+                  "pm.test('200 with a healthy routable instance', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('tamagotchi'); pm.expect(body.instances.some((instance) => instance.health === 'healthy')).to.eql(true); });"
                 ]
               }
             }
@@ -211,12 +173,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{tamagotchi_direct_url}}/ready",
+              "raw": "{{tamagotchi_direct_url}}/instances?routable=true",
               "host": [
                 "{{tamagotchi_direct_url}}"
               ],
               "path": [
-                "ready"
+                "instances"
+              ],
+              "query": [
+                {
+                  "key": "routable",
+                  "value": "true"
+                }
               ]
             }
           }
@@ -521,96 +489,6 @@
                 "v1",
                 "users",
                 "login"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Fetch a Battle service token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 with a bearer token for Tamagotchi', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().token_type).to.eql('Bearer');",
-                  "  pm.expect(pm.response.json().expires_in).to.eql(300);",
-                  "});",
-                  "pm.collectionVariables.set('service_credential', pm.response.json().access_token);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Service-Secret",
-                "value": "{{battle_service_secret}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"service_name\": \"battle\",\n  \"audience\": \"tamagotchi\",\n  \"scopes\": [\n    \"tamagotchi:award-xp\",\n    \"tamagotchi:grant-access\",\n    \"tamagotchi:reserve-engagement\",\n    \"tamagotchi:read-engagement\",\n    \"tamagotchi:release-engagement\"\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/service-tokens",
-              "host": [
-                "{{user_management_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "service-tokens"
-              ]
-            }
-          }
-        },
-        {
-          "name": "No service may be issued tamagotchi:mint",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('403 scope_not_allowed, starters come only from user.package_joined.v1', () => {",
-                  "  pm.response.to.have.status(403);",
-                  "  pm.expect(pm.response.json().code).to.eql('scope_not_allowed');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Service-Secret",
-                "value": "{{battle_service_secret}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"service_name\": \"battle\",\n  \"audience\": \"tamagotchi\",\n  \"scopes\": [\n    \"tamagotchi:mint\"\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/service-tokens",
-              "host": [
-                "{{user_management_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "service-tokens"
               ]
             }
           }
@@ -1045,392 +923,12 @@
               ]
             }
           }
-        },
-        {
-          "name": "Write XP, crossing several levels",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.set('replay_key', pm.collectionVariables.get('idempotency_key'));",
-                  "pm.collectionVariables.set('replay_source_id', pm.collectionVariables.get('fresh_uuid'));"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 with an xp receipt', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.collectionVariables.set('pet_version', body.version);",
-                  "pm.test('6600 xp on top of 5 reaches level 12', () => {",
-                  "  pm.expect(body.xp).to.eql(6605);",
-                  "  pm.expect(body.level).to.eql(12);",
-                  "});",
-                  "pm.test('reports every level crossed at once', () => {",
-                  "  pm.expect(body.levels_gained).to.eql(11);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{replay_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 6600,\n  \"source\": \"BATTLE\",\n  \"source_id\": \"{{replay_source_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis",
-                "{{pet_id}}",
-                "xp"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Replaying the same key does not award twice",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 replaying the first receipt', () => pm.response.to.have.status(200));",
-                  "pm.test('xp is unchanged', () => {",
-                  "  pm.expect(pm.response.json().xp).to.eql(6605);",
-                  "  pm.expect(pm.response.json().levels_gained).to.eql(11);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{replay_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 6600,\n  \"source\": \"BATTLE\",\n  \"source_id\": \"{{replay_source_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis",
-                "{{pet_id}}",
-                "xp"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Engagements",
-      "item": [
-        {
-          "name": "Reserve both primaries",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.set('battle_id', pm.collectionVariables.get('fresh_uuid'));"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('201 engaged', () => pm.response.to.have.status(201));",
-                  "const body = pm.response.json();",
-                  "pm.collectionVariables.set('engagement_id', body.engagement_id);",
-                  "pm.test('locks both pets', () => {",
-                  "  pm.expect(body.status).to.eql('ACTIVE');",
-                  "  pm.expect(body.pets).to.have.lengthOf(2);",
-                  "});",
-                  "pm.test('roles follow the lineup slots', () => {",
-                  "  pm.expect(body.pets.map((p) => p.role)).to.eql(['PRIMARY','PRIMARY']);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"source\": \"BATTLE\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"ttl_seconds\": 300,\n  \"lineups\": [\n    {\n      \"user_id\": \"{{owner_id}}\",\n      \"primary_id\": \"{{pet_id}}\"\n    },\n    {\n      \"user_id\": \"{{winner_id}}\",\n      \"primary_id\": \"{{winner_pet_id}}\"\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "internal",
-                "engagements"
-              ]
-            }
-          }
-        },
-        {
-          "name": "A second reservation is refused",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('409 creature_engaged', () => {",
-                  "  pm.response.to.have.status(409);",
-                  "  pm.expect(pm.response.json().code).to.eql('creature_engaged');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"source\": \"RAID\",\n  \"reference_id\": \"{{fresh_uuid}}\",\n  \"ttl_seconds\": 300,\n  \"lineups\": [\n    {\n      \"user_id\": \"{{owner_id}}\",\n      \"primary_id\": \"{{pet_id}}\"\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "internal",
-                "engagements"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Read the engagement by battle id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 and still active', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              }
-            ],
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements/{{battle_id}}",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "internal",
-                "engagements",
-                "{{battle_id}}"
-              ]
-            }
-          }
         }
       ]
     },
     {
       "name": "Holders",
       "item": [
-        {
-          "name": "Grant access to the winner",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 granted', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.collectionVariables.set('pet_version', body.version);",
-                  "pm.test('the winner joins the holder set', () => {",
-                  "  pm.expect(body.outcome).to.eql('GRANTED');",
-                  "  pm.expect(body.holder_user_ids).to.have.lengthOf(2);",
-                  "});",
-                  "pm.test('the cap is five', () => pm.expect(body.holder_cap).to.eql(5));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"to_user_id\": \"{{winner_id}}\",\n  \"reason\": \"BATTLE_LOSS\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"engagement_id\": \"{{engagement_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis",
-                "{{pet_id}}",
-                "holders"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Granting twice changes nothing",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 ALREADY_HOLDER', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().outcome).to.eql('ALREADY_HOLDER');",
-                  "});",
-                  "pm.test('the holder set is unchanged', () => {",
-                  "  pm.expect(pm.response.json().holder_user_ids).to.have.lengthOf(2);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"to_user_id\": \"{{winner_id}}\",\n  \"reason\": \"BATTLE_LOSS\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"engagement_id\": \"{{engagement_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis",
-                "{{pet_id}}",
-                "holders"
-              ]
-            }
-          }
-        },
         {
           "name": "Read the holder set",
           "event": [
@@ -1727,58 +1225,6 @@
                 "{{pet_id}}",
                 "holders",
                 "{{winner_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Grant it to the rival again",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 granted', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.collectionVariables.set('pet_version', body.version);",
-                  "pm.test('a holder who dropped the creature can be granted it again', () => {",
-                  "  pm.expect(body.outcome).to.eql('GRANTED');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"to_user_id\": \"{{winner_id}}\",\n  \"reason\": \"BATTLE_LOSS\",\n  \"reference_id\": \"{{battle_id}}\",\n  \"engagement_id\": \"{{engagement_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/holders",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis",
-                "{{pet_id}}",
-                "holders"
               ]
             }
           }
@@ -2187,103 +1633,6 @@
       ]
     },
     {
-      "name": "Release",
-      "item": [
-        {
-          "name": "Release the engagement",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 RELEASED', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().status).to.eql('RELEASED');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements/{{battle_id}}/release",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "internal",
-                "engagements",
-                "{{battle_id}}",
-                "release"
-              ]
-            }
-          }
-        },
-        {
-          "name": "The creature can be fielded again",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('201, the lock is gone', () => {",
-                  "  pm.response.to.have.status(201);",
-                  "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"source\": \"RAID\",\n  \"reference_id\": \"{{fresh_uuid}}\",\n  \"ttl_seconds\": 300,\n  \"lineups\": [\n    {\n      \"user_id\": \"{{owner_id}}\",\n      \"primary_id\": \"{{pet_id}}\"\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/internal/engagements",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "internal",
-                "engagements"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
       "name": "Refusals",
       "item": [
         {
@@ -2315,102 +1664,6 @@
                 "users",
                 "{{owner_id}}",
                 "collection"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Minting needs tamagotchi:mint, which no service holds",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('403 insufficient_scope', () => {",
-                  "  pm.response.to.have.status(403);",
-                  "  pm.expect(pm.response.json().code).to.eql('insufficient_scope');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis"
-              ]
-            }
-          }
-        },
-        {
-          "name": "A user token where a service token is required",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('403 insufficient_scope, the wrong kind of caller', () => {",
-                  "  pm.response.to.have.status(403);",
-                  "  pm.expect(pm.response.json().code).to.eql('insufficient_scope');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{owner_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"origin_owner_id\": \"{{owner_id}}\",\n  \"package_id\": \"{{package_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis"
               ]
             }
           }
@@ -2448,151 +1701,6 @@
                 "v1",
                 "tamagotchis",
                 "{{fresh_uuid}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "A missing Idempotency-Key",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('400 idempotency_key_required', () => {",
-                  "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().code).to.eql('idempotency_key_required');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 10,\n  \"source\": \"BATTLE\",\n  \"source_id\": \"{{fresh_uuid}}\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis",
-                "{{pet_id}}",
-                "xp"
-              ]
-            }
-          }
-        },
-        {
-          "name": "A body that is not JSON",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('415 unsupported_media_type', () => {",
-                  "  pm.response.to.have.status(415);",
-                  "  pm.expect(pm.response.json().code).to.eql('unsupported_media_type');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "text/plain"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "not json"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis",
-                "{{pet_id}}",
-                "xp"
-              ]
-            }
-          }
-        },
-        {
-          "name": "A v4 uuid where the contract requires v7",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('400, the contract requires uuid v7', () => {",
-                  "  pm.response.to.have.status(400);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{service_credential}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{idempotency_key}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 10,\n  \"source\": \"BATTLE\",\n  \"source_id\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\"\n}"
-            },
-            "url": {
-              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{pet_id}}/xp",
-              "host": [
-                "{{tamagotchi_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "tamagotchis",
-                "{{pet_id}}",
-                "xp"
               ]
             }
           }

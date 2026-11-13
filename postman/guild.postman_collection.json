@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Guild",
-    "description": "Every endpoint of the Guild service, in an order that runs start to finish against an empty or populated database. Requests capture ids into collection variables, so a full run needs no manual input beyond the Tamagotchi Go Local environment.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.\n\nThe guild chat endpoint is a WebSocket and is not exercised here; see the service README.",
+    "description": "Every public endpoint of the Guild service, in an order that runs start to finish against an empty or populated database. Requests capture ids into collection variables, so a full run needs no manual input beyond the Tamagotchi Go Local environment.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.\n\nThe guild chat endpoint is a WebSocket and is not exercised here; its ticket comes from the Gateway's POST /gateway/v1/ws-negotiate (demo collection).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -122,12 +122,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{guild_probe_url}}/health",
+              "raw": "{{guild_probe_url}}/instances",
               "host": [
                 "{{guild_probe_url}}"
               ],
               "path": [
-                "health"
+                "instances"
               ]
             }
           },
@@ -137,7 +137,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                  "pm.test('200 with registered instances', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('guild'); pm.expect(body.instances).to.be.an('array').that.is.not.empty; });"
                 ]
               }
             }
@@ -149,12 +149,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{guild_probe_url}}/ready",
+              "raw": "{{guild_probe_url}}/instances?routable=true",
               "host": [
                 "{{guild_probe_url}}"
               ],
               "path": [
-                "ready"
+                "instances"
+              ],
+              "query": [
+                {
+                  "key": "routable",
+                  "value": "true"
+                }
               ]
             }
           },
@@ -164,7 +170,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 READY', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('READY'); });"
+                  "pm.test('200 with a healthy routable instance', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('guild'); pm.expect(body.instances.some((instance) => instance.health === 'healthy')).to.eql(true); });"
                 ]
               }
             }
@@ -993,49 +999,6 @@
     {
       "name": "Chat history",
       "item": [
-        {
-          "name": "Issue a chat ticket",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{leader_credential}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{guild_base_url}}/v1/guilds/{{guild_id}}/chat-tickets",
-              "host": [
-                "{{guild_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "guilds",
-                "{{guild_id}}",
-                "chat-tickets"
-              ]
-            },
-            "description": "Single-use, short-lived ticket to open the chat WebSocket with: connect to GET /v1/guilds/{guildId}/chat (upgraded), then send {\"type\": \"auth\", \"ticket\": \"<ticket>\"} as the first frame within the auth timeout. The socket itself cannot be exercised by a plain HTTP collection; see the service README for a wscat example."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('201, a single-use ticket', () => {",
-                  "  pm.response.to.have.status(201);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body).to.have.property('ticket');",
-                  "  pm.expect(body.guild_id).to.eql(pm.collectionVariables.get('guild_id'));",
-                  "  pm.expect(body).to.have.property('expires_at');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
         {
           "name": "Read the chat history",
           "request": {
