@@ -1,4 +1,5 @@
 import subprocess
+import json
 import sys
 import tempfile
 import unittest
@@ -122,6 +123,17 @@ class MonsterRaidContractTests(unittest.TestCase):
             descriptor = self.pool.FindMessageTypeByName(message).fields_by_name[field]
             self.assertEqual('google.protobuf.Timestamp', descriptor.message_type.full_name, f'{message}.{field}')
 
+
+
+class ConditionalRegistryWriteTests(unittest.TestCase):
+    def test_conditional_updates_keep_required_keys_without_enabling_failover(self):
+        catalogue = json.loads((ROOT / "contracts/operations.v1.json").read_text())
+        operations = {item["name"]: item for item in catalogue["operations"]}
+        for name in ("registry.update_package", "registry.update_boss"):
+            with self.subTest(operation=name):
+                self.assertEqual("COMMAND_KEY", operations[name]["idempotency"])
+                self.assertEqual("UNSAFE", operations[name]["failover"])
+                self.assertIn("if-match", operations[name]["public"]["request_headers"])
 
 if __name__ == '__main__':
     unittest.main()
