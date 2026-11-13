@@ -103,10 +103,12 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
-Every client request goes Client → Gateway → Message Broker → service, and
+![Architecture: clients reach the Gateway over REST, and the Gateway sends every public operation to the custom Message Broker over mTLS gRPC; the broker queues, balances and delivers calls to the two replicas of each service, carries typed service-to-service calls and outbox events through topics and subscriber queues, and keeps its work in its own PostgreSQL database; Service Discovery gives the broker instances, load and subscriptions and sends alerts to Discord; Prometheus, Grafana and Jaeger collect metrics and traces; Guild chat sockets and the JWKS bootstrap stay direct](docs/img/architecture_diagram.png)
+
+Every public API request goes Client → Gateway → Message Broker → service, and
 services call each other and publish events only through the Broker. There is no
-RabbitMQ and no service-to-service HTTP. `deploy/compose.yaml` runs this stack on
-published images; see [Deployment](#deployment).
+RabbitMQ and no service-to-service HTTP. `deploy/compose.yaml` defines this stack with numeric image pins; see
+[Deployment](#deployment) for publication and startup requirements.
 
 ```mermaid
 flowchart LR

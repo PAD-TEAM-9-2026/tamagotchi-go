@@ -466,8 +466,7 @@ enumerations stay strings like the file's other messages; an absent
 `config_version`. Business refusals are call failures with the public API's
 status and code. Guild and Package Registry serve these four operations through typed Broker
 adapters. Raid uses them by default; its deprecated explicit legacy-read setting
-is empty in the tested stack. The snapshot remains proposed until independent
-contract review and merge.
+is empty in the tested stack. The contract is approved in Shared; consumers pin an immutable merged revision.
 
 Raid's other dependencies are already listed: Tamagotchi's collection, engagement
 and XP operations, `users.credit_global`, `users.issue_service_token` and, with
