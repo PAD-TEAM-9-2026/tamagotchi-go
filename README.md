@@ -103,6 +103,8 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
+![Architecture: clients reach the Gateway over REST, and the Gateway sends every public operation to the custom Message Broker over mTLS gRPC; the broker queues, balances and delivers calls to the two replicas of each service, carries typed service-to-service calls and outbox events through topics and subscriber queues, and keeps its work in its own PostgreSQL database; Service Discovery gives the broker instances, load and subscriptions and sends alerts to Discord; Prometheus, Grafana and Jaeger collect metrics and traces; Guild chat sockets and the JWKS bootstrap stay direct](docs/img/architecture_diagram.png)
+
 The custom-broker candidate is an incremental migration. The runtime, contracts
 and several service adapters are implemented on development branches; complete-stack
 acceptance and published replacement images are tracked separately. Base
