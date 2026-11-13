@@ -8,6 +8,8 @@
 # Optional overlays: compose.monitoring.yaml (Prometheus, Grafana), compose.tracing.yaml (Jaeger),
 # compose.source.yaml (build every service from local checkouts instead of pulling its image).
 # Startup order: databases and log volumes, Discovery, User Management, broker, services, Gateway.
+# Long-running services restart unless stopped, so a replica that loses a first-start race (two
+# replicas migrating one fresh database) comes back on its own.
 
 name: tamagotchi-go
 
@@ -30,6 +32,7 @@ x-ready-dotnet-8080: &ready-dotnet-8080
 services:
   database:
     image: postgis/postgis:17-3.6-alpine
+    restart: unless-stopped
     platform: linux/amd64
     environment:
       POSTGRES_USER: postgres
@@ -74,6 +77,7 @@ services:
 
   broker-database:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${BROKER_DB_USER:-message_broker}
       POSTGRES_PASSWORD: ${BROKER_DB_PASSWORD:?set BROKER_DB_PASSWORD in .env}
@@ -127,6 +131,7 @@ services:
 
   service-discovery:
     image: patriciamoraru/service-discovery:4.0.0
+    restart: unless-stopped
     pull_policy: always
     <<: *logs
     depends_on:
@@ -156,6 +161,7 @@ services:
   # User Management starts before the broker, which reads its keys at startup (contracts/identity.md).
   user-management:
     image: patriciamoraru/user-management:4.0.0
+    restart: unless-stopped
     pull_policy: always
     deploy:
       replicas: 2
@@ -208,6 +214,7 @@ services:
 
   message-broker:
     image: sergedbs/message-broker:4.0.0
+    restart: unless-stopped
     pull_policy: always
     <<: *logs
     depends_on:
@@ -270,6 +277,7 @@ services:
 
   tamagotchi:
     image: victoriamutruc/tamagotchi:4.0.0
+    restart: unless-stopped
     pull_policy: always
     deploy:
       replicas: 2
@@ -309,6 +317,7 @@ services:
 
   notification:
     image: victoriamutruc/notification:4.0.0
+    restart: unless-stopped
     pull_policy: always
     deploy:
       replicas: 2
@@ -345,6 +354,7 @@ services:
 
   guild:
     image: mihaelacatan/guild-service:4.0.0
+    restart: unless-stopped
     pull_policy: always
     deploy:
       replicas: 2
@@ -386,6 +396,7 @@ services:
   # Browser sockets reach a Guild replica through this ingress; the ticket names the replica.
   guild-socket:
     image: nginx:1.28.0-alpine@sha256:30f1c0d78e0ad60901648be663a710bdadf19e4c10ac6782c235200619158284
+    restart: unless-stopped
     pull_policy: always
     depends_on:
       guild:
@@ -402,6 +413,7 @@ services:
 
   registry:
     image: mihaelacatan/package-registry-service:4.0.0
+    restart: unless-stopped
     pull_policy: always
     deploy:
       replicas: 2
@@ -441,6 +453,7 @@ services:
 
   battle:
     image: patriciamoraru/battle:4.0.0
+    restart: unless-stopped
     pull_policy: always
     deploy:
       replicas: 2
@@ -483,6 +496,7 @@ services:
 
   map:
     image: sergedbs/map:4.0.0
+    restart: unless-stopped
     pull_policy: always
     deploy:
       replicas: 2
@@ -520,6 +534,7 @@ services:
 
   monster-raid:
     image: sergedbs/monster-raid:4.0.0
+    restart: unless-stopped
     pull_policy: always
     deploy:
       replicas: 2
@@ -555,6 +570,7 @@ services:
 
   gateway:
     image: victoriamutruc/gateway:4.0.1
+    restart: unless-stopped
     pull_policy: always
     <<: *logs
     depends_on:
