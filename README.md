@@ -1625,8 +1625,8 @@ and role in one PostGIS-enabled PostgreSQL container.
 | Battle | `patriciamoraru/battle:4.0.0` | `sha256:ffbbd7e580a89c06b270025168e526e4402f3aee0915d8ff28e2d67b528efaea` | internal |
 | Guild | `mihaelacatan/guild-service:4.0.0` | `sha256:b5636ab96411277abac11e9515edb82534800e802f081e715244def01ba9d138` | internal; socket balancer 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:4.0.0` | `sha256:d9f9067481beeacaf2beeda512422018b3c91d9f4c8f490c2ba63ca7fc1c91cd` | internal |
-| Map | `sergedbs/map:4.0.0` | `sha256:7a059afb016884c3680c5efa0e5d62d871a4b040c871bf092b37903951201bef` | internal |
-| Monster Raid | `sergedbs/monster-raid:4.0.0` | `sha256:9adce1a500be1571279f26c4a718e32cb50d29f0177fdccfc221651c97014adc` | internal |
+| Map | `sergedbs/map:4.0.1` | `sha256:eeb02a6fad0bd761fed4c82032a18949a8c6399d6ffa8b7ba9b39d0757f3b8f5` | internal |
+| Monster Raid | `sergedbs/monster-raid:4.0.1` | `sha256:4ef141622e2eb82a5d335542d1592867a7113f3f42b4c6af9ee7f13b0bd13bb4` | internal |
 | Notification | `victoriamutruc/notification:4.0.0` | `sha256:c2e0a4fa603640d9d6fe8603388ff70949a92b96c84b7258071cc7177f9a2f27` | internal |
 
 These numeric images are published for AMD64 and ARM64 and pinned by digest.
@@ -1713,6 +1713,12 @@ needs the outbox, the idempotency receipts, the combat snapshot columns and the 
 before the new images start. If a migration was applied by hand earlier, add its row to `__EFMigrationsHistory` first.
 User Management and Battle 4.0.0 also need the nullable `OutboxMessages.TraceParent` column (`AddOutboxTraceParent`), so a volume
 created before it must run the same `upgrade.sql`.
+
+Map and Monster Raid 4.0.1 apply their own startup migrations, adding nullable
+`event_outbox.trace_parent` (Map 006, Raid 012) to preserve request-to-event traces.
+Existing rows remain valid. Their schema-version guard rejects older binaries
+after this upgrade, so rollback requires a schema-compatible build. Do not delete
+schema history or application data to downgrade.
 
 Map and Monster Raid seed through Gateway using Python 3. From each standalone
 repository, run `scripts/seed.sh` after configuring real fixtures in your

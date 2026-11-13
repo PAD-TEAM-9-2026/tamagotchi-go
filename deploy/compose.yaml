@@ -495,7 +495,7 @@ services:
       retries: 12
 
   map:
-    image: sergedbs/map:4.0.0@sha256:7a059afb016884c3680c5efa0e5d62d871a4b040c871bf092b37903951201bef
+    image: sergedbs/map:4.0.1@sha256:eeb02a6fad0bd761fed4c82032a18949a8c6399d6ffa8b7ba9b39d0757f3b8f5
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -533,7 +533,7 @@ services:
     healthcheck: *ready-dotnet-8080
 
   monster-raid:
-    image: sergedbs/monster-raid:4.0.0@sha256:9adce1a500be1571279f26c4a718e32cb50d29f0177fdccfc221651c97014adc
+    image: sergedbs/monster-raid:4.0.1@sha256:4ef141622e2eb82a5d335542d1592867a7113f3f42b4c6af9ee7f13b0bd13bb4
     restart: unless-stopped
     pull_policy: always
     deploy:

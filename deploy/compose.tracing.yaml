@@ -36,3 +36,7 @@ services:
     environment: *traced
   registry:
     environment: *traced
+  map:
+    environment: *traced
+  monster-raid:
+    environment: *traced
