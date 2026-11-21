@@ -1,4 +1,4 @@
--- Brings an existing user-management database up to the schema of user-management 2.0.1. Safe to run again: each migration is applied only
+-- Brings an existing user-management database up to the schema of user-management through its AddOutboxTraceParent migration. Safe to run again: each migration is applied only
 -- if its row is not in "__EFMigrationsHistory" yet, so it adds what is missing and touches nothing that is there.
 -- Generated with `dotnet ef migrations script --idempotent`. Run it as the service's database user, for example
 --   docker compose exec -T database psql -U ${USER_MANAGEMENT_DB_USER} -d ${USER_MANAGEMENT_DB_NAME} -v ON_ERROR_STOP=1 < deploy/db/user-management/upgrade.sql
@@ -380,6 +380,24 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261008193531_AddEffectLedgers') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
     VALUES ('20261008193531_AddEffectLedgers', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261112194331_AddOutboxTraceParent') THEN
+    ALTER TABLE "OutboxMessages" ADD "TraceParent" character varying(55);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261112194331_AddOutboxTraceParent') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261112194331_AddOutboxTraceParent', '10.0.12');
     END IF;
 END $EF$;
 COMMIT;

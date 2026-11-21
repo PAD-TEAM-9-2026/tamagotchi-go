@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package tamagotchi.user_management.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.user_management.v1";
+option csharp_namespace = "Tamagotchi.Contracts.UserManagement.V1";
+
+// Equivalent to BattleSettlementInput: three UUIDv7 ids, winner and loser differ.
+message SettleBattleRequest {
+  string battle_id = 1;
+  string winner_id = 2;
+  string loser_id = 3;
+}
+
+// Equivalent to BattleSettlement. winner_credit is always 50, loser_debit 0..20,
+// balances 0..2^53-1.
+message BattleSettlement {
+  string battle_id = 1;
+  string winner_id = 2;
+  string loser_id = 3;
+  uint32 winner_credit = 4;
+  uint32 loser_debit = 5;
+  uint64 winner_balance = 6;
+  uint64 loser_balance = 7;
+}

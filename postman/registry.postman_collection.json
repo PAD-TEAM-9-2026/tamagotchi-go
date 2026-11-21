@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Package Registry",
-    "description": "Every endpoint of the Package Registry service, in an order that runs start to finish against an empty or populated database.\n\nAdmin endpoints (creating packages, bosses, raid occurrences) need a user id configured in the service's ADMIN_USER_IDS. This collection's `admin_id` variable is fixed (not randomly generated) so you can add it once: set REGISTRY_ADMIN_USER_IDS to the collection admin_id in the untracked deployment .env and recreate Registry before running admin requests.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.",
+    "description": "Every public endpoint of the Package Registry service, in an order that runs start to finish against an empty or populated database.\n\nAdmin endpoints (creating packages, bosses, raid occurrences) need a user id configured in the service's ADMIN_USER_IDS. This collection's `admin_id` variable is fixed (not randomly generated) so you can add it once: set REGISTRY_ADMIN_USER_IDS to the collection admin_id in the untracked deployment .env and recreate Registry before running admin requests.\n\nUUID v7 is generated in the collection pre-request script, matching the contract's UUID v7 requirement.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -110,12 +110,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{registry_probe_url}}/health",
+              "raw": "{{registry_probe_url}}/instances",
               "host": [
                 "{{registry_probe_url}}"
               ],
               "path": [
-                "health"
+                "instances"
               ]
             }
           },
@@ -125,7 +125,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                  "pm.test('200 with registered instances', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('package-registry'); pm.expect(body.instances).to.be.an('array').that.is.not.empty; });"
                 ]
               }
             }
@@ -137,12 +137,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{registry_probe_url}}/ready",
+              "raw": "{{registry_probe_url}}/instances?routable=true",
               "host": [
                 "{{registry_probe_url}}"
               ],
               "path": [
-                "ready"
+                "instances"
+              ],
+              "query": [
+                {
+                  "key": "routable",
+                  "value": "true"
+                }
               ]
             }
           },
@@ -152,7 +158,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 READY', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('READY'); });"
+                  "pm.test('200 with a healthy routable instance', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('package-registry'); pm.expect(body.instances.some((instance) => instance.health === 'healthy')).to.eql(true); });"
                 ]
               }
             }
@@ -405,153 +411,6 @@
           ]
         },
         {
-          "name": "Service reads stat-definitions",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{monster_raid_service_credential}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/stat-definitions",
-              "host": [
-                "{{registry_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "packages",
-                "{{package_id}}",
-                "stat-definitions"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, hunger is defined', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().stats[0].key).to.eql('hunger');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Service reads stat-bonuses",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{monster_raid_service_credential}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/stat-bonuses",
-              "host": [
-                "{{registry_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "packages",
-                "{{package_id}}",
-                "stat-bonuses"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, one bonus rule', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().bonuses).to.have.lengthOf(1); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Service reads currency-rules",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{monster_raid_service_credential}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/currency-rules",
-              "host": [
-                "{{registry_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "packages",
-                "{{package_id}}",
-                "currency-rules"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, daily cap is 100', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().daily_currency_cap).to.eql(100); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Service reads starter-pet",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tamagotchi_service_credential}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/starter-pet",
-              "host": [
-                "{{registry_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "packages",
-                "{{package_id}}",
-                "starter-pet"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, starter is Ember', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().starter.name).to.eql('Ember'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
           "name": "Public reads assets",
           "request": {
             "method": "GET",
@@ -576,59 +435,6 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200, no auth needed', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().items).to.have.lengthOf(1); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Eligibility check",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{guild_service_credential}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{registry_base_url}}/v1/packages/eligibility-check",
-              "host": [
-                "{{registry_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "packages",
-                "eligibility-check"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"user_packages\": [\n    \"{{package_id}}\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, eligible on this active package', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.eligible).to.eql(true);",
-                  "  pm.expect(body.eligible_package_ids).to.eql([pm.collectionVariables.get('package_id')]);",
-                  "});"
                 ]
               }
             }
@@ -941,7 +747,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{monster_raid_service_credential}}",
+                "value": "Bearer {{admin_credential}}",
                 "type": "text"
               }
             ],
@@ -1100,36 +906,6 @@
       "name": "Refusals",
       "item": [
         {
-          "name": "No credentials at all",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/stat-definitions",
-              "host": [
-                "{{registry_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "packages",
-                "{{package_id}}",
-                "stat-definitions"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('401 unauthorized', () => { pm.response.to.have.status(401); pm.expect(pm.response.json().code).to.eql('unauthorized'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
           "name": "A non-admin cannot create a package",
           "request": {
             "method": "POST",
@@ -1174,7 +950,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('403 admin_required', () => { pm.response.to.have.status(403); pm.expect(pm.response.json().code).to.eql('admin_required'); });"
+                  "pm.test('403 admin_required', () => { pm.response.to.have.status(403); pm.expect(pm.response.json().code).to.eql('forbidden'); });"
                 ]
               }
             }
@@ -1368,42 +1144,6 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('404 package_not_found', () => { pm.response.to.have.status(404); pm.expect(pm.response.json().code).to.eql('package_not_found'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "A user cannot call a service-only endpoint",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{outsider_credential}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{registry_base_url}}/v1/packages/{{package_id}}/stat-definitions",
-              "host": [
-                "{{registry_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "packages",
-                "{{package_id}}",
-                "stat-definitions"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('403', () => pm.response.to.have.status(403));"
                 ]
               }
             }

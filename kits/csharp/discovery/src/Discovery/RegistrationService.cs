@@ -12,6 +12,9 @@ public sealed class RegistrationOptions
     /// <summary>The port the service listens on inside its container.</summary>
     public required int Port { get; init; }
 
+    /// <summary>The broker delivery port, registered as <c>grpc_endpoint</c> on the same host; null when it is off.</summary>
+    public int? GrpcPort { get; init; }
+
     public TimeSpan CheckInterval { get; init; } = RegistrationService.DefaultCheckInterval;
 }
 
@@ -124,15 +127,21 @@ public sealed class RegistrationService : BackgroundService
     /// <summary>Registers; returns how long to wait before the next step.</summary>
     private async Task<TimeSpan> RegisterAsync(CancellationToken stoppingToken)
     {
-        var body = new
+        var body = new Dictionary<string, object>
         {
-            instance_id = _instance.Id,
-            service_name = _options.ServiceName,
-            host = _settings.Host,
-            port = _options.Port,
-            status_path = StatusEndpoint.Path,
-            version = _instance.Version,
+            ["instance_id"] = _instance.Id,
+            ["service_name"] = _options.ServiceName,
+            ["host"] = _settings.Host,
+            ["port"] = _options.Port,
+            ["status_path"] = StatusEndpoint.Path,
+            ["version"] = _instance.Version,
         };
+
+        // Only with broker delivery on (contracts/discovery.md). Subscriptions are not registered by this kit yet.
+        if (_options.GrpcPort is { } grpcPort)
+        {
+            body["grpc_endpoint"] = $"{_settings.Host}:{grpcPort}";
+        }
 
         int? status = null;
         string? cause = null;

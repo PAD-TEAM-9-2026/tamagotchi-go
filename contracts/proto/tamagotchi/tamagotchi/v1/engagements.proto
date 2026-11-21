@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package tamagotchi.tamagotchi.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.tamagotchi.v1";
+option csharp_namespace = "Tamagotchi.Contracts.Tamagotchi.V1";
+
+import "tamagotchi/tamagotchi/v1/creature.proto";
+import "google/protobuf/timestamp.proto";
+
+message Lineup {
+  string user_id = 1;
+  string primary_id = 2;
+  optional string secondary_id = 3;
+}
+
+message ReserveEngagementRequest {
+  Source source = 1;
+  string reference_id = 2;
+  repeated Lineup lineups = 3;
+  uint32 ttl_seconds = 4;
+}
+
+message GetEngagementRequest {
+  string reference_id = 1;
+}
+
+message ReleaseEngagementRequest {
+  string reference_id = 1;
+}
+
+message Engagement {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    RELEASED = 2;
+    EXPIRED = 3;
+  }
+
+  string engagement_id = 1;
+  Source source = 2;
+  string reference_id = 3;
+  Status status = 4;
+  repeated Creature pets = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp expires_at = 7;
+}

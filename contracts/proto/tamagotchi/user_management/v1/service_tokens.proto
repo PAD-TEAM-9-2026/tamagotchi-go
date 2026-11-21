@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package tamagotchi.user_management.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.user_management.v1";
+option csharp_namespace = "Tamagotchi.Contracts.UserManagement.V1";
+
+// Equivalent to ServiceTokenRequest. The secret is not a field: it travels only
+// as x-service-secret metadata (contracts/identity.md, section 5).
+// service_name must equal the caller's certificate identity; the broker refuses
+// anything else before User Management sees the request.
+message IssueServiceTokenRequest {
+  // A canonical service name.
+  string service_name = 1;
+  // The one destination service the token is for, a canonical service name.
+  string audience = 2;
+  // 0..20 scopes, each 1..64 characters with no whitespace.
+  repeated string scopes = 3;
+}
+
+// Equivalent to ServiceToken. Never stored by the broker and never logged.
+message IssueServiceTokenReply {
+  // 1..8192 characters.
+  string access_token = 1;
+  // Always "Bearer".
+  string token_type = 2;
+  // Seconds; 300 today.
+  uint32 expires_in = 3;
+}

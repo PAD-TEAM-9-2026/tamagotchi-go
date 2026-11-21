@@ -15,7 +15,7 @@ public static class DiscoveryExtensions
     /// Service Discovery. Pass <c>DiscoverySettings.FromEnvironment()</c>; it is null when discovery is disabled.
     /// </summary>
     public static IServiceCollection AddDiscovery(
-        this IServiceCollection services, string serviceName, int port, DiscoverySettings? settings)
+        this IServiceCollection services, string serviceName, int port, DiscoverySettings? settings, int? grpcPort = null)
     {
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton(provider => DiscoveryInstance.Create(provider.GetRequiredService<TimeProvider>()));
@@ -29,7 +29,7 @@ public static class DiscoveryExtensions
         services.AddHostedService(provider => new RegistrationService(
             new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) }),
             settings,
-            new RegistrationOptions { ServiceName = serviceName, Port = port },
+            new RegistrationOptions { ServiceName = serviceName, Port = port, GrpcPort = grpcPort },
             provider.GetRequiredService<DiscoveryInstance>(),
             provider.GetRequiredService<ILogger<RegistrationService>>(),
             provider.GetRequiredService<IHostApplicationLifetime>()));

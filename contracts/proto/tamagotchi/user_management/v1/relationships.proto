@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package tamagotchi.user_management.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.user_management.v1";
+option csharp_namespace = "Tamagotchi.Contracts.UserManagement.V1";
+
+// UUIDv7 user_id; limit 1..100; absent cursor starts the first page.
+// A present cursor is opaque, 1..2048 characters, never a transport URL.
+message ListRelationshipsRequest {
+  string user_id = 1;
+  uint32 limit = 2;
+  optional string cursor = 3;
+}
+
+message RelationshipItem {
+  enum Relationship {
+    RELATIONSHIP_UNSPECIFIED = 0;
+    FRIEND = 1;
+    ENEMY = 2;
+  }
+  string user_id = 1;
+  // UNKNOWN/UNSPECIFIED values must be refused by adapters, not made strangers.
+  Relationship relationship = 2;
+}
+
+// Equivalent to RelationshipPage: at most 100 items. Absence means JSON null.
+// Only a successful complete traversal establishes absent users as strangers.
+message ListRelationshipsReply {
+  repeated RelationshipItem items = 1;
+  optional string next_cursor = 2;
+}
+
+// The path's userId and otherId, both UUIDv7.
+message GetRelationshipRequest {
+  string user_id = 1;
+  string other_user_id = 2;
+}
+
+// Equivalent to Relationship. version is 1..2147483647.
+message GetRelationshipReply {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    FRIEND = 1;
+    ENEMY = 2;
+    STRANGER = 3;
+  }
+  // UNSPECIFIED must be refused by adapters.
+  Kind relationship = 1;
+  Kind reverse_relationship = 2;
+  uint32 version = 3;
+}

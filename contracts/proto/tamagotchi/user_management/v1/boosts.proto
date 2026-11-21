@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package tamagotchi.user_management.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.user_management.v1";
+option csharp_namespace = "Tamagotchi.Contracts.UserManagement.V1";
+
+// UNSPECIFIED must be refused by adapters.
+enum BoostId {
+  BOOST_ID_UNSPECIFIED = 0;
+  ATTACK_10 = 1;
+}
+
+// Equivalent to ConsumeBoost.
+message ConsumeBoostRequest {
+  string battle_id = 1;
+  string user_id = 2;
+  BoostId boost_id = 3;
+}
+
+// Equivalent to BoostReceipt. attack_bps is always 1000 for ATTACK_10,
+// remaining_charges 0..100.
+message BoostReceipt {
+  string battle_id = 1;
+  string user_id = 2;
+  BoostId boost_id = 3;
+  uint32 attack_bps = 4;
+  uint32 remaining_charges = 5;
+}

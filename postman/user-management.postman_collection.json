@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "User Management",
-    "description": "Authenticated User Management scenarios through Gateway. Supply two real active packages; package 1 must have FEED=10, PLAY=5 and daily cap=30 at um_config_version. Supply narrowly scoped service credentials. Setup registers fresh dedicated users and logs them in. Run stateful folders in order; no plain identity headers.",
+    "description": "Authenticated User Management scenarios through Gateway. Supply two real active packages as pkg1_id and pkg2_id. Currency credits, relationship checks, membership, boost consumption and battle settlement are service-only operations called through the broker, so they are not here. Setup registers fresh dedicated users and logs them in. Run stateful folders in order; no plain identity headers.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -60,9 +60,9 @@
           "seed('battle_id', uuidv7());",
           "",
           "",
-          "for (const key of ['pkg1_id', 'pkg2_id', 'um_config_version', 'um_global_credential', 'um_local_credential', 'um_relationship_credential', 'um_membership_credential', 'um_battle_credential']) {",
+          "for (const key of ['pkg1_id', 'pkg2_id']) {",
           "  const value = pm.environment.get(key) || pm.collectionVariables.get(key);",
-          "  if (!value) throw new Error('Supply the real fixture or scoped credential: ' + key);",
+          "  if (!value) throw new Error('Supply the real package fixture: ' + key);",
           "  pm.collectionVariables.set(key, value);",
           "}",
           "seed('fixture_password', 'Aa1!' + uuidv7());",
@@ -82,9 +82,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{user_management_probe_url}}/health",
+              "raw": "{{user_management_probe_url}}/instances",
               "host": ["{{user_management_probe_url}}"],
-              "path": ["health"]
+              "path": ["instances"]
             }
           },
           "event": [
@@ -93,7 +93,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 UP', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"
+                  "pm.test('200 with registered instances', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('user-management'); pm.expect(body.instances).to.be.an('array').that.is.not.empty; });"
                 ]
               }
             }
@@ -105,9 +105,10 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{user_management_probe_url}}/ready",
+              "raw": "{{user_management_probe_url}}/instances?routable=true",
               "host": ["{{user_management_probe_url}}"],
-              "path": ["ready"]
+              "path": ["instances"],
+              "query": [{ "key": "routable", "value": "true" }]
             }
           },
           "event": [
@@ -116,7 +117,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 READY', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('READY'); });"
+                  "pm.test('200 with a healthy routable instance', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('user-management'); pm.expect(body.instances.some((instance) => instance.health === 'healthy')).to.eql(true); });"
                 ]
               }
             }
@@ -431,31 +432,6 @@
       "name": "Friend requests and relationships",
       "item": [
         {
-          "name": "Fresh strangers have a valid relationship version",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{um_relationship_credential}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/relationship/{{bob_id}}",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "relationship", "{{bob_id}}"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 strangers with contract version', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.relationship).to.eql('stranger'); pm.expect(body.reverse_relationship).to.eql('stranger'); pm.expect(body.version).to.be.at.least(1); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
           "name": "Alice sends a friend request to Bob",
           "request": {
             "method": "POST",
@@ -547,36 +523,6 @@
                   "pm.test('200 ACCEPTED', () => {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().status).to.eql('ACCEPTED');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Alice and Bob are now mutual friends",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{um_relationship_credential}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/relationship/{{bob_id}}",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "relationship", "{{bob_id}}"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, friend both ways', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.relationship).to.eql('friend');",
-                  "  pm.expect(body.reverse_relationship).to.eql('friend');",
                   "});"
                 ]
               }
@@ -713,36 +659,6 @@
           ]
         },
         {
-          "name": "The enemy mark does not apply the other way",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{um_relationship_credential}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{carol_id}}/relationship/{{alice_id}}",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{carol_id}}", "relationship", "{{alice_id}}"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, stranger forward, enemy reverse', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.relationship).to.eql('stranger');",
-                  "  pm.expect(body.reverse_relationship).to.eql('enemy');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
           "name": "Alice removes the enemy mark",
           "request": {
             "method": "DELETE",
@@ -791,36 +707,6 @@
               }
             }
           ]
-        },
-        {
-          "name": "The friendship is gone on both sides",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{um_relationship_credential}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{bob_id}}/relationship/{{alice_id}}",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{bob_id}}", "relationship", "{{alice_id}}"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, stranger both ways', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.relationship).to.eql('stranger');",
-                  "  pm.expect(body.reverse_relationship).to.eql('stranger');",
-                  "});"
-                ]
-              }
-            }
-          ]
         }
       ]
     },
@@ -856,45 +742,6 @@
           ]
         },
         {
-          "name": "Credit Alice's global currency (service call)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_global_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/global/add",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "currency", "global", "add"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 100,\n  \"reason\": \"RAID_WIN\",\n  \"reference_id\": \"{{reference_id}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "description": "\"service\"-only per the contract. No service-token auth exists yet, so no auth header is sent here."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, credited', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.credited_amount).to.eql(100);",
-                  "  pm.expect(body.new_balance).to.eql(100);",
-                  "  pm.expect(body.reference_id).to.eql(pm.collectionVariables.get('reference_id'));",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
           "name": "Alice's local wallet in package 1 starts at zero",
           "request": {
             "method": "GET",
@@ -916,298 +763,6 @@
                   "pm.test('200, amount 0', () => {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().amount).to.eql(0);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Credit Alice's local currency for a care action (service call)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"FEED\",\n  \"care_action_id\": \"{{care_action_id}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "description": "The reward amount, valid action names and daily cap come from Package Registry's CurrencyRules/CareRule config, which isn't queryable yet; MockPackageRegistryClient mocks a fixed rule set: FEED=10, PLAY=5, CLEAN=8, daily cap 30 per package. Action names are matched case-sensitively against that mocked set."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, credited the mocked FEED reward', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.credited_amount).to.eql(10);",
-                  "  pm.expect(body.new_balance).to.eql(10);",
-                  "  pm.expect(body.reference_id).to.eql(pm.collectionVariables.get('care_action_id'));",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Crediting an unknown care action is rejected",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"NOT_A_REAL_ACTION\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "description": "An action not in the mocked package's rule set must be rejected before any balance changes."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('422 unknown_care_action', () => {",
-                  "  pm.response.to.have.status(422);",
-                  "  pm.expect(pm.response.json().code).to.eql('unknown_care_action');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Credit Alice's local currency again (PLAY) #1",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "description": "Running total after the FEED credit above: 10. PLAY's mocked reward is 5, so this should land at 15, still under the package's 30 daily cap."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, balance now 15', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.credited_amount).to.eql(5);",
-                  "  pm.expect(body.new_balance).to.eql(15);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Credit Alice's local currency again (PLAY) #2",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, balance now 20', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.new_balance).to.eql(20);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Credit Alice's local currency again (PLAY) #3",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, balance now 25', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.new_balance).to.eql(25);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Credit Alice's local currency again (PLAY) #4, lands exactly on the cap",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, balance now exactly at the 30 daily cap', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.new_balance).to.eql(30);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "A 5th local credit the same day exceeds the daily cap",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{pkg1_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"PLAY\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "description": "Alice's package-1 balance is already at the mocked 30 daily cap, so crediting another 5 must be refused rather than over-crediting."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('409 daily_cap_reached', () => {",
-                  "  pm.response.to.have.status(409);",
-                  "  pm.expect(pm.response.json().code).to.eql('daily_cap_reached');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Local currency 404s for a package Alice never joined",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_local_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/users/{{alice_id}}/currency/local/add",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "users", "{{alice_id}}", "currency", "local", "add"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"package_id\": \"{{unknown_package_id}}\",\n  \"config_version\": {{um_config_version}},\n  \"action\": \"FEED\",\n  \"care_action_id\": \"{{idempotency_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('404 not_a_member', () => {",
-                  "  pm.response.to.have.status(404);",
-                  "  pm.expect(pm.response.json().code).to.eql('not_a_member');",
                   "});"
                 ]
               }
@@ -1243,157 +798,6 @@
                   "  const body = pm.response.json();",
                   "  pm.expect(body).to.have.property('items');",
                   "  pm.expect(body).to.have.property('next_cursor');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Consuming a boost Alice doesn't have fails (service call)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_battle_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/internal/boost-consumptions",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "internal", "boost-consumptions"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"user_id\": \"{{alice_id}}\",\n  \"boost_id\": \"ATTACK_10\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "description": "No endpoint grants boost charges yet (Battle would be the caller in the real system), so a fresh account always has zero; this exercises the 422 no-charges path."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('422 no_charges', () => {",
-                  "  pm.response.to.have.status(422);",
-                  "  pm.expect(pm.response.json().code).to.eql('no_charges');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Internal (service) endpoints",
-      "item": [
-        {
-          "name": "Alice's membership snapshot",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{um_membership_credential}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/internal/users/{{alice_id}}/membership",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "internal", "users", "{{alice_id}}", "membership"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, both packages listed', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.package_ids).to.include.members([pm.collectionVariables.get('pkg1_id'), pm.collectionVariables.get('pkg2_id')]);",
-                  "  pm.expect(body.membership_version).to.eql(2);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Battle settlements",
-      "item": [
-        {
-          "name": "Settle a battle between Bob and Carol",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_battle_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/internal/battle-settlements",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "internal", "battle-settlements"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"battle_id\": \"{{battle_id}}\",\n  \"winner_id\": \"{{bob_id}}\",\n  \"loser_id\": \"{{carol_id}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "description": "Both Bob and Carol still have a global balance of 0 at this point, so loser_debit clamps to 0; see BattleSettlementEndpoints for the clamping rule."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200, winner credited, debit clamped to available balance', () => {",
-                  "  pm.response.to.have.status(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.winner_credit).to.eql(50);",
-                  "  pm.expect(body.loser_debit).to.eql(0);",
-                  "  pm.expect(body.winner_balance).to.eql(50);",
-                  "  pm.expect(body.loser_balance).to.eql(0);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Battle settlement 404s for an unknown user",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{um_battle_credential}}" },
-              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
-            ],
-            "url": {
-              "raw": "{{user_management_base_url}}/v1/internal/battle-settlements",
-              "host": ["{{user_management_base_url}}"],
-              "path": ["v1", "internal", "battle-settlements"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"battle_id\": \"{{unknown_battle_id}}\",\n  \"winner_id\": \"{{unknown_user_id}}\",\n  \"loser_id\": \"{{carol_id}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('404 wallet_not_found', () => {",
-                  "  pm.response.to.have.status(404);",
-                  "  pm.expect(pm.response.json().code).to.eql('wallet_not_found');",
                   "});"
                 ]
               }

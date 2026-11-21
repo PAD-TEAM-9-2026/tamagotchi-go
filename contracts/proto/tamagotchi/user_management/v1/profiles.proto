@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package tamagotchi.user_management.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.user_management.v1";
+option csharp_namespace = "Tamagotchi.Contracts.UserManagement.V1";
+
+// Equivalent to UserProfile. The path's userId becomes user_id (UUIDv7).
+message GetUserProfileRequest {
+  string user_id = 1;
+}
+
+// username is 3..32 characters.
+message UserProfile {
+  string user_id = 1;
+  string username = 2;
+}

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Map",
-    "description": "Gateway-authenticated Map checks. Configure two real test users and matching bearer credentials. Location requests prepare only those users; probes are direct. See postman/README.md.",
+    "description": "Gateway-authenticated Map checks. Configure two real test users and matching bearer credentials. Location requests prepare only those users; probes read Discovery. See postman/README.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -22,7 +22,7 @@
           "}",
           "pm.variables.set('command_key', uuidv7());",
           "pm.variables.set('map_timestamp', new Date().toISOString());",
-          "if (!['Health', 'Readiness', 'Missing authentication', 'Direct impersonation'].includes(pm.info.requestName) && !pm.environment.get('map_credential')) throw new Error('Configure the real test user credential before running domain requests.');"
+          "if (!['Health', 'Readiness', 'Missing authentication'].includes(pm.info.requestName) && !pm.environment.get('map_credential')) throw new Error('Configure the real test user credential before running domain requests.');"
         ]
       }
     }
@@ -37,12 +37,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{map_probe_url}}/health",
+              "raw": "{{map_probe_url}}/instances",
               "host": [
                 "{{map_probe_url}}"
               ],
               "path": [
-                "health"
+                "instances"
               ]
             },
             "auth": {
@@ -55,8 +55,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"service is up\", () => { pm.expect(pm.response.json().status).to.eql('UP') });"
+                  "pm.test('200 with registered instances', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('map'); pm.expect(body.instances).to.be.an('array').that.is.not.empty; });"
                 ]
               }
             }
@@ -68,12 +67,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{map_probe_url}}/ready",
+              "raw": "{{map_probe_url}}/instances?routable=true",
               "host": [
                 "{{map_probe_url}}"
               ],
               "path": [
-                "ready"
+                "instances"
+              ],
+              "query": [
+                {
+                  "key": "routable",
+                  "value": "true"
+                }
               ]
             },
             "auth": {
@@ -86,8 +91,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"database is ready\", () => { pm.expect(pm.response.json().status).to.eql('READY') });"
+                  "pm.test('200 with a healthy routable instance', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.service_name).to.eql('map'); pm.expect(body.instances.some((instance) => instance.health === 'healthy')).to.eql(true); });"
                 ]
               }
             }
@@ -578,44 +582,6 @@
                 "exec": [
                   "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
                   "pm.test('problem code', () => pm.expect(pm.response.json().code).to.eql('not_self'));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Direct impersonation",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "X-User-Id",
-                "value": "{{map_user_id}}"
-              }
-            ],
-            "url": {
-              "raw": "{{map_probe_url}}/v1/location/{{map_user_id}}",
-              "host": [
-                "{{map_probe_url}}"
-              ],
-              "path": [
-                "v1",
-                "location",
-                "{{map_user_id}}"
-              ]
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
-                  "pm.test('problem code', () => pm.expect(pm.response.json().code).to.eql('invalid_gateway_assertion'));"
                 ]
               }
             }

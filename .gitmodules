@@ -29,3 +29,6 @@
 	path = services/service-discovery
 	url = git@github.com:PatriciaMoraru/service-discovery.git
 	branch = develop
+[submodule "services/message-broker"]
+	path = services/message-broker
+	url = git@github.com:sergedbs/message-broker.git

@@ -1,61 +1,54 @@
-import importlib.util
+import json
 import re
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("broker_provision", ROOT / "deploy/rabbitmq/provision.py")
-broker = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(broker)
+CATALOGUE = json.loads((ROOT / "contracts/operations.v1.json").read_text())
+PRODUCERS = {
+    "user-management": "User Management",
+    "tamagotchi": "Tamagotchi",
+    "battle": "Battle",
+    "guild": "Guild",
+    "package-registry": "Package Registry",
+    "map": "Map",
+    "monster-raid": "Monster Raid",
+}
+SUBSCRIBERS = {
+    "tamagotchi": "Tamagotchi",
+    "package-registry": "Package Registry",
+    "monster-raid": "Monster Raid",
+    "notification": "Notification",
+    "audit": "audit",
+}
 
 
-class BrokerTopologyTests(unittest.TestCase):
-    def setUp(self):
-        self.topology = broker.definitions({name: "test-value" for name in broker.PASSWORDS})
+class EventTableTests(unittest.TestCase):
+    """The README event table says the same as the operation catalogue the broker routes by."""
 
-    def test_bindings_match_every_contract_subscription(self):
-        events = re.findall(r"\| `((?:user|tamagotchi|battle|guild|registry|map|raid)\.[^`]+\.v1)` \| ([^|]+) \| ([^|]+) \|", (ROOT / "README.md").read_text())
-        publishers = {"User Management": "user-management.events", "Tamagotchi": "tamagotchi.events", "Battle": "battle.events", "Guild": "guild.events", "Package Registry": "package-registry.events", "Map": "map.events", "Monster Raid": "monster-raid.events"}
-        consumers = {"Tamagotchi": "tamagotchi", "Package Registry": "package-registry", "Monster Raid": "monster-raid", "Notification": "notification", "audit": "audit"}
-        expected = {(publishers[owner.strip()], consumers[consumer.strip()] + ".work", event) for event, owner, destinations in events for consumer in destinations.split(",")}
-        actual = {(item["source"], item["destination"], item["routing_key"]) for item in self.topology["bindings"]}
-        self.assertEqual(15, len(expected))
-        self.assertEqual(expected, actual)
-        self.assertEqual(7, len(self.topology["exchanges"]))
-        self.assertFalse(any(q["name"].startswith("map.") for q in self.topology["queues"]))
+    def test_every_logical_subscription_is_in_the_readme_event_table(self):
+        rows = re.findall(
+            r"\| `((?:user|tamagotchi|battle|guild|registry|map|raid)\.[^`]+\.v1)` \| ([^|]+) \| ([^|]+) \|",
+            (ROOT / "README.md").read_text(),
+        )
+        documented = {
+            (topic, owner.strip(), consumer.strip())
+            for topic, owner, consumers in rows
+            for consumer in consumers.split(",")
+        }
+        producers = {event["topic"]: event["producer"] for event in CATALOGUE["events"]}
+        routed = {
+            (topic, PRODUCERS[producers[topic]], SUBSCRIBERS[subscription["subscriber"]])
+            for subscription in CATALOGUE["subscriptions"]
+            if subscription["kind"] == "LOGICAL"
+            for topic in subscription["topics"]
+        }
+        self.assertEqual(15, len(routed))
+        self.assertEqual(routed, documented)
 
-    def test_queues_retry_safely_and_accounts_have_only_required_permissions(self):
-        for queue in self.topology["queues"]:
-            self.assertTrue(queue["durable"])
-            args = queue["arguments"]
-            self.assertEqual("quorum", args["x-queue-type"])
-            if ".retry." in queue["name"]:
-                self.assertEqual(5000 if queue["name"].endswith("5s") else 30000, args["x-message-ttl"])
-                self.assertEqual("", args["x-dead-letter-exchange"])
-                self.assertEqual(queue["name"].split(".retry.")[0] + ".work", args["x-dead-letter-routing-key"])
-                self.assertEqual("reject-publish", args["x-overflow"])
-        self.assertEqual("at-least-once", self.topology["policies"][0]["definition"]["dead-letter-strategy"])
-        permissions = {item["user"]: item for item in self.topology["permissions"]}
-        self.assertIsNone(re.fullmatch(permissions["map"]["write"], "amq.default"))
-        self.assertIsNotNone(re.fullmatch(permissions["map"]["write"], "map.events"))
-        self.assertIsNone(re.fullmatch(permissions["map"]["write"], "guild.events"))
-        self.assertIsNotNone(re.fullmatch(permissions["monster-raid"]["write"], "amq.default"))
-        self.assertIsNotNone(re.fullmatch(permissions["monster-raid"]["read"], "package-registry.events"))
-        self.assertIsNone(re.fullmatch(permissions["notification"]["write"], "map.events"))
-        self.assertEqual({*broker.PUBLISHERS, "notification"}, {item["name"] for item in self.topology["users"]})
-
-    def test_guild_can_declare_bind_publish_and_consume_its_transient_chat(self):
-        guild = next(p for p in self.topology["permissions"] if p["user"] == "guild")
-        for operation, resources in {
-            "configure": ["guild.events", "guild.chat", "amq.gen-example"],
-            "write": ["guild.events", "guild.chat", "amq.gen-example"],
-            "read": ["guild.chat", "amq.gen-example"],
-        }.items():
-            for resource in resources:
-                self.assertIsNotNone(re.fullmatch(guild[operation], resource))
-            for resource in ["map.events", "notification.work", "amq.default", "guildXchat", "amq.gen"]:
-                self.assertIsNone(re.fullmatch(guild[operation], resource))
-        self.assertFalse(any(q["name"].startswith("amq.gen.") for q in self.topology["queues"]))
+    def test_every_event_has_a_subscriber_so_publish_is_never_unroutable(self):
+        subscribed = {topic for subscription in CATALOGUE["subscriptions"] for topic in subscription["topics"]}
+        self.assertEqual({event["topic"] for event in CATALOGUE["events"]}, subscribed)
 
 
 if __name__ == "__main__":

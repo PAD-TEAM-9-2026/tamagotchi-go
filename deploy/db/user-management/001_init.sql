@@ -1,4 +1,4 @@
--- The schema of user-management 2.0.1, one statement block for every migration in order, with the history rows, so a later
+-- The schema of user-management through its AddOutboxTraceParent migration, one statement block for every migration in order, with the history rows, so a later
 -- `dotnet ef database update` runs cleanly against a volume that was initialized from this file instead of via EF.
 -- Generated from the service's migrations with `dotnet ef migrations script`; regenerate it, never edit it by hand.
 -- A volume that already exists is brought up to date with upgrade.sql in this folder.
@@ -210,5 +210,13 @@ CREATE UNIQUE INDEX "IX_CurrencyCredits_UserId_Reason_ReferenceId" ON "CurrencyC
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20261008193531_AddEffectLedgers', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+ALTER TABLE "OutboxMessages" ADD "TraceParent" character varying(55);
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261112194331_AddOutboxTraceParent', '10.0.12');
 
 COMMIT;

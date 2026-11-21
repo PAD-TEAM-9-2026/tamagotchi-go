@@ -1,0 +1,60 @@
+# Jaeger 2 (OpenTelemetry collector based): receives OTLP traces from every service and keeps them in
+# memory only, at most 50,000 traces, lost on restart. The redact processor deletes attributes that can
+# carry query strings, ids in paths, SQL text, headers or gRPC metadata, as a second line of defence:
+# services never record them in the first place (deploy/monitoring.md, Tracing).
+service:
+  extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/redact, batch]
+      exporters: [jaeger_storage_exporter]
+  telemetry:
+    logs:
+      level: warn
+
+extensions:
+  healthcheckv2:
+    use_v2: true
+    http:
+      endpoint: 0.0.0.0:13133
+  jaeger_query:
+    storage:
+      traces: memstore
+  jaeger_storage:
+    backends:
+      memstore:
+        memory:
+          max_traces: 50000
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 400
+    spike_limit_mib: 100
+  attributes/redact:
+    actions:
+      - { key: url.query, action: delete }
+      - { key: url.full, action: delete }
+      - { key: url.path, action: delete }
+      - { key: http.url, action: delete }
+      - { key: http.target, action: delete }
+      - { key: db.statement, action: delete }
+      - { key: db.query.text, action: delete }
+      - { pattern: ^http\.request\.header\..*, action: delete }
+      - { pattern: ^http\.response\.header\..*, action: delete }
+      - { pattern: ^rpc\.grpc\.request\.metadata\..*, action: delete }
+      - { pattern: ^rpc\.grpc\.response\.metadata\..*, action: delete }
+  batch: {}
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: memstore

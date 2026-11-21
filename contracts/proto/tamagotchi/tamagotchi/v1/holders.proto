@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package tamagotchi.tamagotchi.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.tamagotchi.v1";
+option csharp_namespace = "Tamagotchi.Contracts.Tamagotchi.V1";
+
+import "google/protobuf/timestamp.proto";
+
+message ListHoldersRequest {
+  string tamagotchi_id = 1;
+}
+
+message ListHoldersReply {
+  string tamagotchi_id = 1;
+  string origin_owner_id = 2;
+  repeated string holder_user_ids = 3;
+  uint32 holder_cap = 4;
+  uint32 version = 5;
+}
+
+message GrantAccessRequest {
+  enum Reason {
+    REASON_UNSPECIFIED = 0;
+    BATTLE_LOSS = 1;
+  }
+
+  string tamagotchi_id = 1;
+  string to_user_id = 2;
+  Reason reason = 3;
+  string reference_id = 4;
+  string engagement_id = 5;
+}
+
+message GrantAccessReply {
+  enum Outcome {
+    OUTCOME_UNSPECIFIED = 0;
+    GRANTED = 1;
+    ALREADY_HOLDER = 2;
+    CAP_REACHED = 3;
+  }
+
+  string id = 1;
+  Outcome outcome = 2;
+  string granted_to_user_id = 3;
+  repeated string holder_user_ids = 4;
+  uint32 holder_cap = 5;
+  uint32 version = 6;
+  google.protobuf.Timestamp granted_at = 7;
+}

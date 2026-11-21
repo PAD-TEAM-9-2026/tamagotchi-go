@@ -1,0 +1,56 @@
+# Builds every service from local checkouts instead of pulling its published image, layered on
+# compose.yaml without changing anything else:
+#
+#   docker compose -f compose.yaml -f compose.source.yaml up -d --build
+#
+# Set each *_SOURCE in .env to a checkout (absolute, or relative to deploy/). The images are tagged
+# tamagotchi-go/<service>:local, so the published images and the volumes stay untouched.
+
+x-local: &local
+  pull_policy: build
+
+services:
+  service-discovery:
+    <<: *local
+    build: ${SERVICE_DISCOVERY_SOURCE:?set SERVICE_DISCOVERY_SOURCE in .env to a service-discovery checkout}
+    image: tamagotchi-go/service-discovery:local
+  user-management:
+    <<: *local
+    build: ${USER_MANAGEMENT_SOURCE:?set USER_MANAGEMENT_SOURCE in .env to a user-management checkout}
+    image: tamagotchi-go/user-management:local
+  message-broker:
+    <<: *local
+    build: ${MESSAGE_BROKER_SOURCE:?set MESSAGE_BROKER_SOURCE in .env to a message-broker checkout}
+    image: tamagotchi-go/message-broker:local
+  tamagotchi:
+    <<: *local
+    build: ${TAMAGOTCHI_SOURCE:?set TAMAGOTCHI_SOURCE in .env to a tamagotchi checkout}
+    image: tamagotchi-go/tamagotchi:local
+  notification:
+    <<: *local
+    build: ${NOTIFICATION_SOURCE:?set NOTIFICATION_SOURCE in .env to a notifications checkout}
+    image: tamagotchi-go/notification:local
+  guild:
+    <<: *local
+    build: ${GUILD_SOURCE:?set GUILD_SOURCE in .env to a guild-service checkout}
+    image: tamagotchi-go/guild-service:local
+  registry:
+    <<: *local
+    build: ${REGISTRY_SOURCE:?set REGISTRY_SOURCE in .env to a package-registry-service checkout}
+    image: tamagotchi-go/package-registry-service:local
+  battle:
+    <<: *local
+    build: ${BATTLE_SOURCE:?set BATTLE_SOURCE in .env to a battle checkout}
+    image: tamagotchi-go/battle:local
+  map:
+    <<: *local
+    build: ${MAP_SOURCE:?set MAP_SOURCE in .env to a map checkout}
+    image: tamagotchi-go/map:local
+  monster-raid:
+    <<: *local
+    build: ${MONSTER_RAID_SOURCE:?set MONSTER_RAID_SOURCE in .env to a monster-raid checkout}
+    image: tamagotchi-go/monster-raid:local
+  gateway:
+    <<: *local
+    build: ${GATEWAY_SOURCE:?set GATEWAY_SOURCE in .env to a gateway checkout}
+    image: tamagotchi-go/gateway:local

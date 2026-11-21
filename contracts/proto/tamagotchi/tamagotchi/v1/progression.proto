@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package tamagotchi.tamagotchi.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.tamagotchi.v1";
+option csharp_namespace = "Tamagotchi.Contracts.Tamagotchi.V1";
+
+import "tamagotchi/tamagotchi/v1/creature.proto";
+
+message AwardXpRequest {
+  string tamagotchi_id = 1;
+  uint32 amount = 2;
+  Source source = 3;
+  string source_id = 4;
+}
+
+message AwardXpReply {
+  string id = 1;
+  uint64 xp = 2;
+  uint32 level = 3;
+  uint32 levels_gained = 4;
+  uint32 version = 5;
+}

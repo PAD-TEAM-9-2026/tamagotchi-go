@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package tamagotchi.guild.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.guild.v1";
+option csharp_namespace = "Tamagotchi.Contracts.Guild.V1";
+
+// Published to guild.chat_message.v1 by the Guild instance that accepted a
+// user's send frame. Every other live Guild instance consumes this event to
+// fan-out the message to its locally connected WebSocket clients.
+//
+// Consumers skip the event when source_instance_id matches their own instance
+// ID; the publishing instance already delivered the message locally.
+message ChatRelayEvent {
+  // Instance ID of the Guild replica that persisted and published this message.
+  // Consumers compare this against their own registered instance ID to avoid
+  // re-delivering a message they already broadcast.
+  string source_instance_id = 1;
+
+  // Guild the message belongs to. Consumers use this to route to the correct
+  // set of locally connected WebSocket clients.
+  string guild_id = 2;
+
+  // UUIDv7 assigned by the publishing instance; stable across relay deliveries.
+  string message_id = 3;
+
+  // User ID of the sender.
+  string author_id = 4;
+
+  // Client-supplied idempotency key echoed back in the ack frame.
+  string client_message_id = 5;
+
+  // Message body. Max 2000 characters enforced at the WebSocket layer.
+  string content = 6;
+
+  // Unix millisecond timestamp at which the message was persisted.
+  int64 timestamp_unix_ms = 7;
+}

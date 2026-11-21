@@ -1,9 +1,22 @@
 # Postman collections
 
 Import the eight service test collections, optional demo collection and `tamagotchi-go.postman_environment.json`.
-Select the **Tamagotchi Go Local** environment. Application base URLs use
-Gateway on port 3000 with service prefixes. Map/Raid probes use their separate
-direct URLs on ports 3006/3007.
+Select the **Tamagotchi Go Local** environment. The published stack
+(`deploy/compose.yaml`) exposes the Gateway on port 3000, the Guild socket
+ingress on 3004, Discovery on 127.0.0.1:3009 and the Broker on 127.0.0.1:3010.
+Service ports are not published. Application base URLs use the Gateway with
+service prefixes (`/users`, `/tamagotchi`, `/battle`, `/guild`, `/registry`,
+`/map`, `/raid`, `/notification`). Probe URLs (`*_probe_url`,
+`tamagotchi_direct_url`, `notification_direct_url`) read each service's
+instances from Discovery: Health needs a registered instance and Readiness a
+healthy routable one.
+
+The collections contain only operations whose catalogue entry in
+`contracts/operations.v1.json` has a `public` section. Service-only operations,
+such as currency credits, relationship checks, XP awards, engagements, holder
+grants, Registry configuration reads and Guild chat tickets, run service to
+service through the Broker. The Gateway does not expose them and answers
+`404 unknown_route`, so they are not in the collections.
 
 Map uses two real dedicated test accounts: set `map_user_id`, `map_credential`,
 `map_neighbor_id` and `map_neighbor_credential` to matching user IDs and bearer
@@ -22,7 +35,7 @@ The requests no longer generate nonexistent Guilds or Registry occurrences.
 Both collections use bearer authentication through Gateway and required
 Idempotency-Key headers. They test identical command replay and missing keys;
 Raid creation/attack replay uses the original recorded key and response. Forged
-plain headers and direct REST impersonation are refused. Domain prerequisite
+plain identity headers are refused. Domain prerequisite
 scripts use asynchronous authenticated setup;
 probes require no bearer token. Refusal requests assert expected status/codes.
 Run other collections in order when they depend on earlier state. Their owner
@@ -44,36 +57,29 @@ reports can contain tokens and must also stay private.
 
 Guild and Registry collections require real fixture IDs matching their supplied
 credentials. Set Guild leader, officer-to-be, decliner, revokee, kicked-user and
-outsider IDs; set Registry developer, moderator and outsider IDs. Probes use
-guild_probe_url and registry_probe_url directly. Registry configuration reads use
-a Monster Raid token with registry:read-config; occurrence reads also require
-registry:read-occurrences. Do not add Battle grants for these collection calls.
+outsider IDs; set Registry developer, moderator and outsider IDs. The public Registry occurrence read uses the admin user fixture. Typed Monster
+Raid reads of Guild and Registry are exercised through Broker integration, not
+a service token on a user-only public mapping. Do not broaden service grants.
 
 Battle requires real `challenger_id`, `opponent_id` and `outsider_id`, with matching
 `challenger_credential`, `opponent_credential` and `outsider_credential`. Supply
 `challenger_primary_id`, `challenger_secondary_id`, `opponent_primary_id` and
 `opponent_secondary_id`: distinct held creatures with no pending challenge or
 engagement. Run requests in order for challenge replay, acceptance, attack and
-forfeit. Direct probes use `battle_probe_url`; domain calls use Gateway.
+forfeit. Probes use `battle_probe_url`; domain calls use Gateway.
 
 User Management registers fresh dedicated users and logs them in through Gateway.
-Supply real pkg1_id/pkg2_id and um_config_version. Package 1 must define FEED=10,
-PLAY=5 and daily_currency_cap=30 at that immutable configuration version. This
-is real Registry configuration, not a mock. Supply narrowly scoped service tokens:
-um_global_credential (Monster Raid, users:credit-global), um_local_credential
-(Tamagotchi, users:credit-local), um_relationship_credential (Guild,
-users:check-relationship), um_membership_credential (Guild, users:read-membership),
-and um_battle_credential (Battle, users:consume-boost/users:settle-battle).
-The collection never requests broader grants. Direct probes use
-user_management_probe_url. Fresh-stranger version is asserted against the shared
-contract; a failing owner candidate remains a failing check.
+Supply real pkg1_id/pkg2_id. Currency credits, relationship checks, membership
+snapshots, boost consumption and battle settlement are service-only, so the
+collection checks wallets, boosts and relationships through their public reads
+and needs no service tokens. Probes use user_management_probe_url.
 
 ## Demo and independent requests
 
 Import demo.postman_collection.json. Set demo_credential to a fresh user token
 matching demo_user_id. Reads, probes and refusal requests run independently.
-Use the process-probe folder without credentials. Probes go directly to services;
-all application calls use Gateway. Each request adds and logs a correlation ID.
+Use the process-probe folder without credentials. It checks Gateway readiness and
+each service's healthy instances in Discovery; all application calls use Gateway. Each request adds and logs a correlation ID.
 
 The Map log scenario refreshes the dedicated viewer location, then performs a
 nearby query with a nested relationship call. Run those two requests in order.
@@ -83,7 +89,7 @@ need fresh actors or an explicitly resolved previous request. Notification histo
 is polled every 500 ms for at most 15 seconds. Persistence is not device-push proof.
 
 Guild negotiation uses demo_guild_id containing the authenticated user. Open the
-returned URL in a WebSocket tab and send {"type":"auth","ticket":"<ticket>"}
+returned URL (the Guild socket ingress on port 3004) in a WebSocket tab and send {"type":"auth","ticket":"<ticket>"}
 within five seconds. Tickets are single-use with a 30-second lifetime.
 
 Refresh local bearer tokens before rehearsal. Use ordinary Postman Send for the
@@ -100,3 +106,8 @@ For the Tamagotchi scenario, supply `tamagotchi_fixture_package_id` for an activ
 package with a configured starter and the documented care rules (FEED adds
 20 hunger and 5 XP). Do not select a package merely because it is active;
 Registry edit scenarios may leave active packages without starter definitions.
+
+XP awards, engagements and holder grants are service-only, so the Tamagotchi
+collection no longer fetches a Battle service token. Its holder and collection
+requests that expect the rival to co-hold the owner's creature need a grant that
+only a finished battle makes; with fresh users they fail.

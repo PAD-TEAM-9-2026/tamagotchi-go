@@ -1,0 +1,202 @@
+syntax = "proto3";
+
+package tamagotchi.package_registry.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.packageregistry.v1";
+option csharp_namespace = "Tamagotchi.Contracts.PackageRegistry.V1";
+
+import "google/protobuf/timestamp.proto";
+
+// Requests a specific or latest version of the starter pet configuration
+// for the given package. Called internally by the tamagotchi service when
+// initialising a creature from scratch.
+message GetStarterPetRequest {
+  // UUIDv4 of the package.
+  string package_id = 1;
+  // If non-zero, pin the response to exactly this config version.
+  int32 config_version = 2;
+}
+
+message GetStarterPetResponse {
+  string package_id = 1;
+  int32 config_version = 2;
+  StarterPet starter = 3;
+}
+
+// Requests the full set of stat definitions (key, type, bounds) for a package.
+// Used by the tamagotchi service to validate and interpret raw stat values.
+message GetStatDefinitionsRequest {
+  string package_id = 1;
+  int32 config_version = 2;
+}
+
+message GetStatDefinitionsResponse {
+  string package_id = 1;
+  int32 config_version = 2;
+  repeated StatDefinition stats = 3;
+  repeated CareRule care_actions = 4;
+}
+
+// Requests the bonus rules (threshold → effect) for a package's stats.
+message GetStatBonusesRequest {
+  string package_id = 1;
+  int32 config_version = 2;
+}
+
+message GetStatBonusesResponse {
+  string package_id = 1;
+  int32 config_version = 2;
+  repeated BonusRule bonuses = 3;
+}
+
+// Requests the currency earning rules for a package (daily cap, care XP values).
+message GetCurrencyRulesRequest {
+  string package_id = 1;
+  int32 config_version = 2;
+}
+
+message GetCurrencyRulesResponse {
+  string package_id = 1;
+  int32 config_version = 2;
+  int32 daily_currency_cap = 3;
+  repeated CareRule care_actions = 4;
+}
+
+// Reads one package as a service, the service-side twin of the public
+// registry.get_package. Called internally by User Management to check that a
+// package exists and is active when a user registers or joins it.
+message ReadPackageRequest {
+  // UUID of the package.
+  string package_id = 1;
+}
+
+message ReadPackageResponse {
+  string package_id = 1;
+  string name = 2;
+  string version = 3;
+  // "active" or "inactive".
+  string status = 4;
+  // The current config version; 0 when no config has been written yet.
+  int32 config_version = 5;
+}
+
+// Checks whether a user may found or join a guild: at least one of their
+// packages must exist and be active. Called internally by Guild.
+message CheckEligibilityRequest {
+  // UUIDs of the user's packages, 1 to 20.
+  repeated string user_packages = 1;
+}
+
+message CheckEligibilityResponse {
+  bool eligible = 1;
+  // The submitted packages that exist and are active.
+  repeated string eligible_package_ids = 2;
+  // Why the user is not eligible; empty when eligible.
+  string reason = 3;
+}
+
+// Reads one raid occurrence as a service. Called internally by Monster Raid when
+// it creates a raid. Mirrors the public Occurrence shape.
+message GetOccurrenceRequest {
+  // UUIDv7 of the occurrence.
+  string occurrence_id = 1;
+}
+
+message GetOccurrenceResponse {
+  string occurrence_id = 1;
+  string boss_id = 2;
+  int32 boss_version = 3;
+  google.protobuf.Timestamp available_from = 4;
+  google.protobuf.Timestamp available_until = 5;
+  // "scheduled", "active", "inactive" or "cancelled".
+  string status = 6;
+  int32 version = 7;
+}
+
+// Reads one boss configuration as a service. Called internally by Monster Raid
+// to snapshot the boss when it creates a raid. Mirrors the public Boss shape.
+message GetBossRequest {
+  // UUIDv7 of the boss.
+  string boss_id = 1;
+  // If non-zero, pin the response to exactly this config version.
+  int32 config_version = 2;
+}
+
+message GetBossResponse {
+  string boss_id = 1;
+  int32 config_version = 2;
+  BossInput definition = 3;
+}
+
+// ── Shared embedded types ──────────────────────────────────────────────────
+
+message StarterPet {
+  string name = 1;
+  string combat_type = 2;
+  string sprite_ref = 3;
+  // The starter's initial value for each stat, as text. Every key is a stat in
+  // GetStatDefinitionsResponse.stats for the same package and config_version,
+  // and that stat's value_type gives the encoding:
+  //   NUMBER  - a decimal number as JavaScript formats it ("80", "0.5", "-3";
+  //             magnitudes below 1e-6 use exponent form, such as "1e-7"), within
+  //             the stat's minimum and maximum when they are set.
+  //   BOOLEAN - "true" or "false".
+  //   STRING  - the value as is, one of allowed_strings when they are set.
+  map<string, string> initial_stats = 4;
+}
+
+message StatDefinition {
+  string key = 1;
+  string value_type = 2;
+  optional double minimum = 3;
+  optional double maximum = 4;
+  repeated string allowed_strings = 5;
+}
+
+message CareRule {
+  string action = 1;
+  repeated CareDelta deltas = 2;
+  int32 xp = 3;
+  int32 cooldown_seconds = 4;
+  int32 local_currency = 5;
+}
+
+message CareDelta {
+  string stat_key = 1;
+  double delta = 2;
+}
+
+message BonusRule {
+  string stat_key = 1;
+  string operator = 2;
+  double threshold = 3;
+  string effect = 4;
+  int32 value_bps = 5;
+}
+
+message BossInput {
+  string name = 1;
+  string description = 2;
+  string sprite_ref = 3;
+  // FLAME, NATURE, EARTH, ELECTRIC, WATER or SHADOW.
+  string combat_type = 4;
+  int32 max_hp = 5;
+  int32 defense = 6;
+  repeated string weaknesses = 7;
+  repeated string resistances = 8;
+  // Empty today; kept so the shape matches the public definition.
+  SpecialProperties special_properties = 9;
+  int32 duration_seconds = 10;
+  int32 max_participants = 11;
+  RewardAmounts rewards = 12;
+  // Absent when the boss pays nothing on defeat (JSON null).
+  RewardAmounts defeat_rewards = 13;
+}
+
+message SpecialProperties {}
+
+message RewardAmounts {
+  int32 global_currency = 1;
+  int32 xp = 2;
+}

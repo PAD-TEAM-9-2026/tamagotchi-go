@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package tamagotchi.user_management.v1;
+
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.user_management.v1";
+option csharp_namespace = "Tamagotchi.Contracts.UserManagement.V1";
+
+// UNSPECIFIED must be refused by adapters.
+enum CreditReason {
+  CREDIT_REASON_UNSPECIFIED = 0;
+  RAID_WIN = 1;
+  RAID_DEFEAT = 2;
+  BATTLE_ACCESS_CAP = 3;
+}
+
+// Equivalent to Credit, with the path's userId as user_id. amount is 0..1000000.
+message CreditGlobalRequest {
+  string user_id = 1;
+  uint32 amount = 2;
+  CreditReason reason = 3;
+  string reference_id = 4;
+}
+
+// Equivalent to LocalCredit, with the path's userId as user_id. config_version is
+// 1..2147483647; action is the package's care action name, 1..64 characters.
+message CreditLocalRequest {
+  string user_id = 1;
+  string package_id = 2;
+  uint32 config_version = 3;
+  string action = 4;
+  string care_action_id = 5;
+}
+
+// Equivalent to CreditReceipt. Amounts and balances are 0..2^53-1.
+message CreditReceipt {
+  string user_id = 1;
+  uint64 credited_amount = 2;
+  uint64 new_balance = 3;
+  string reference_id = 4;
+}

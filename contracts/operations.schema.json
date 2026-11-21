@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Broker operation manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*\\.[a-z][a-z0-9_]*$",
+            "maxLength": 128
+          },
+          "destination": {
+            "enum": [
+              "user-management",
+              "battle",
+              "tamagotchi",
+              "guild",
+              "package-registry",
+              "map",
+              "monster-raid",
+              "notification"
+            ]
+          },
+          "storage": {
+            "enum": [
+              "DURABLE",
+              "VOLATILE"
+            ]
+          },
+          "failover": {
+            "enum": [
+              "SAFE_READ",
+              "IDEMPOTENT",
+              "UNSAFE"
+            ]
+          },
+          "idempotency": {
+            "enum": [
+              "NONE",
+              "COMMAND_KEY",
+              "NATURAL"
+            ]
+          },
+          "contains_credentials": {
+            "type": "boolean"
+          },
+          "request_max_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1048576
+          },
+          "reply_max_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1048576
+          },
+          "public": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "enum": [
+                  "GET",
+                  "HEAD",
+                  "POST",
+                  "PUT",
+                  "PATCH",
+                  "DELETE",
+                  "OPTIONS"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "pattern": "^/v1/",
+                "maxLength": 256
+              },
+              "access": {
+                "enum": [
+                  "anonymous",
+                  "user",
+                  "admin"
+                ]
+              },
+              "request_headers": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]*$",
+                  "maxLength": 64
+                },
+                "maxItems": 32,
+                "uniqueItems": true
+              },
+              "query_parameters": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "maxLength": 64
+                },
+                "maxItems": 32,
+                "uniqueItems": true
+              },
+              "response_headers": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]*$",
+                  "maxLength": 64
+                },
+                "maxItems": 32,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "method",
+              "path",
+              "access",
+              "request_headers",
+              "query_parameters",
+              "response_headers"
+            ]
+          },
+          "internal": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "request_type": {
+                "type": "string",
+                "pattern": "^type.googleapis.com/tamagotchi\\.[a-z_]+\\.v[1-9][0-9]*\\.[A-Z][A-Za-z0-9]*$",
+                "maxLength": 256
+              },
+              "response_type": {
+                "type": "string",
+                "pattern": "^type.googleapis.com/tamagotchi\\.[a-z_]+\\.v[1-9][0-9]*\\.[A-Z][A-Za-z0-9]*$",
+                "maxLength": 256
+              },
+              "callers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "service": {
+                      "enum": [
+                        "user-management",
+                        "battle",
+                        "tamagotchi",
+                        "guild",
+                        "package-registry",
+                        "map",
+                        "monster-raid",
+                        "notification",
+                        "gateway",
+                        "message-broker",
+                        "service-discovery"
+                      ]
+                    },
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]*:[a-z][a-z0-9-]*$",
+                        "maxLength": 64
+                      },
+                      "maxItems": 20,
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "service",
+                    "scopes"
+                  ]
+                },
+                "maxItems": 20,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "request_type",
+              "response_type",
+              "callers"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "destination",
+          "storage",
+          "failover",
+          "idempotency",
+          "contains_credentials",
+          "request_max_bytes",
+          "reply_max_bytes"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "public"
+            ]
+          },
+          {
+            "required": [
+              "internal"
+            ]
+          }
+        ]
+      },
+      "maxItems": 500,
+      "uniqueItems": true
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "topic": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_]*)+\\.v[1-9][0-9]*$",
+            "maxLength": 128
+          },
+          "producer": {
+            "enum": [
+              "user-management",
+              "battle",
+              "tamagotchi",
+              "guild",
+              "package-registry",
+              "map",
+              "monster-raid",
+              "notification"
+            ]
+          }
+        },
+        "required": [
+          "topic",
+          "producer"
+        ]
+      },
+      "maxItems": 100,
+      "uniqueItems": true
+    },
+    "subscriptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subscriber": {
+            "enum": [
+              "user-management",
+              "battle",
+              "tamagotchi",
+              "guild",
+              "package-registry",
+              "map",
+              "monster-raid",
+              "notification",
+              "audit"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "LOGICAL",
+              "INSTANCE"
+            ]
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_]*)+\\.v[1-9][0-9]*$",
+              "maxLength": 128
+            },
+            "maxItems": 100,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "subscriber",
+          "kind",
+          "topics"
+        ]
+      },
+      "maxItems": 100,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema_version",
+    "operations",
+    "events",
+    "subscriptions"
+  ]
+}
