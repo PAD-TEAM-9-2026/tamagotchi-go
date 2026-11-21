@@ -168,8 +168,10 @@ only in CallRequest.idempotency_key. Strip credentials, assertions, caller ident
 hop-by-hop headers and every header nominated by Connection before persistence.
 Security metadata is separately verified, never copied into the durable envelope.
 Response headers preserve Content-Type, ETag, Retry-After, WWW-Authenticate and
-other explicitly permitted metadata, including empty 304 responses. Prohibit
-Set-Cookie and all credential-bearing metadata in generic durable replies.
+other explicitly permitted metadata, including empty 304 responses. X-Cache
+(`HIT` or `MISS`, whether a read was answered from the shared cache) is permitted
+on the cached reads that list it. Prohibit Set-Cookie and all credential-bearing
+metadata in generic durable replies.
 
 PublicHttpRequest.path is the original raw path after Gateway prefix removal,
 matched against the allowlisted template. Refuse malformed escapes, encoded slash
