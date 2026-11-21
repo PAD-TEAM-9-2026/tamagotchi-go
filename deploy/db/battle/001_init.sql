@@ -1,4 +1,4 @@
--- The schema of battle through its AddTxOutcomes migration, one statement block for every migration in order, with the history rows, so a later
+-- The schema of battle through its AddSettlementMode migration, one statement block for every migration in order, with the history rows, so a later
 -- `dotnet ef database update` runs cleanly against a volume that was initialized from this file instead of via EF.
 -- Generated from the service's migrations with `dotnet ef migrations script`; regenerate it, never edit it by hand.
 -- A volume that already exists is brought up to date with upgrade.sql in this folder.
@@ -167,3 +167,14 @@ INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20261121134051_AddTxOutcomes', '10.0.12');
 
 COMMIT;
+
+START TRANSACTION;
+ALTER TABLE "Battles" ADD "SettlementMarkedAt" timestamp with time zone;
+
+ALTER TABLE "Battles" ADD "SettlementMode" integer NOT NULL DEFAULT 0;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261121163024_AddSettlementMode', '10.0.12');
+
+COMMIT;
+
