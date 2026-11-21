@@ -1,4 +1,4 @@
--- The schema of battle through its AddOutboxTraceParent migration, one statement block for every migration in order, with the history rows, so a later
+-- The schema of battle through its AddSettlementMode migration, one statement block for every migration in order, with the history rows, so a later
 -- `dotnet ef database update` runs cleanly against a volume that was initialized from this file instead of via EF.
 -- Generated from the service's migrations with `dotnet ef migrations script`; regenerate it, never edit it by hand.
 -- A volume that already exists is brought up to date with upgrade.sql in this folder.
@@ -138,3 +138,43 @@ INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20261112195941_AddOutboxTraceParent', '10.0.12');
 
 COMMIT;
+
+START TRANSACTION;
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'etl_reader') THEN
+        GRANT SELECT ("Id", "ChallengerId", "OpponentId", "WinnerId", "LoserId", "Status", "SettlementStatus",
+                      "AccessGrantStatus", "SettlementAttempts") ON "Battles" TO etl_reader;
+        GRANT SELECT ("BattleId", "CreatedAt") ON "BattleAttackRecords" TO etl_reader;
+    END IF;
+END $$;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261121131525_GrantEtlReader', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+CREATE TABLE "TxOutcomes" (
+    "TxId" character varying(150) NOT NULL,
+    "Operation" character varying(64) NOT NULL,
+    "Result" text NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_TxOutcomes" PRIMARY KEY ("TxId")
+);
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261121134051_AddTxOutcomes', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+ALTER TABLE "Battles" ADD "SettlementMarkedAt" timestamp with time zone;
+
+ALTER TABLE "Battles" ADD "SettlementMode" integer NOT NULL DEFAULT 0;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261121163024_AddSettlementMode', '10.0.12');
+
+COMMIT;
+

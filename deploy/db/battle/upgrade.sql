@@ -1,4 +1,4 @@
--- Brings an existing battle database up to the schema of battle through its AddOutboxTraceParent migration. Safe to run again: each migration is applied only
+-- Brings an existing battle database up to the schema of battle through its AddSettlementMode migration. Safe to run again: each migration is applied only
 -- if its row is not in "__EFMigrationsHistory" yet, so it adds what is missing and touches nothing that is there.
 -- Generated with `dotnet ef migrations script --idempotent`. Run it as the service's database user, for example
 --   docker compose exec -T database psql -U ${BATTLE_DB_USER} -d ${BATTLE_DB_NAME} -v ON_ERROR_STOP=1 < deploy/db/battle/upgrade.sql
@@ -274,3 +274,78 @@ BEGIN
     END IF;
 END $EF$;
 COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121131525_GrantEtlReader') THEN
+    DO $$
+    BEGIN
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'etl_reader') THEN
+            GRANT SELECT ("Id", "ChallengerId", "OpponentId", "WinnerId", "LoserId", "Status", "SettlementStatus",
+                          "AccessGrantStatus", "SettlementAttempts") ON "Battles" TO etl_reader;
+            GRANT SELECT ("BattleId", "CreatedAt") ON "BattleAttackRecords" TO etl_reader;
+        END IF;
+    END $$;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121131525_GrantEtlReader') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261121131525_GrantEtlReader', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121134051_AddTxOutcomes') THEN
+    CREATE TABLE "TxOutcomes" (
+        "TxId" character varying(150) NOT NULL,
+        "Operation" character varying(64) NOT NULL,
+        "Result" text NOT NULL,
+        "CreatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_TxOutcomes" PRIMARY KEY ("TxId")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121134051_AddTxOutcomes') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261121134051_AddTxOutcomes', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121163024_AddSettlementMode') THEN
+    ALTER TABLE "Battles" ADD "SettlementMarkedAt" timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121163024_AddSettlementMode') THEN
+    ALTER TABLE "Battles" ADD "SettlementMode" integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121163024_AddSettlementMode') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261121163024_AddSettlementMode', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+

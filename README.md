@@ -1713,6 +1713,9 @@ needs the outbox, the idempotency receipts, the combat snapshot columns and the 
 before the new images start. If a migration was applied by hand earlier, add its row to `__EFMigrationsHistory` first.
 User Management and Battle 4.0.0 also need the nullable `OutboxMessages.TraceParent` column (`AddOutboxTraceParent`), so a volume
 created before it must run the same `upgrade.sql`.
+The Lab 5 builds of User Management and Battle add `TxOutcomes` (two-phase commit outcomes) to both, `InjectedFaults` (the demo fault
+switch) and `ReversedBattles` (settlement reversals) to User Management, and read grants for the warehouse's `etl_reader` role, which
+are skipped where the role does not exist yet. A volume created before them must run the same `upgrade.sql`.
 
 Map and Monster Raid 4.0.1 apply their own startup migrations, adding nullable
 `event_outbox.trace_parent` (Map 006, Raid 012) to preserve request-to-event traces.

@@ -1,4 +1,4 @@
--- Brings an existing user-management database up to the schema of user-management through its AddOutboxTraceParent migration. Safe to run again: each migration is applied only
+-- Brings an existing user-management database up to the schema of user-management through its GrantEtlReader migration. Safe to run again: each migration is applied only
 -- if its row is not in "__EFMigrationsHistory" yet, so it adds what is missing and touches nothing that is there.
 -- Generated with `dotnet ef migrations script --idempotent`. Run it as the service's database user, for example
 --   docker compose exec -T database psql -U ${USER_MANAGEMENT_DB_USER} -d ${USER_MANAGEMENT_DB_NAME} -v ON_ERROR_STOP=1 < deploy/db/user-management/upgrade.sql
@@ -398,6 +398,111 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261112194331_AddOutboxTraceParent') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
     VALUES ('20261112194331_AddOutboxTraceParent', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121115850_AddTxOutcomes') THEN
+    CREATE TABLE "TxOutcomes" (
+        "TxId" character varying(150) NOT NULL,
+        "Operation" character varying(64) NOT NULL,
+        "Result" text NOT NULL,
+        "CreatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_TxOutcomes" PRIMARY KEY ("TxId")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121115850_AddTxOutcomes') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261121115850_AddTxOutcomes', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121122239_AddInjectedFaults') THEN
+    CREATE TABLE "InjectedFaults" (
+        "Operation" character varying(64) NOT NULL,
+        "Mode" character varying(16) NOT NULL,
+        "DelayMs" integer NOT NULL,
+        "Remaining" integer NOT NULL,
+        "CreatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_InjectedFaults" PRIMARY KEY ("Operation")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121122239_AddInjectedFaults') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261121122239_AddInjectedFaults', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121130304_AddReversedBattles') THEN
+    CREATE TABLE "ReversedBattles" (
+        "BattleId" uuid NOT NULL,
+        "WasSettled" boolean NOT NULL,
+        "WinnerId" uuid NOT NULL,
+        "LoserId" uuid NOT NULL,
+        "WinnerDebit" integer NOT NULL,
+        "Unrecovered" integer NOT NULL,
+        "LoserCredit" integer NOT NULL,
+        "WinnerBalance" bigint NOT NULL,
+        "LoserBalance" bigint NOT NULL,
+        "CreatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_ReversedBattles" PRIMARY KEY ("BattleId")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121130304_AddReversedBattles') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261121130304_AddReversedBattles', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121131424_GrantEtlReader') THEN
+    DO $$
+    BEGIN
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'etl_reader') THEN
+            GRANT SELECT ("Id") ON "Users" TO etl_reader;
+            GRANT SELECT ("UserId", "Role") ON "UserRoles" TO etl_reader;
+            GRANT SELECT ("UserId", "PackageId") ON "PackageMemberships" TO etl_reader;
+            GRANT SELECT ON "CurrencyCredits", "SettledBattles", "ReversedBattles" TO etl_reader;
+        END IF;
+    END $$;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121131424_GrantEtlReader') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261121131424_GrantEtlReader', '10.0.12');
     END IF;
 END $EF$;
 COMMIT;
