@@ -1,4 +1,4 @@
--- The schema of user-management through its AddOutboxTraceParent migration, one statement block for every migration in order, with the history rows, so a later
+-- The schema of user-management through its GrantEtlReader migration, one statement block for every migration in order, with the history rows, so a later
 -- `dotnet ef database update` runs cleanly against a volume that was initialized from this file instead of via EF.
 -- Generated from the service's migrations with `dotnet ef migrations script`; regenerate it, never edit it by hand.
 -- A volume that already exists is brought up to date with upgrade.sql in this folder.
@@ -218,5 +218,70 @@ ALTER TABLE "OutboxMessages" ADD "TraceParent" character varying(55);
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20261112194331_AddOutboxTraceParent', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+CREATE TABLE "TxOutcomes" (
+    "TxId" character varying(150) NOT NULL,
+    "Operation" character varying(64) NOT NULL,
+    "Result" text NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_TxOutcomes" PRIMARY KEY ("TxId")
+);
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261121115850_AddTxOutcomes', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+CREATE TABLE "InjectedFaults" (
+    "Operation" character varying(64) NOT NULL,
+    "Mode" character varying(16) NOT NULL,
+    "DelayMs" integer NOT NULL,
+    "Remaining" integer NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_InjectedFaults" PRIMARY KEY ("Operation")
+);
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261121122239_AddInjectedFaults', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+CREATE TABLE "ReversedBattles" (
+    "BattleId" uuid NOT NULL,
+    "WasSettled" boolean NOT NULL,
+    "WinnerId" uuid NOT NULL,
+    "LoserId" uuid NOT NULL,
+    "WinnerDebit" integer NOT NULL,
+    "Unrecovered" integer NOT NULL,
+    "LoserCredit" integer NOT NULL,
+    "WinnerBalance" bigint NOT NULL,
+    "LoserBalance" bigint NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_ReversedBattles" PRIMARY KEY ("BattleId")
+);
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261121130304_AddReversedBattles', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'etl_reader') THEN
+        GRANT SELECT ("Id") ON "Users" TO etl_reader;
+        GRANT SELECT ("UserId", "Role") ON "UserRoles" TO etl_reader;
+        GRANT SELECT ("UserId", "PackageId") ON "PackageMemberships" TO etl_reader;
+        GRANT SELECT ON "CurrencyCredits", "SettledBattles", "ReversedBattles" TO etl_reader;
+    END IF;
+END $$;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261121131424_GrantEtlReader', '10.0.12');
 
 COMMIT;
