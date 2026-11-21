@@ -160,7 +160,7 @@ services:
 
   # User Management starts before the broker, which reads its keys at startup (contracts/identity.md).
   user-management:
-    image: patriciamoraru/user-management:4.0.0@sha256:df012384516e952c6bfe9878a4239c4583a8276d29befa58ff00ba50ce29e38e
+    image: patriciamoraru/user-management:4.0.1@sha256:a2e32dd58b7a5b2111ecfcb460b4ecf0b660b77c3927d782def914b80704a25c
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -452,7 +452,7 @@ services:
     healthcheck: *ready-node
 
   battle:
-    image: patriciamoraru/battle:4.0.0@sha256:ffbbd7e580a89c06b270025168e526e4402f3aee0915d8ff28e2d67b528efaea
+    image: patriciamoraru/battle:4.0.1@sha256:3117a21eb09ca0aa5e85039d2eaa26541f6dd8edee3dab367ea732b73082d409
     restart: unless-stopped
     pull_policy: always
     deploy:
