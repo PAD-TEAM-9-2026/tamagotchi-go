@@ -24,7 +24,7 @@ FORBIDDEN_HEADERS = frozenset({
     'x-correlation-id',
 })
 REQUEST_HEADERS = {'accept', 'content-type', 'if-match', 'if-none-match'}
-RESPONSE_HEADERS = {'content-type', 'etag', 'retry-after', 'www-authenticate', 'location', 'cache-control', 'vary'}
+RESPONSE_HEADERS = {'content-type', 'etag', 'retry-after', 'www-authenticate', 'location', 'cache-control', 'vary', 'x-cache'}
 PATH = re.compile(r'/v1(?:/(?:[a-zA-Z0-9_-]+|\{[a-zA-Z][a-zA-Z0-9_]*\}))+\Z')
 
 
