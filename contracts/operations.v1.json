@@ -50,7 +50,8 @@
           "etag",
           "retry-after",
           "www-authenticate",
-          "cache-control"
+          "cache-control",
+          "x-cache"
         ]
       }
     },

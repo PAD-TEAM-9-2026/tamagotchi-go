@@ -1232,6 +1232,11 @@ the freshness window return `STALE`; observations older than the stored reading
 return `OUT_OF_ORDER`. A timestamp more than 60 seconds ahead returns
 `400 invalid_timestamp`. Refresh shared locations before a demonstration.
 
+With the optional sharded cache enabled, the self-only single-location GET
+reports `X-Cache: HIT` or `MISS` and uses a two-second TTL. Invalidation follows
+committed writes; a concurrent late read fill can remain stale until expiry.
+Nearby queries and encounter/visibility decisions always bypass that cache.
+
 Friends and enemies are visible while their location is fresh. Strangers appear
 within 6 metres, which is configurable.
 
