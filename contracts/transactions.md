@@ -19,6 +19,18 @@ participant call runs on the inbound request budget. Disconnect after admission
 does not cancel durable settlement. Same ID and normalized input returns current
 state; changed input is ALREADY_EXISTS. Durable state contains no credentials.
 
+The compared input is the normalized settlement plan and, for 2PC, access_step.
+correlation_id is validated on every start but is not part of that fingerprint:
+an identical retry may carry a fresh correlation ID and still joins the original
+work. Background calls and the stored view retain the first correlation ID.
+
+One settlement mode owns a battle. Admission in both modes atomically takes the
+same battle-level lock before checking either mode's durable records. Starting
+the other mode returns FAILED_PRECONDITION settlement_mode_conflict, including
+when the previous attempt has aborted; a mode change needs explicit reconciliation.
+While saga execution is unavailable, select 2pc only after its runtime passes
+acceptance. StartSaga remains UNIMPLEMENTED; there is no automatic mode fallback.
+
 The fixed coordinator definition delegates only its approved operations as
 `service:battle`. Each dispatch derives its destination/scope from the reviewed
 catalogue and signs a fresh, instance-bound Broker context. It never persists a
@@ -62,6 +74,15 @@ storage/auth/transport returns an error, never presumed abort. Late prepare afte
 an abort must be fenced or recovered against that durable decision; an early
 NOTHING_TO_ABORT must not conceal a subsequently prepared transaction.
 
+In particular, NOTHING_TO_ABORT counts as a phase-two acknowledgement only when
+the participant durably records an abort fence under the same serialization used
+by prepare. A later prepare must refuse that ID. Recovery scans prepared work at
+startup and every five seconds, querying the authoritative decision without an
+age delay; sixty seconds is a warning threshold, not permission to roll back or
+the time before recovery starts. Each pass is bounded and failed lookups retry
+on the next pass. A participant without the abort fence must not claim final
+resolution merely because an earlier abort found no work.
+
 Stable effect keys are `{id}:{step}:{phase}`; persist one UUIDv7 Call message ID per
 logical action and reuse it after uncertain responses. New dispatch attempts get
 fresh deadlines and contexts; root start deadline is not the workflow lifetime.
@@ -74,6 +95,10 @@ results. A compensated payout cannot claim that access was granted. Battle's
 mark/prepare uses the verified result and publishes its completed event through
 its existing outbox only once.
 
+SETTLED + NO_ACCESS is invalid for this fixed definition: successful settlement
+has GRANTED, ALREADY_HOLDER or CAP_COMPENSATED. COMPENSATED + NO_ACCESS represents
+a compensated forward path; an uncertain pivot has no terminal settlement claim.
+
 Currency reversal refunds the original debit to the loser, takes the available
 winner credit back and reports `unrecovered`; balances remain unsigned. Reversal
 of an unsettled battle records a tombstone and moves nothing. A late settlement
@@ -85,6 +110,20 @@ Saga ordering, retry/pivot/deadline behavior is finalized by the saga owner befo
 this proposal is approved. Both modes use the same participant dispatch boundary.
 
 ## Management and acceptance
+
+### Controlled participant faults
+
+Participants expose POST /v1/admin/faults directly on their service HTTP port,
+protected by current admin authorization, never as a public Gateway mapping.
+The body is {operation, mode, delay_ms, count}. Only the service's explicit
+operation allowlist is accepted; faults are durable and count is consumed
+atomically across replicas. count defaults to 1 and is bounded to 1..100.
+delay requires 1..30000 milliseconds and honors cancellation before running the
+operation. fail returns 502 fault_injected. vote_no on a tx_prepare operation is
+a normal typed negative vote with reason fault_injected, without a prepared
+effect; on other operations it behaves as fail. The demo uses the loopback-only
+ports in compose.demo.yaml and a real admin credential. Ordinary deployment
+does not expose these administration ports publicly.
 
 Existing admin authorization protects GET /v1/transactions[/{id}] and
 GET /v1/sagas[/{id}]. Responses expose progress/reasons, not credentials or bodies.
