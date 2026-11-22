@@ -1833,6 +1833,20 @@ The Lab 5 builds of User Management and Battle add `TxOutcomes` (two-phase commi
 switch) and `ReversedBattles` (settlement reversals) to User Management, and read grants for the warehouse's `etl_reader` role, which
 are skipped where the role does not exist yet. A volume created before them must run the same `upgrade.sql`.
 
+A fresh volume gets `etl_reader` from `init-service-databases.sh`, which creates it (read-only by default, password
+`ETL_READER_PASSWORD`, `CONNECT` on every service database) before any schema is loaded, so those grants apply. On a volume created
+earlier, create the role before running `upgrade.sql`, as the `postgres` user:
+
+```sql
+CREATE ROLE etl_reader LOGIN PASSWORD '<ETL_READER_PASSWORD>';
+ALTER ROLE etl_reader SET default_transaction_read_only = on;
+-- once per service database:
+GRANT CONNECT ON DATABASE user_management TO etl_reader;
+```
+
+If `upgrade.sql` already ran without the role, its grants were skipped and are not retried, because the migration is recorded as
+applied: run the `GRANT` lines of its `etl_reader` block by hand, as the service's database user.
+
 Map and Monster Raid 4.0.1 apply their own startup migrations, adding nullable
 `event_outbox.trace_parent` (Map 006, Raid 012) to preserve request-to-event traces.
 Existing rows remain valid. Their schema-version guard rejects older binaries
