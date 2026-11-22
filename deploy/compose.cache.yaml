@@ -1,0 +1,50 @@
+# Sharded read cache (contracts/cache.md), layered on compose.yaml:
+#
+#   docker compose -f compose.yaml -f compose.cache.yaml up -d
+#
+# Three Valkey shards on the Compose network only, no persistence, LRU eviction. Services place
+# keys with the consistent-hashing ring over CACHE_NODES; a service that does not cache yet ignores it.
+
+x-cache-node: &cache-node
+  image: valkey/valkey:8.1.12-alpine@sha256:9971099af41c36e887aabdfe22b80c0fe45df949163dfc9cb434febc57cfc3fc
+  restart: unless-stopped
+  command:
+    - valkey-server
+    - --save
+    - ""
+    - --appendonly
+    - "no"
+    - --maxmemory
+    - ${CACHE_MAXMEMORY:-64mb}
+    - --maxmemory-policy
+    - allkeys-lru
+  healthcheck:
+    test: ["CMD", "valkey-cli", "ping"]
+    interval: 5s
+    timeout: 3s
+    retries: 12
+  mem_limit: 128m
+
+x-cached: &cached
+  CACHE_NODES: cache-0=cache-0:6379,cache-1=cache-1:6379,cache-2=cache-2:6379
+
+services:
+  cache-0: *cache-node
+  cache-1: *cache-node
+  cache-2: *cache-node
+  user-management:
+    environment: *cached
+  battle:
+    environment: *cached
+  tamagotchi:
+    environment: *cached
+  notification:
+    environment: *cached
+  guild:
+    environment: *cached
+  registry:
+    environment: *cached
+  map:
+    environment: *cached
+  monster-raid:
+    environment: *cached
