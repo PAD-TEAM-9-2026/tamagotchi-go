@@ -1502,6 +1502,42 @@ const response = await gateway.request('POST', '/v1/tasks', {
 Guild and Package-registry use this kit. Copy it with the discovery files and wire it up in
 the service's HTTP client layer.
 
+### TypeScript cache kit
+
+[`kits/typescript/cache/`](kits/typescript/cache/) implements the sharded read cache of
+[contracts/cache.md](contracts/cache.md): the consistent-hashing ring, cache-aside reads,
+invalidation, the per-node down window and `cache_requests_total`. Copy `src/cache/` and
+`tests/cache/` into the service root, and `contracts/cache-ring-vectors.json` into
+`tests/cache/` (or point `CACHE_RING_VECTORS` at it). It needs `ioredis`, `prom-client`, a
+logger at `src/lib/logger.ts` and `vitest`.
+
+| File | Holds |
+|---|---|
+| `ring.ts` | `parseNodes(CACHE_NODES)`, `buildRing(names)`, `locate(ring, key)`, `hash64(text)` |
+| `keys.ts` | `cacheKey(service, resource, id, query?)` with the normalized query hash |
+| `cache.ts` | `createCache({ service, nodes, registry })` with `read`, `invalidate`, `nodeFor`, `close`; `readCacheNodes()`; `X_CACHE` |
+| `valkey.ts` | The `ioredis` client per node: 50 ms command timeout, no offline queue |
+| `log.ts` | Re-exports the service logger |
+
+Wiring:
+
+```ts
+const cache = createCache({ service: 'tamagotchi', nodes: readCacheNodes(), registry: metrics.registry });
+
+const { entry, cache: status } = await cache.read(cacheKey('tamagotchi', 'creature', id), 60, async () => {
+  const creature = await repository.findCreature(id);
+  return creature === undefined ? null : { body: creature, etag: etagOf(creature) };
+});
+res.setHeader(X_CACHE, status);
+
+// after the write commits
+await cache.invalidate([cacheKey('tamagotchi', 'creature', id)]);
+```
+
+`read` never throws for cache failures: an error or a command over 50 ms marks the node down
+for 10 s and the value comes from `load`. Reads skipped while a node is down count as `error`.
+Unset `CACHE_NODES` turns the cache off.
+
 ### C# discovery kit
 
 [`kits/csharp/discovery/`](kits/csharp/discovery/) is the same kit for the ASP.NET Core
@@ -1588,6 +1624,61 @@ dependency into a 502 keeps working. The handler owns the timeout: `AddGatewayBr
 counts. Every client that calls the Gateway shares one breaker, since there is one Gateway.
 The breaker only logs; removing instances is the Gateway's job.
 
+### C# cache kit
+
+[`kits/csharp/cache/`](kits/csharp/cache/) is the sharded cache for the ASP.NET Core services:
+the consistent-hashing ring of [`contracts/cache.md`](contracts/cache.md) and cache-aside reads
+over the Valkey shards. Everything is in the namespace `Tamagotchi.Cache`. Copy `src/Cache/` into
+the service's web project and `tests/Cache/` into its test project. It needs .NET 9 or later, the
+ASP.NET Core shared framework and `StackExchange.Redis` 3.4.31; the tests use xUnit only.
+
+| File | Holds |
+|---|---|
+| `HashRing.cs` | the ring: 128 points per node name, the first 8 bytes of `MD5("{name}#{i}")` big-endian, a key goes to the first point at or after the first 8 bytes of `MD5(key)`, wrapping; ties go to the lower name |
+| `CacheNodes.cs` | `CacheNodes.Parse` for `CACHE_NODES` (`cache-0=cache-0:6379,…`). Empty or missing means no cache |
+| `CacheKeys.cs` | `{service}:v1:{resource}:{id}[:{first 16 hex of sha256(normalized query)}]`; the query is sorted, so parameter order does not change the key |
+| `ShardedCache.cs` | `GetOrLoadAsync` (cache-aside), `InvalidateAsync`, the stored `{body, etag, cached_at}`, `CacheLookup.Header` for `X-Cache` |
+| `NodeHealth.cs` | a node that failed or took longer than 50 ms is skipped for 10 s |
+| `ValkeyCacheNode.cs` | one shard through `StackExchange.Redis` |
+| `CacheExtensions.cs` | `AddShardedCache` |
+
+Wiring and use:
+
+```csharp
+using Tamagotchi.Cache;
+
+builder.Services.AddSingleton<ICacheObserver, MyCacheMetrics>(); // counts cache_requests_total{service,node,result}
+builder.Services.AddShardedCache(builder.Configuration, "battle");
+
+// read
+var lookup = await cache.GetOrLoadAsync(
+    CacheKeys.For("battle", "battle", battleId.ToString()), TimeSpan.FromMinutes(5),
+    ct => LoadBattleAsync(battleId, ct), ct);
+http.Response.Headers[CacheLookup<BattleView>.HeaderName] = lookup.Header; // X-Cache: HIT | MISS
+
+// write path, after the database commit
+await cache.InvalidateAsync(CacheKeys.For("battle", "battle", battleId.ToString()), ct);
+```
+
+The cache is optional. A node that is down, slow or failing is skipped for 10 seconds and the
+value comes from the database, so a cache problem is never an error for the caller. Its keys
+do not move to another node; only a change of `CACHE_NODES` changes the ring. A result of
+`null` (not found) is not stored. Every TTL is above zero and at most one hour; `null` (no
+expiry) is only for immutable versioned config. Never cache tokens, password hashes or other
+secrets, and put the user id in the key of anything specific to one user. The kit logs only
+the node name and the error type, never a key.
+
+`ICacheObserver.Record(service, node, result)` receives every result, with `result` one of
+`hit`, `miss` or `error`; a request skipped because its node is down counts as `error`. The
+service adds it to its own Prometheus counter, so the kit depends on no metrics library.
+
+The tests check the ring against [`contracts/cache-ring-vectors.json`](contracts/cache-ring-vectors.json),
+every key's hash and every expected node, so the C# and TypeScript rings place every key on the
+same node. Copy the file into the test project as content copied to the output directory, or set
+`CACHE_RING_VECTORS` to its path; without either that test has nothing to check.
+
+Change the kit here first, then copy it into every service that uses it.
+
 ## Image publication
 
 Release, code, package and image versions use `X.Y.Z`: integration milestone,
@@ -1621,13 +1712,13 @@ and role in one PostGIS-enabled PostgreSQL container.
 | Service Discovery | `patriciamoraru/service-discovery:4.0.0` | `sha256:3b2564d5069654f765ad5f90acc7f0a32ef7d73569355aeea35fe59924a1404e` | 3009 (loopback) |
 | Message Broker | `sergedbs/message-broker:4.0.0` | `sha256:2f90a0d797a801d2dbf4a9fe7c3f5f5e8e9f76b1c138a0343063047308ddb8b2` | 3010 (loopback) |
 | User Management | `patriciamoraru/user-management:4.0.1` | `sha256:a2e32dd58b7a5b2111ecfcb460b4ecf0b660b77c3927d782def914b80704a25c` | internal |
-| Tamagotchi | `victoriamutruc/tamagotchi:4.0.0` | `sha256:27925856c193d6376dcd6da59e1ecea87ab1e1162d1ec84f9a96258ac0224bfc` | internal |
+| Tamagotchi | `victoriamutruc/tamagotchi:4.0.1` | `sha256:ef70dd2bb16b4641e289dc1afef9263510982aacd7944485e056a4eb62fbb6b4` | internal |
 | Battle | `patriciamoraru/battle:4.0.1` | `sha256:3117a21eb09ca0aa5e85039d2eaa26541f6dd8edee3dab367ea732b73082d409` | internal |
 | Guild | `mihaelacatan/guild-service:4.0.1` | `sha256:4306a61183d0ba2c93b8990076619543460a3ca0be35e6589f3a884a4ae7f862` | internal; socket balancer 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:4.0.1` | `sha256:67efbd4ef5872548e4ed7070418a9f276e15a22b0cf89b88da1029ae841761b2` | internal |
 | Map | `sergedbs/map:4.0.1` | `sha256:eeb02a6fad0bd761fed4c82032a18949a8c6399d6ffa8b7ba9b39d0757f3b8f5` | internal |
 | Monster Raid | `sergedbs/monster-raid:4.0.1` | `sha256:4ef141622e2eb82a5d335542d1592867a7113f3f42b4c6af9ee7f13b0bd13bb4` | internal |
-| Notification | `victoriamutruc/notification:4.0.0` | `sha256:c2e0a4fa603640d9d6fe8603388ff70949a92b96c84b7258071cc7177f9a2f27` | internal |
+| Notification | `victoriamutruc/notification:4.0.1` | `sha256:2e3134baff8003427df2e00ab95d44c190dcf7ec136ee4e9e68581d914542c12` | internal |
 
 These numeric images are published for AMD64 and ARM64 and pinned by digest.
 The `compose.source.yaml` overlay can instead build reviewed local checkouts.
@@ -1648,9 +1739,23 @@ docker compose up -d --wait
 | `compose.source.yaml` | Builds every service from the `*_SOURCE` checkouts in `.env` as `tamagotchi-go/<service>:local` |
 | `compose.monitoring.yaml` | Prometheus and Grafana, see [Monitoring](deploy/monitoring.md) |
 | `compose.tracing.yaml` | Jaeger and the OpenTelemetry settings of every service |
+| `compose.cache.yaml` | Valkey shards `cache-0..2` and `CACHE_NODES` for every domain service, see [contracts/cache.md](contracts/cache.md) |
+| `compose.demo.yaml` | The demo switches: `FAULT_INJECTION_ENABLED` for Tamagotchi and User Management. Never in the release stack |
 
 Combine them with repeated `-f`, for example
 `docker compose -f compose.yaml -f compose.monitoring.yaml up -d`.
+
+For Lab 5, `./up.sh lab5` combines `compose.yaml` with every Lab 5 overlay present
+(`ha`, `cache`, `warehouse`, `monitoring`, `tracing`, `demo`, in that order) and runs
+`up -d --wait`. `--only cache,demo` picks overlays, and anything after it goes to
+`docker compose`:
+
+```bash
+./up.sh lab5                         # whole Lab 5 stack
+./up.sh lab5 --only cache,demo       # base stack with the cache and the demo switches
+./up.sh lab5 ps                      # any compose command on the same files
+./up.sh lab5 files                   # print the compose files it would use
+```
 
 Startup order is databases and log volumes, Discovery, User Management (it
 serves the issuer keys the Broker checks), the Broker, the domain services and
