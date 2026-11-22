@@ -1502,6 +1502,42 @@ const response = await gateway.request('POST', '/v1/tasks', {
 Guild and Package-registry use this kit. Copy it with the discovery files and wire it up in
 the service's HTTP client layer.
 
+### TypeScript cache kit
+
+[`kits/typescript/cache/`](kits/typescript/cache/) implements the sharded read cache of
+[contracts/cache.md](contracts/cache.md): the consistent-hashing ring, cache-aside reads,
+invalidation, the per-node down window and `cache_requests_total`. Copy `src/cache/` and
+`tests/cache/` into the service root, and `contracts/cache-ring-vectors.json` into
+`tests/cache/` (or point `CACHE_RING_VECTORS` at it). It needs `ioredis`, `prom-client`, a
+logger at `src/lib/logger.ts` and `vitest`.
+
+| File | Holds |
+|---|---|
+| `ring.ts` | `parseNodes(CACHE_NODES)`, `buildRing(names)`, `locate(ring, key)`, `hash64(text)` |
+| `keys.ts` | `cacheKey(service, resource, id, query?)` with the normalized query hash |
+| `cache.ts` | `createCache({ service, nodes, registry })` with `read`, `invalidate`, `nodeFor`, `close`; `readCacheNodes()`; `X_CACHE` |
+| `valkey.ts` | The `ioredis` client per node: 50 ms command timeout, no offline queue |
+| `log.ts` | Re-exports the service logger |
+
+Wiring:
+
+```ts
+const cache = createCache({ service: 'tamagotchi', nodes: readCacheNodes(), registry: metrics.registry });
+
+const { entry, cache: status } = await cache.read(cacheKey('tamagotchi', 'creature', id), 60, async () => {
+  const creature = await repository.findCreature(id);
+  return creature === undefined ? null : { body: creature, etag: etagOf(creature) };
+});
+res.setHeader(X_CACHE, status);
+
+// after the write commits
+await cache.invalidate([cacheKey('tamagotchi', 'creature', id)]);
+```
+
+`read` never throws for cache failures: an error or a command over 50 ms marks the node down
+for 10 s and the value comes from `load`. Reads skipped while a node is down count as `miss`.
+Unset `CACHE_NODES` turns the cache off.
+
 ### C# discovery kit
 
 [`kits/csharp/discovery/`](kits/csharp/discovery/) is the same kit for the ASP.NET Core
@@ -1648,6 +1684,7 @@ docker compose up -d --wait
 | `compose.source.yaml` | Builds every service from the `*_SOURCE` checkouts in `.env` as `tamagotchi-go/<service>:local` |
 | `compose.monitoring.yaml` | Prometheus and Grafana, see [Monitoring](deploy/monitoring.md) |
 | `compose.tracing.yaml` | Jaeger and the OpenTelemetry settings of every service |
+| `compose.cache.yaml` | Valkey shards `cache-0..2` and `CACHE_NODES` for every domain service, see [contracts/cache.md](contracts/cache.md) |
 
 Combine them with repeated `-f`, for example
 `docker compose -f compose.yaml -f compose.monitoring.yaml up -d`.
