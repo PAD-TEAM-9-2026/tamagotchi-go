@@ -90,3 +90,15 @@ scrape_configs:
         type: A
         port: 9090
         refresh_interval: 15s
+
+  # ETL Service (compose.warehouse.yaml): run, row, failure and last-success metrics
+  # (etl_runs_total, etl_extract_rows_total, etl_extract_failures_total,
+  # etl_run_duration_seconds, etl_last_success_timestamp_seconds). Without the warehouse
+  # overlay the name does not resolve and the job simply has no targets.
+  - job_name: etl
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [etl]
+        type: A
+        port: 9090
+        refresh_interval: 15s

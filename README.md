@@ -34,12 +34,15 @@ Each service has its own private repository. They are linked here as submodules.
 | Gateway | `services/gateway` | Shared by the team |
 | Service Discovery | `services/service-discovery` | Shared by the team |
 | Message Broker | `services/message-broker` | Shared by the team |
+| ETL Service | `services/etl` | Mihaela |
 
 
 ## Service boundaries
 
 Each service owns one part of the game and one database. Nothing reads another
-service's tables.
+service's tables, with one exception: the ETL service reads them for the data warehouse
+through the read-only `etl_reader` role, and only the columns each owner grants it
+(see [Data warehouse](#data-warehouse)).
 
 | Service | Owns | Does not own |
 |---|---|---|
@@ -54,6 +57,7 @@ service's tables.
 | Gateway | REST routing, caller validation, correlation and negotiation | Game rules, domain data, databases, events |
 | Service Discovery | In-memory instance registry, health polling, transport/subscription metadata, failure removal and developer alerts | Domain data, authentication, application request routing |
 | Message Broker | Durable admission/fan-out, delivery leases, gRPC routing, load balancing, instance breakers and administrative inspection | Domain effects, user account data or cross-service SQL |
+| ETL Service | The data warehouse: its star schema, the extract runner, the run history and the admin run endpoints | Any service's data or rules (it only copies granted columns, read-only), personal data, request routing |
 
 Two rules keep the boundaries honest. Battle decides, Tamagotchi applies.
 Package Registry holds configuration, the runtime services hold state.
@@ -228,6 +232,7 @@ and [Monitoring](deploy/monitoring.md) describe the log and metrics setup.
 | Monster Raid | C#, ASP.NET Core, EF Core | PostgreSQL | Counters under concurrent attacks |
 | Gateway | Python 3.13, FastAPI, Uvicorn, HTTPX, uv | None | Public authentication/mapping and bounded broker dispatch |
 | Message Broker | Java 21, Spring Boot, gRPC, JDBC | Dedicated PostgreSQL | Durable queues, routing, workers and administrative inspection |
+| ETL Service | Python 3.13, FastAPI, psycopg 3, uv | Dedicated PostgreSQL (the warehouse) | Set-based SQL extracts written as YAML by each owner; read-only access to the service databases |
 
 The domain services use TypeScript and C#. Gateway uses Python with uv 0.12.23
 and a checked dependency lock. It has no database or event publisher.
@@ -1725,8 +1730,8 @@ and role in one PostGIS-enabled PostgreSQL container.
 | User Management | `patriciamoraru/user-management:4.0.1` | `sha256:a2e32dd58b7a5b2111ecfcb460b4ecf0b660b77c3927d782def914b80704a25c` | internal |
 | Tamagotchi | `victoriamutruc/tamagotchi:4.0.1` | `sha256:ef70dd2bb16b4641e289dc1afef9263510982aacd7944485e056a4eb62fbb6b4` | internal |
 | Battle | `patriciamoraru/battle:4.0.1` | `sha256:3117a21eb09ca0aa5e85039d2eaa26541f6dd8edee3dab367ea732b73082d409` | internal |
-| Guild | `mihaelacatan/guild-service:4.0.1` | `sha256:4306a61183d0ba2c93b8990076619543460a3ca0be35e6589f3a884a4ae7f862` | internal; socket balancer 3004 |
-| Package Registry | `mihaelacatan/package-registry-service:4.0.1` | `sha256:67efbd4ef5872548e4ed7070418a9f276e15a22b0cf89b88da1029ae841761b2` | internal |
+| Guild | `mihaelacatan/guild-service:5.0.0` | `sha256:14aad0dc97630b0ae4c11635e641bcf6e0949135fef08e3454b0b431724d303a` | internal; socket balancer 3004 |
+| Package Registry | `mihaelacatan/package-registry-service:5.0.0` | `sha256:1ce33681c9af9ca52350f5136fd7e405c75d8d40df533316b55d0ceffd84ebf0` | internal |
 | Map | `sergedbs/map:4.0.1` | `sha256:eeb02a6fad0bd761fed4c82032a18949a8c6399d6ffa8b7ba9b39d0757f3b8f5` | internal |
 | Monster Raid | `sergedbs/monster-raid:4.0.1` | `sha256:4ef141622e2eb82a5d335542d1592867a7113f3f42b4c6af9ee7f13b0bd13bb4` | internal |
 | Notification | `victoriamutruc/notification:4.0.1` | `sha256:2e3134baff8003427df2e00ab95d44c190dcf7ec136ee4e9e68581d914542c12` | internal |

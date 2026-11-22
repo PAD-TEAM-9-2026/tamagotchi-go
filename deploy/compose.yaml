@@ -354,7 +354,7 @@ services:
     healthcheck: *ready-node
 
   guild:
-    image: mihaelacatan/guild-service:4.0.1@sha256:4306a61183d0ba2c93b8990076619543460a3ca0be35e6589f3a884a4ae7f862
+    image: mihaelacatan/guild-service:5.0.0@sha256:14aad0dc97630b0ae4c11635e641bcf6e0949135fef08e3454b0b431724d303a
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -413,7 +413,7 @@ services:
       retries: 10
 
   registry:
-    image: mihaelacatan/package-registry-service:4.0.1@sha256:67efbd4ef5872548e4ed7070418a9f276e15a22b0cf89b88da1029ae841761b2
+    image: mihaelacatan/package-registry-service:5.0.0@sha256:1ce33681c9af9ca52350f5136fd7e405c75d8d40df533316b55d0ceffd84ebf0
     restart: unless-stopped
     pull_policy: always
     deploy:

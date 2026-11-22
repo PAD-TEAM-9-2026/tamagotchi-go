@@ -69,7 +69,8 @@ class TamagotchiContractTests(unittest.TestCase):
         self.assertNotIn('internal', self.operations['tamagotchi.get_tamagotchi'])
         self.assertFalse(any('mint' in name for name in self.operations))
         internal_only = [n for n, o in self.operations.items() if o['destination'] == 'tamagotchi' and 'public' not in o]
-        self.assertEqual(5, len(internal_only))
+        self.assertEqual(9, len(internal_only))
+        self.assertTrue({"tamagotchi.tx_prepare", "tamagotchi.tx_commit", "tamagotchi.tx_abort", "tamagotchi.revoke_xp"} <= set(internal_only))
         self.assertTrue(all(o['internal']['request_type'].startswith(f'type.googleapis.com/{PACKAGE}.') for o in self.operations.values() if o['destination'] == 'tamagotchi' and 'internal' in o))
 
     def test_mutations_need_a_command_key_and_reads_do_not(self):

@@ -1,0 +1,104 @@
+syntax = "proto3";
+package tamagotchi.transactions.v1;
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.transactions.v1";
+option csharp_namespace = "Tamagotchi.Contracts.Transactions.V1";
+import "google/protobuf/timestamp.proto";
+
+// Proposed coordinator boundary. Participant operations use ServiceDelivery.Execute.
+service TransactionCoordinator {
+  rpc StartTransaction(StartTransactionRequest) returns (TransactionView);
+  rpc StartSaga(StartSagaRequest) returns (SagaView);
+  rpc GetDecision(GetDecisionRequest) returns (Decision);
+}
+
+enum AccessStep { ACCESS_STEP_UNSPECIFIED = 0; GRANT = 1; CREDIT_INSTEAD = 2; }
+enum AccessOutcome {
+  ACCESS_OUTCOME_UNSPECIFIED = 0;
+  GRANTED = 1;
+  ALREADY_HOLDER = 2;
+  CAP_COMPENSATED = 3;
+  NO_ACCESS = 4;
+}
+enum SettlementOutcome { SETTLEMENT_OUTCOME_UNSPECIFIED = 0; SETTLED = 1; COMPENSATED = 2; }
+enum TransactionState {
+  TRANSACTION_STATE_UNSPECIFIED = 0;
+  PREPARING = 1;
+  COMMITTING = 2;
+  ABORTING = 3;
+  COMMITTED = 4;
+  ABORTED = 5;
+  NEEDS_ATTENTION = 6;
+}
+enum DecisionKind { DECISION_UNSPECIFIED = 0; PENDING = 1; COMMIT = 2; ABORT = 3; }
+enum PhaseOutcome {
+  PHASE_OUTCOME_UNSPECIFIED = 0;
+  PREPARED = 1;
+  PHASE_COMMITTED = 2;
+  PHASE_ABORTED = 3;
+  NOTHING_TO_ABORT = 4;
+  UNKNOWN = 5;
+  ALREADY_COMMITTED_CANNOT_ABORT = 6;
+}
+// Domain identifiers are UUIDv7; amounts are fixed by battle-settlement v1.
+message SettlementPlan {
+  string battle_id = 1;
+  string winner_id = 2;
+  string loser_id = 3;
+  optional string engagement_id = 4;
+  string winner_primary_id = 5;
+  uint32 winner_primary_xp = 6; // 60
+  string winner_secondary_id = 7;
+  uint32 winner_secondary_xp = 8; // 40
+  string staked_tamagotchi_id = 9;
+  uint32 access_cap_credit = 10; // 50
+}
+message StartTransactionRequest {
+  string transaction_id = 1; // battle_id or battle_id.N after confirmed abort
+  SettlementPlan plan = 2;
+  AccessStep access_step = 3;
+  string correlation_id = 4; // UUIDv7, preserved across background attempts
+}
+message StartSagaRequest {
+  string saga_id = 1; // equals plan.battle_id
+  SettlementPlan plan = 2;
+  string correlation_id = 3;
+}
+message GetDecisionRequest { string transaction_id = 1; }
+message Decision {
+  string transaction_id = 1;
+  DecisionKind decision = 2;
+  bool presumed_abort = 3; // authoritative absent-ID tombstone, never a network error
+}
+message ParticipantView {
+  string service = 1;
+  bool prepared = 2;
+  bool settled = 3;
+  string reason = 4;
+}
+message TransactionView {
+  string transaction_id = 1;
+  string battle_id = 2;
+  TransactionState state = 3;
+  DecisionKind decision = 4;
+  string reason = 5;
+  AccessOutcome access_outcome = 6;
+  repeated ParticipantView participants = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+// Saga state/step details are reviewed jointly with the saga owner before freeze.
+message SagaView {
+  string saga_id = 1;
+  string battle_id = 2;
+  string state = 3;
+  string reason = 4;
+  AccessOutcome access_outcome = 5;
+  repeated SagaStepView steps = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+message SagaStepView {
+  string step = 1;
+  string state = 2;
+  uint32 attempts = 3;
+  string reason = 4;
+}

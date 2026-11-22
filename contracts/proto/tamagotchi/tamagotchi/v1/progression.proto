@@ -22,3 +22,10 @@ message AwardXpReply {
   uint32 levels_gained = 4;
   uint32 version = 5;
 }
+
+// Reverse the recorded BATTLE XP effect, not an arbitrary caller-selected amount.
+message RevokeXpRequest {
+  string tamagotchi_id = 1;
+  Source source = 2;
+  string source_id = 3;
+}

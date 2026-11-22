@@ -32,6 +32,11 @@ job in `prometheus.yml` and change `job_name` and `names`. The broker's job is `
 Label values stay bounded: route templates, operation names, topics and fixed outcomes, never an
 identifier.
 
+The ETL service (job `etl`, from `compose.warehouse.yaml`) exports its own families instead:
+`etl_runs_total{trigger,status}`, `etl_extract_rows_total{table}`, `etl_extract_failures_total{table}`,
+`etl_run_duration_seconds` and `etl_last_success_timestamp_seconds{table}` (contracts/warehouse.md).
+They are not on the common panels; query them in Explore or add a panel.
+
 ## Dashboards
 
 | Dashboard | Shows |

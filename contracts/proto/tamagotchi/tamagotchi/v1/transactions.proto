@@ -1,0 +1,22 @@
+syntax = "proto3";
+package tamagotchi.tamagotchi.v1;
+option java_multiple_files = true;
+option java_package = "com.tamagotchigo.contracts.tamagotchi.v1";
+option csharp_namespace = "Tamagotchi.Contracts.Tamagotchi.V1";
+import "tamagotchi/transactions/v1/coordinator.proto";
+
+// Proposed battle-settlement participant boundary. Domain handlers retain authorization.
+message PrepareSettlementRequest {
+  string transaction_id = 1;
+  .tamagotchi.transactions.v1.SettlementPlan plan = 2;
+  .tamagotchi.transactions.v1.AccessStep access_step = 3;
+  .tamagotchi.transactions.v1.SettlementOutcome outcome = 4;
+  .tamagotchi.transactions.v1.AccessOutcome access_outcome = 5;
+}
+message PrepareSettlementReply {
+  bool prepared = 1;
+  string reason = 2;
+  .tamagotchi.transactions.v1.AccessOutcome access_outcome = 3;
+}
+message FinishTransactionRequest { string transaction_id = 1; }
+message FinishTransactionReply { .tamagotchi.transactions.v1.PhaseOutcome outcome = 1; }
