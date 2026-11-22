@@ -2918,6 +2918,270 @@
           "cache-control"
         ]
       }
+    },
+    {
+      "name": "users.tx_prepare",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.PrepareSettlementRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.PrepareSettlementReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:transactions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.tx_commit",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.FinishTransactionRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.FinishTransactionReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:transactions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.tx_abort",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.FinishTransactionRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.FinishTransactionReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:transactions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.tx_prepare",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.PrepareSettlementRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.PrepareSettlementReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:transactions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.tx_commit",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.FinishTransactionRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.FinishTransactionReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:transactions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.tx_abort",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.FinishTransactionRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.FinishTransactionReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:transactions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "battle.tx_prepare",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.battle.v1.PrepareSettlementRequest",
+        "response_type": "type.googleapis.com/tamagotchi.battle.v1.PrepareSettlementReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "battle:transactions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "battle.tx_commit",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.battle.v1.FinishTransactionRequest",
+        "response_type": "type.googleapis.com/tamagotchi.battle.v1.FinishTransactionReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "battle:transactions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "battle.tx_abort",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.battle.v1.FinishTransactionRequest",
+        "response_type": "type.googleapis.com/tamagotchi.battle.v1.FinishTransactionReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "battle:transactions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "users.reverse_settlement",
+      "destination": "user-management",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.user_management.v1.SettleBattleRequest",
+        "response_type": "type.googleapis.com/tamagotchi.user_management.v1.SettlementReversal",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "users:settle-battle"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "tamagotchi.revoke_xp",
+      "destination": "tamagotchi",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.RevokeXpRequest",
+        "response_type": "type.googleapis.com/tamagotchi.tamagotchi.v1.AwardXpReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "tamagotchi:award-xp"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "battle.mark_settled",
+      "destination": "battle",
+      "storage": "DURABLE",
+      "failover": "IDEMPOTENT",
+      "idempotency": "COMMAND_KEY",
+      "contains_credentials": false,
+      "request_max_bytes": 16384,
+      "reply_max_bytes": 16384,
+      "internal": {
+        "request_type": "type.googleapis.com/tamagotchi.battle.v1.MarkSettledRequest",
+        "response_type": "type.googleapis.com/tamagotchi.battle.v1.MarkSettledReply",
+        "callers": [
+          {
+            "service": "battle",
+            "scopes": [
+              "battle:transactions"
+            ]
+          }
+        ]
+      }
     }
   ],
   "events": [

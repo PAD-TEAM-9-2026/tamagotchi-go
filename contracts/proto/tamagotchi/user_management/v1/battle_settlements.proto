@@ -24,3 +24,14 @@ message BattleSettlement {
   uint64 winner_balance = 6;
   uint64 loser_balance = 7;
 }
+
+// Reuses SettleBattleRequest. Repeated reversal returns this original receipt.
+message SettlementReversal {
+  string battle_id = 1;
+  bool was_settled = 2;
+  uint32 winner_debit = 3;
+  uint32 unrecovered = 4;
+  uint32 loser_credit = 5;
+  uint64 winner_balance = 6;
+  uint64 loser_balance = 7;
+}
