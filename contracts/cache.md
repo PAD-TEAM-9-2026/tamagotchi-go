@@ -4,6 +4,8 @@
 user lookups. Each service talks to the shards directly through its language kit
 (`kits/typescript`, `kits/csharp`); there is no cache proxy. Every kit must pass
 [cache-ring-vectors.json](cache-ring-vectors.json).
+Background, measurements and the comparison with Redis Cluster are in
+[docs/consistent-hashing.md](../docs/consistent-hashing.md).
 
 ## Nodes
 
