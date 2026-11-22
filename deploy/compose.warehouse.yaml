@@ -1,0 +1,27 @@
+# Data warehouse (contracts/warehouse.md), layered on compose.yaml:
+#
+#   docker compose -f compose.yaml -f compose.warehouse.yaml up -d
+#
+# A separate PostgreSQL for the star schema the ETL service loads. It is never one of the
+# service databases and is not replicated: a full ETL run rebuilds it. The ETL service creates
+# its tables and its `etl` bookkeeping schema; this file only provides the empty database.
+# The host port is on loopback, for analysis queries only.
+services:
+  warehouse:
+    image: postgres:17.12-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${WAREHOUSE_DB_NAME:-warehouse}
+      POSTGRES_USER: ${WAREHOUSE_DB_USER:-warehouse}
+      POSTGRES_PASSWORD: ${WAREHOUSE_DB_PASSWORD:?set WAREHOUSE_DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${WAREHOUSE_PORT:-5433}:5432"
+    volumes:
+      - shared-warehouse-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  shared-warehouse-data:
