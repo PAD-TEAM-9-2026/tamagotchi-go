@@ -1271,6 +1271,11 @@ and a verified user matching `user_id`. Global listing requires a user; a guild
 filter requires membership. User detail/leaderboard reads require membership;
 verified service reads require `raid:read`. Plain identity headers grant no access.
 
+The optional single-raid display cache reports `X-Cache: HIT` or `MISS` with a
+two-second TTL. Membership is rechecked even on hits. Committed mutations and
+occurrence cancellation invalidate it; combat, admission, lists and leaderboards
+use current database state rather than this cached display response.
+
 Creation requires an active occurrence inside its availability window. Raid
 expiry is the earlier of configured duration and `available_until`. Boss
 configuration and participant creature/bonus snapshots remain immutable.

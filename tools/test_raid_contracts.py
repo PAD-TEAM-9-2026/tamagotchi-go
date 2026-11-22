@@ -89,6 +89,8 @@ class MonsterRaidContractTests(unittest.TestCase):
             expected = list(STANDARD_RESPONSE)
             if name == 'raid.create_raid':
                 expected.insert(1, 'location')
+            if name == 'raid.get_raid':
+                expected.append('x-cache')
             self.assertEqual(expected, public['response_headers'], name)
 
     def test_dependency_reads_keep_their_public_route_and_add_one_typed_caller(self):

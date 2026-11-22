@@ -2837,7 +2837,8 @@
           "content-type",
           "retry-after",
           "www-authenticate",
-          "cache-control"
+          "cache-control",
+          "x-cache"
         ]
       }
     },
