@@ -32,3 +32,6 @@
 [submodule "services/message-broker"]
 	path = services/message-broker
 	url = git@github.com:sergedbs/message-broker.git
+[submodule "services/etl"]
+	path = services/etl
+	url = https://github.com/MihaelaCatan04/etl-service.git
