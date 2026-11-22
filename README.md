@@ -289,6 +289,17 @@ mechanisms carry it:
 - **Idempotency-Key.** Required on every command that is not naturally repeatable. A retry after a timeout does not double an award.
 - **Consumer dedupe.** Every consumer stores `event_id` under a unique constraint, so at-least-once delivery becomes one effect.
 
+### Data warehouse
+
+Questions that span services (battles per day, currency flow, popular packages, guild
+sizes) are answered from a separate warehouse database, never by joining service
+databases at runtime. The ETL service (`services/etl`) reads every service database
+through the read-only `etl_reader` role, which sees only the columns each owner grants,
+and loads a star schema of dimensions and facts into the warehouse every few minutes.
+Each owner writes the extract files for their own data. No personal data is copied.
+The tables, the extract format, incremental loading and the run endpoints are in
+[contracts/warehouse.md](contracts/warehouse.md).
+
 ## Communication contract
 
 The endpoint tables and specifications below define the integration target.
@@ -1740,7 +1751,7 @@ docker compose up -d --wait
 | `compose.monitoring.yaml` | Prometheus and Grafana, see [Monitoring](deploy/monitoring.md) |
 | `compose.tracing.yaml` | Jaeger and the OpenTelemetry settings of every service |
 | `compose.cache.yaml` | Valkey shards `cache-0..2` and `CACHE_NODES` for every domain service, see [contracts/cache.md](contracts/cache.md) |
-| `compose.demo.yaml` | The demo switches: `FAULT_INJECTION_ENABLED` for Tamagotchi and User Management. Never in the release stack |
+| `compose.demo.yaml` | The demo switches: `FAULT_INJECTION_ENABLED` for Tamagotchi and User Management, whose `POST /v1/admin/faults` is then reachable on loopback ports 3103-3104 and 3101-3102 (one per replica). Never in the release stack |
 
 Combine them with repeated `-f`, for example
 `docker compose -f compose.yaml -f compose.monitoring.yaml up -d`.
