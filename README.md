@@ -1624,6 +1624,61 @@ dependency into a 502 keeps working. The handler owns the timeout: `AddGatewayBr
 counts. Every client that calls the Gateway shares one breaker, since there is one Gateway.
 The breaker only logs; removing instances is the Gateway's job.
 
+### C# cache kit
+
+[`kits/csharp/cache/`](kits/csharp/cache/) is the sharded cache for the ASP.NET Core services:
+the consistent-hashing ring of [`contracts/cache.md`](contracts/cache.md) and cache-aside reads
+over the Valkey shards. Everything is in the namespace `Tamagotchi.Cache`. Copy `src/Cache/` into
+the service's web project and `tests/Cache/` into its test project. It needs .NET 9 or later, the
+ASP.NET Core shared framework and `StackExchange.Redis` 3.4.31; the tests use xUnit only.
+
+| File | Holds |
+|---|---|
+| `HashRing.cs` | the ring: 128 points per node name, the first 8 bytes of `MD5("{name}#{i}")` big-endian, a key goes to the first point at or after the first 8 bytes of `MD5(key)`, wrapping; ties go to the lower name |
+| `CacheNodes.cs` | `CacheNodes.Parse` for `CACHE_NODES` (`cache-0=cache-0:6379,…`). Empty or missing means no cache |
+| `CacheKeys.cs` | `{service}:v1:{resource}:{id}[:{first 16 hex of sha256(normalized query)}]`; the query is sorted, so parameter order does not change the key |
+| `ShardedCache.cs` | `GetOrLoadAsync` (cache-aside), `InvalidateAsync`, the stored `{body, etag, cached_at}`, `CacheLookup.Header` for `X-Cache` |
+| `NodeHealth.cs` | a node that failed or took longer than 50 ms is skipped for 10 s |
+| `ValkeyCacheNode.cs` | one shard through `StackExchange.Redis` |
+| `CacheExtensions.cs` | `AddShardedCache` |
+
+Wiring and use:
+
+```csharp
+using Tamagotchi.Cache;
+
+builder.Services.AddSingleton<ICacheObserver, MyCacheMetrics>(); // counts cache_requests_total{service,node,result}
+builder.Services.AddShardedCache(builder.Configuration, "battle");
+
+// read
+var lookup = await cache.GetOrLoadAsync(
+    CacheKeys.For("battle", "battle", battleId.ToString()), TimeSpan.FromMinutes(5),
+    ct => LoadBattleAsync(battleId, ct), ct);
+http.Response.Headers[CacheLookup<BattleView>.HeaderName] = lookup.Header; // X-Cache: HIT | MISS
+
+// write path, after the database commit
+await cache.InvalidateAsync(CacheKeys.For("battle", "battle", battleId.ToString()), ct);
+```
+
+The cache is optional. A node that is down, slow or failing is skipped for 10 seconds and the
+value comes from the database, so a cache problem is never an error for the caller. Its keys
+do not move to another node; only a change of `CACHE_NODES` changes the ring. A result of
+`null` (not found) is not stored. Every TTL is above zero and at most one hour; `null` (no
+expiry) is only for immutable versioned config. Never cache tokens, password hashes or other
+secrets, and put the user id in the key of anything specific to one user. The kit logs only
+the node name and the error type, never a key.
+
+`ICacheObserver.Record(service, node, result)` receives every result, with `result` one of
+`hit`, `miss` or `error`; a request skipped because its node is down counts as `error`. The
+service adds it to its own Prometheus counter, so the kit depends on no metrics library.
+
+The tests check the ring against [`contracts/cache-ring-vectors.json`](contracts/cache-ring-vectors.json),
+every key's hash and every expected node, so the C# and TypeScript rings place every key on the
+same node. Copy the file into the test project as content copied to the output directory, or set
+`CACHE_RING_VECTORS` to its path; without either that test has nothing to check.
+
+Change the kit here first, then copy it into every service that uses it.
+
 ## Image publication
 
 Release, code, package and image versions use `X.Y.Z`: integration milestone,
