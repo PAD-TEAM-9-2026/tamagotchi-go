@@ -35,3 +35,9 @@ class DatabaseHaTests(unittest.TestCase):
         writer = text.split('listen writer', 1)[1].split('listen reader', 1)[0]
         self.assertIn('on-marked-down shutdown-sessions', writer)
         self.assertIn('GET /primary', writer)
+
+    def test_bootstrap_receives_etl_reader_credential_before_owner_schemas(self):
+        compose = (ROOT / 'deploy/compose.ha.yaml').read_text()
+        self.assertIn('ETL_READER_PASSWORD: "${ETL_READER_PASSWORD:?set ETL_READER_PASSWORD}"', compose)
+        bootstrap = (ROOT / 'deploy/db/init-service-databases.sh').read_text()
+        self.assertLess(bootstrap.index('CREATE ROLE etl_reader'), bootstrap.index('create_service_database "$USER_MANAGEMENT'))
