@@ -1621,13 +1621,13 @@ and role in one PostGIS-enabled PostgreSQL container.
 | Service Discovery | `patriciamoraru/service-discovery:4.0.0` | `sha256:3b2564d5069654f765ad5f90acc7f0a32ef7d73569355aeea35fe59924a1404e` | 3009 (loopback) |
 | Message Broker | `sergedbs/message-broker:4.0.0` | `sha256:2f90a0d797a801d2dbf4a9fe7c3f5f5e8e9f76b1c138a0343063047308ddb8b2` | 3010 (loopback) |
 | User Management | `patriciamoraru/user-management:4.0.1` | `sha256:a2e32dd58b7a5b2111ecfcb460b4ecf0b660b77c3927d782def914b80704a25c` | internal |
-| Tamagotchi | `victoriamutruc/tamagotchi:4.0.0` | `sha256:27925856c193d6376dcd6da59e1ecea87ab1e1162d1ec84f9a96258ac0224bfc` | internal |
+| Tamagotchi | `victoriamutruc/tamagotchi:4.0.1` | `sha256:ef70dd2bb16b4641e289dc1afef9263510982aacd7944485e056a4eb62fbb6b4` | internal |
 | Battle | `patriciamoraru/battle:4.0.1` | `sha256:3117a21eb09ca0aa5e85039d2eaa26541f6dd8edee3dab367ea732b73082d409` | internal |
 | Guild | `mihaelacatan/guild-service:4.0.0` | `sha256:b5636ab96411277abac11e9515edb82534800e802f081e715244def01ba9d138` | internal; socket balancer 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:4.0.0` | `sha256:d9f9067481beeacaf2beeda512422018b3c91d9f4c8f490c2ba63ca7fc1c91cd` | internal |
 | Map | `sergedbs/map:4.0.1` | `sha256:eeb02a6fad0bd761fed4c82032a18949a8c6399d6ffa8b7ba9b39d0757f3b8f5` | internal |
 | Monster Raid | `sergedbs/monster-raid:4.0.1` | `sha256:4ef141622e2eb82a5d335542d1592867a7113f3f42b4c6af9ee7f13b0bd13bb4` | internal |
-| Notification | `victoriamutruc/notification:4.0.0` | `sha256:c2e0a4fa603640d9d6fe8603388ff70949a92b96c84b7258071cc7177f9a2f27` | internal |
+| Notification | `victoriamutruc/notification:4.0.1` | `sha256:2e3134baff8003427df2e00ab95d44c190dcf7ec136ee4e9e68581d914542c12` | internal |
 
 These numeric images are published for AMD64 and ARM64 and pinned by digest.
 The `compose.source.yaml` overlay can instead build reviewed local checkouts.
