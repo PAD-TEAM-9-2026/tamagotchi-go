@@ -34,12 +34,15 @@ Each service has its own private repository. They are linked here as submodules.
 | Gateway | `services/gateway` | Shared by the team |
 | Service Discovery | `services/service-discovery` | Shared by the team |
 | Message Broker | `services/message-broker` | Shared by the team |
+| ETL Service | `services/etl` | Mihaela |
 
 
 ## Service boundaries
 
 Each service owns one part of the game and one database. Nothing reads another
-service's tables.
+service's tables, with one exception: the ETL service reads them for the data warehouse
+through the read-only `etl_reader` role, and only the columns each owner grants it
+(see [Data warehouse](#data-warehouse)).
 
 | Service | Owns | Does not own |
 |---|---|---|
@@ -54,6 +57,7 @@ service's tables.
 | Gateway | REST routing, caller validation, correlation and negotiation | Game rules, domain data, databases, events |
 | Service Discovery | In-memory instance registry, health polling, transport/subscription metadata, failure removal and developer alerts | Domain data, authentication, application request routing |
 | Message Broker | Durable admission/fan-out, delivery leases, gRPC routing, load balancing, instance breakers and administrative inspection | Domain effects, user account data or cross-service SQL |
+| ETL Service | The data warehouse: its star schema, the extract runner, the run history and the admin run endpoints | Any service's data or rules (it only copies granted columns, read-only), personal data, request routing |
 
 Two rules keep the boundaries honest. Battle decides, Tamagotchi applies.
 Package Registry holds configuration, the runtime services hold state.
@@ -228,6 +232,7 @@ and [Monitoring](deploy/monitoring.md) describe the log and metrics setup.
 | Monster Raid | C#, ASP.NET Core, EF Core | PostgreSQL | Counters under concurrent attacks |
 | Gateway | Python 3.13, FastAPI, Uvicorn, HTTPX, uv | None | Public authentication/mapping and bounded broker dispatch |
 | Message Broker | Java 21, Spring Boot, gRPC, JDBC | Dedicated PostgreSQL | Durable queues, routing, workers and administrative inspection |
+| ETL Service | Python 3.13, FastAPI, psycopg 3, uv | Dedicated PostgreSQL (the warehouse) | Set-based SQL extracts written as YAML by each owner; read-only access to the service databases |
 
 The domain services use TypeScript and C#. Gateway uses Python with uv 0.12.23
 and a checked dependency lock. It has no database or event publisher.
