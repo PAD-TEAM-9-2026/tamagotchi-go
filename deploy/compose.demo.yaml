@@ -1,10 +1,15 @@
 # Demo switches, layered last by ./up.sh lab5. The release stack keeps them off.
+# The fault switches are called on the service port, so each replica gets a loopback port.
 
 services:
   tamagotchi:
     environment:
       FAULT_INJECTION_ENABLED: "true"
       USER_MANAGEMENT_JWKS_URL: http://user-management:3001/v1/jwks
+    ports:
+      - "127.0.0.1:3103-3104:3000"
   user-management:
     environment:
       FAULT_INJECTION_ENABLED: "true"
+    ports:
+      - "127.0.0.1:3101-3102:3001"
