@@ -1751,7 +1751,7 @@ docker compose up -d --wait
 | `compose.monitoring.yaml` | Prometheus and Grafana, see [Monitoring](deploy/monitoring.md) |
 | `compose.tracing.yaml` | Jaeger and the OpenTelemetry settings of every service |
 | `compose.cache.yaml` | Valkey shards `cache-0..2` and `CACHE_NODES` for every domain service, see [contracts/cache.md](contracts/cache.md) |
-| `compose.warehouse.yaml` | The data warehouse database `warehouse` (loopback port 5433) that the ETL service loads, see [contracts/warehouse.md](contracts/warehouse.md) |
+| `compose.warehouse.yaml` | The data warehouse database `warehouse` (loopback port 5433) and the ETL service `etl` that loads it at startup and every 5 minutes, with its admin run endpoints on loopback port 3011, see [contracts/warehouse.md](contracts/warehouse.md) |
 | `compose.demo.yaml` | The demo switches: `FAULT_INJECTION_ENABLED` for Tamagotchi and User Management, whose `POST /v1/admin/faults` is then reachable on loopback ports 3103-3104 and 3101-3102 (one per replica). Never in the release stack |
 
 Combine them with repeated `-f`, for example
