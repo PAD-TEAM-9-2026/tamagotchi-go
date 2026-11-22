@@ -160,7 +160,8 @@
           "etag",
           "retry-after",
           "www-authenticate",
-          "cache-control"
+          "cache-control",
+          "x-cache"
         ]
       }
     },
@@ -220,7 +221,8 @@
           "etag",
           "retry-after",
           "www-authenticate",
-          "cache-control"
+          "cache-control",
+          "x-cache"
         ]
       }
     },
@@ -414,7 +416,8 @@
           "etag",
           "retry-after",
           "www-authenticate",
-          "cache-control"
+          "cache-control",
+          "x-cache"
         ]
       },
       "internal": {
@@ -508,7 +511,8 @@
           "etag",
           "retry-after",
           "www-authenticate",
-          "cache-control"
+          "cache-control",
+          "x-cache"
         ]
       }
     },
@@ -535,7 +539,8 @@
           "etag",
           "retry-after",
           "www-authenticate",
-          "cache-control"
+          "cache-control",
+          "x-cache"
         ]
       }
     },
