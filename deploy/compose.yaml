@@ -276,7 +276,7 @@ services:
       retries: 24
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:4.0.0@sha256:27925856c193d6376dcd6da59e1ecea87ab1e1162d1ec84f9a96258ac0224bfc
+    image: victoriamutruc/tamagotchi:4.0.1@sha256:ef70dd2bb16b4641e289dc1afef9263510982aacd7944485e056a4eb62fbb6b4
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -316,7 +316,7 @@ services:
     healthcheck: *ready-node
 
   notification:
-    image: victoriamutruc/notification:4.0.0@sha256:c2e0a4fa603640d9d6fe8603388ff70949a92b96c84b7258071cc7177f9a2f27
+    image: victoriamutruc/notification:4.0.1@sha256:2e3134baff8003427df2e00ab95d44c190dcf7ec136ee4e9e68581d914542c12
     restart: unless-stopped
     pull_policy: always
     deploy:
