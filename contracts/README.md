@@ -476,4 +476,6 @@ this change, `registry.get_stat_bonuses`. Its events are unchanged:
 `raid.started.v1` to Notification, `raid.completed.v1` to the passive audit queue
 and `registry.occurrence_changed.v1` to Raid's logical queue.
 
-Transaction coordination proposal: [transactions.md](transactions.md). It is not part of the currently deployed contract snapshot.
+Transaction coordination: [transactions.md](transactions.md).
+
+Database HA: [database-ha.md](database-ha.md).

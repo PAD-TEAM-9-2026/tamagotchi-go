@@ -1,0 +1,197 @@
+# Database failover overlay. Use a separate project with fresh volumes.
+x-ha-node: &ha-node
+  image: tamagotchi-go-local/postgres-ha:5.0.0
+  build:
+    context: .
+    dockerfile: ha/Dockerfile
+  restart: unless-stopped
+  environment: &ha-env
+    POSTGRES_USER: "postgres"
+    POSTGRES_DB: "postgres"
+    POSTGRES_PASSWORD: "${DATABASE_ADMIN_PASSWORD:?set DATABASE_ADMIN_PASSWORD in .env}"
+    USER_MANAGEMENT_DB_USER: "${USER_MANAGEMENT_DB_USER:-user_management}"
+    USER_MANAGEMENT_DB_PASSWORD: "${USER_MANAGEMENT_DB_PASSWORD:?set USER_MANAGEMENT_DB_PASSWORD in .env}"
+    USER_MANAGEMENT_DB_NAME: "${USER_MANAGEMENT_DB_NAME:-user_management}"
+    TAMAGOTCHI_DB_USER: "${TAMAGOTCHI_DB_USER:-tamagotchi}"
+    TAMAGOTCHI_DB_PASSWORD: "${TAMAGOTCHI_DB_PASSWORD:?set TAMAGOTCHI_DB_PASSWORD in .env}"
+    TAMAGOTCHI_DB_NAME: "${TAMAGOTCHI_DB_NAME:-tamagotchi}"
+    BATTLE_DB_USER: "${BATTLE_DB_USER:-battle}"
+    BATTLE_DB_PASSWORD: "${BATTLE_DB_PASSWORD:?set BATTLE_DB_PASSWORD in .env}"
+    BATTLE_DB_NAME: "${BATTLE_DB_NAME:-battle}"
+    GUILD_DB_USER: "${GUILD_DB_USER:-guild}"
+    GUILD_DB_PASSWORD: "${GUILD_DB_PASSWORD:?set GUILD_DB_PASSWORD in .env}"
+    GUILD_DB_NAME: "${GUILD_DB_NAME:-guild}"
+    REGISTRY_DB_USER: "${REGISTRY_DB_USER:-registry}"
+    REGISTRY_DB_PASSWORD: "${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD in .env}"
+    REGISTRY_DB_NAME: "${REGISTRY_DB_NAME:-registry}"
+    MAP_DB_USER: "${MAP_DB_USER:-map}"
+    MAP_DB_PASSWORD: "${MAP_DB_PASSWORD:?set MAP_DB_PASSWORD in .env}"
+    MAP_DB_NAME: "${MAP_DB_NAME:-map}"
+    MONSTER_RAID_DB_USER: "${MONSTER_RAID_DB_USER:-monster_raid}"
+    MONSTER_RAID_DB_PASSWORD: "${MONSTER_RAID_DB_PASSWORD:?set MONSTER_RAID_DB_PASSWORD in .env}"
+    MONSTER_RAID_DB_NAME: "${MONSTER_RAID_DB_NAME:-monster_raid}"
+    NOTIFICATION_DB_USER: "${NOTIFICATION_DB_USER:-notification}"
+    NOTIFICATION_DB_PASSWORD: "${NOTIFICATION_DB_PASSWORD:?set NOTIFICATION_DB_PASSWORD in .env}"
+    NOTIFICATION_DB_NAME: "${NOTIFICATION_DB_NAME:-notification}"
+    ETL_READER_PASSWORD: "${ETL_READER_PASSWORD:?set ETL_READER_PASSWORD}"
+    HA_REPLICATION_PASSWORD: "${HA_REPLICATION_PASSWORD:?set HA_REPLICATION_PASSWORD}"
+    HA_API_PASSWORD: "${HA_API_PASSWORD:?set HA_API_PASSWORD}"
+    BROKER_DB_USER: "${BROKER_DB_USER:-message_broker}"
+    BROKER_DB_PASSWORD: "${BROKER_DB_PASSWORD:?set BROKER_DB_PASSWORD}"
+    BROKER_DB_NAME: "${BROKER_DB_NAME:-message_broker}"
+  depends_on:
+    etcd:
+      condition: service_started
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/health', timeout=2)"]
+    interval: 3s
+    timeout: 3s
+    retries: 40
+    start_period: 10s
+  mem_limit: 512m
+  stop_grace_period: 30s
+
+services:
+  database:
+    profiles: [single-database]
+  broker-database:
+    profiles: [single-database]
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.21@sha256:a3ccd299377af4b9968d8cbaaf9722fe354297f11908f74a846075e1e5f4ee89
+    restart: unless-stopped
+    command:
+      - /usr/local/bin/etcd
+      - --name=etcd
+      - --data-dir=/etcd-data
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd:2379
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --initial-advertise-peer-urls=http://etcd:2380
+      - --initial-cluster=etcd=http://etcd:2380
+    volumes: [ha-etcd-data:/etcd-data]
+    mem_limit: 256m
+  pg-1:
+    <<: *ha-node
+    environment:
+      <<: *ha-env
+      PATRONI_NAME: pg-1
+    volumes: [ha-pg-1-data:/var/lib/postgresql/data]
+  pg-2:
+    <<: *ha-node
+    environment:
+      <<: *ha-env
+      PATRONI_NAME: pg-2
+    volumes: [ha-pg-2-data:/var/lib/postgresql/data]
+  pg-3:
+    <<: *ha-node
+    environment:
+      <<: *ha-env
+      PATRONI_NAME: pg-3
+    volumes: [ha-pg-3-data:/var/lib/postgresql/data]
+  pg-haproxy:
+    image: haproxy:3.2-alpine@sha256:7816a9801a6846b912bc37e48529808e2fa87c3c47992441940f68e393ebcfeb
+    restart: unless-stopped
+    depends_on: [pg-1, pg-2, pg-3]
+    volumes: [./ha/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro]
+    ports:
+      - "127.0.0.1:${HA_RW_PORT:-15435}:5000"
+      - "127.0.0.1:${HA_RO_PORT:-15436}:5001"
+    mem_limit: 128m
+  ha-ready:
+    image: postgres:17-bookworm@sha256:837bed18782820fe967067cb5328b02b0d9992c1be9a37ee0c9c492cfc03af3b
+    depends_on: [pg-haproxy]
+    environment:
+      PGPASSWORD: ${DATABASE_ADMIN_PASSWORD:?set DATABASE_ADMIN_PASSWORD}
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        for attempt in $$(seq 1 120); do
+          ready=$$(psql -h pg-haproxy -p 5000 -U postgres -d postgres -Atqc "SELECT count(*) >= 2 AND bool_or(sync_state IN ('sync','quorum')) FROM pg_stat_replication WHERE state = 'streaming'" 2>/dev/null || true)
+          [ "$$ready" = t ] && exit 0
+          sleep 1
+        done
+        echo "HA replication readiness deadline exceeded" >&2
+        exit 1
+  user-management:
+    depends_on: !override
+      log-init:
+        condition: service_completed_successfully
+      ha-ready:
+        condition: service_completed_successfully
+    environment:
+      ConnectionStrings__UserManagementDb: "Host=pg-haproxy;Port=5000;Database=${USER_MANAGEMENT_DB_NAME:-user_management};Username=${USER_MANAGEMENT_DB_USER:-user_management};Password=${USER_MANAGEMENT_DB_PASSWORD};Timeout=2;Command Timeout=3"
+  message-broker:
+    depends_on: !override
+      service-discovery:
+        condition: service_healthy
+      user-management:
+        condition: service_healthy
+      log-init:
+        condition: service_completed_successfully
+      ha-ready:
+        condition: service_completed_successfully
+    environment:
+      BROKER_DATABASE_URL: "jdbc:postgresql://pg-haproxy:5000/${BROKER_DB_NAME:-message_broker}"
+  tamagotchi:
+    depends_on: !override
+      message-broker:
+        condition: service_healthy
+      ha-ready:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: "postgres://${TAMAGOTCHI_DB_USER:-tamagotchi}:${TAMAGOTCHI_DB_PASSWORD}@pg-haproxy:5000/${TAMAGOTCHI_DB_NAME:-tamagotchi}"
+  notification:
+    depends_on: !override
+      message-broker:
+        condition: service_healthy
+      ha-ready:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: "postgres://${NOTIFICATION_DB_USER:-notification}:${NOTIFICATION_DB_PASSWORD}@pg-haproxy:5000/${NOTIFICATION_DB_NAME:-notification}"
+  guild:
+    depends_on: !override
+      message-broker:
+        condition: service_healthy
+      ha-ready:
+        condition: service_completed_successfully
+    environment:
+      DB_HOST: "pg-haproxy"
+      DB_PORT: "5000"
+  registry:
+    depends_on: !override
+      message-broker:
+        condition: service_healthy
+      ha-ready:
+        condition: service_completed_successfully
+    environment:
+      DB_HOST: "pg-haproxy"
+      DB_PORT: "5000"
+  battle:
+    depends_on: !override
+      message-broker:
+        condition: service_healthy
+      ha-ready:
+        condition: service_completed_successfully
+    environment:
+      ConnectionStrings__BattleDb: "Host=pg-haproxy;Port=5000;Database=${BATTLE_DB_NAME:-battle};Username=${BATTLE_DB_USER:-battle};Password=${BATTLE_DB_PASSWORD};Timeout=2;Command Timeout=3"
+  map:
+    depends_on: !override
+      message-broker:
+        condition: service_healthy
+      ha-ready:
+        condition: service_completed_successfully
+    environment:
+      ConnectionStrings__Default: "Host=pg-haproxy;Port=5000;Database=${MAP_DB_NAME:-map};Username=${MAP_DB_USER:-map};Password=${MAP_DB_PASSWORD};GSS Encryption Mode=Disable;Maximum Pool Size=10;Timeout=2;Command Timeout=3"
+  monster-raid:
+    depends_on: !override
+      message-broker:
+        condition: service_healthy
+      ha-ready:
+        condition: service_completed_successfully
+    environment:
+      ConnectionStrings__Default: "Host=pg-haproxy;Port=5000;Database=${MONSTER_RAID_DB_NAME:-monster_raid};Username=${MONSTER_RAID_DB_USER:-monster_raid};Password=${MONSTER_RAID_DB_PASSWORD};GSS Encryption Mode=Disable;Maximum Pool Size=10;Timeout=2;Command Timeout=3"
+volumes:
+  ha-etcd-data:
+  ha-pg-1-data:
+  ha-pg-2-data:
+  ha-pg-3-data:
