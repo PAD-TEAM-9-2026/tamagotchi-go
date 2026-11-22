@@ -1535,7 +1535,7 @@ await cache.invalidate([cacheKey('tamagotchi', 'creature', id)]);
 ```
 
 `read` never throws for cache failures: an error or a command over 50 ms marks the node down
-for 10 s and the value comes from `load`. Reads skipped while a node is down count as `miss`.
+for 10 s and the value comes from `load`. Reads skipped while a node is down count as `error`.
 Unset `CACHE_NODES` turns the cache off.
 
 ### C# discovery kit

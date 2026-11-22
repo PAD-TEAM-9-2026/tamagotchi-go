@@ -160,7 +160,8 @@ describe('node down', () => {
     client.mode = 'ok';
     await cache.read(key, 60, load);
     expect(client.data.size).toBe(0);
-    expect(await metric(node, 'miss')).toBe(1);
+    expect(await metric(node, 'error')).toBe(2);
+    expect(await metric(node, 'miss')).toBe(0);
     expect(cache.nodeFor(key)).toBe(node);
 
     clock.now += 10_000;
