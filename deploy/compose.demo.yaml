@@ -1,0 +1,10 @@
+# Demo switches, layered last by ./up.sh lab5. The release stack keeps them off.
+
+services:
+  tamagotchi:
+    environment:
+      FAULT_INJECTION_ENABLED: "true"
+      USER_MANAGEMENT_JWKS_URL: http://user-management:3001/v1/jwks
+  user-management:
+    environment:
+      FAULT_INJECTION_ENABLED: "true"
