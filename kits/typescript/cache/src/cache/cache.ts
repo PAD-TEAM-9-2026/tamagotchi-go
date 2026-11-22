@@ -138,7 +138,7 @@ export function createCache(settings: CacheSettings): Cache {
 
       if (shard === undefined || !available(shard)) {
         if (shard !== undefined) {
-          count(shard, 'miss');
+          count(shard, 'error');
         }
         return { entry: await load(), cache: 'MISS' as const };
       }

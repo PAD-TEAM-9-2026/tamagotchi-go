@@ -60,7 +60,7 @@ implementation [tools/cache_ring.py](../tools/cache_ring.py) and checked in CI.
 
 | Event | Behaviour |
 | --- | --- |
-| Node temporarily down: a command errors or takes longer than **50 ms** | Mark the node down for **10 s**, count `result="error"` and read from the database. Its keys are **not** moved to another node. While it is down, its keys are neither read nor written. After 10 s the next command tries it again. |
+| Node temporarily down: a command errors or takes longer than **50 ms** | Mark the node down for **10 s**, count `result="error"` and read from the database. Its keys are **not** moved to another node. While it is down, its keys are neither read nor written, and every read skipped this way also counts as `error`, so `hit` and `miss` describe the data only. After 10 s the next command tries it again. |
 | Node removed from or added to `CACHE_NODES` (config change, restart) | The ring changes and about `1/N` of the keys move. Keys that now live elsewhere simply miss once. |
 
 The cache is optional: a cache failure never turns into an error response.
