@@ -2,9 +2,9 @@
 
 Status: proposed, not an implemented or approved transport. Participant owners
 review these types and scopes before adapters depend on them. Existing operations
-and deployed snapshots remain unchanged. The saga owner reviews SagaView and the
-saga definition in a coordinated follow-up; an unimplemented StartSaga must return
-UNIMPLEMENTED, never acknowledge work it cannot durably execute.
+and deployed snapshots remain unchanged. The saga definition, SagaView and the saga
+rules are in [Saga: battle-settlement](#saga-battle-settlement). An unimplemented
+StartSaga must return UNIMPLEMENTED, never acknowledge work it cannot durably execute.
 
 ## Admission, identity and replay
 
@@ -14,7 +14,7 @@ certificates. Only `battle` starts the fixed `battle-settlement` definition.
 HTTP mapping, arbitrary operation list, caller-selected scope or participant URL
 is accepted. UUID fields are UUIDv7. Correlation survives background processing.
 
-A start commits its plan and returns PREPARING (or saga RUNNING) promptly; no
+A start commits its plan and returns PREPARING (or SAGA_RUNNING) promptly; no
 participant call runs on the inbound request budget. Disconnect after admission
 does not cancel durable settlement. Same ID and normalized input returns current
 state; changed input is ALREADY_EXISTS. Durable state contains no credentials.
@@ -106,8 +106,85 @@ is `409 battle_settlement_reversed`. Infrastructure failures remain failures;
 partial unrecovered money is visible reconciliation data, not a fully restored
 balance. XP reversal identifies the existing BATTLE effect and recomputes level.
 
-Saga ordering, retry/pivot/deadline behavior is finalized by the saga owner before
-this proposal is approved. Both modes use the same participant dispatch boundary.
+Both modes use the same participant dispatch boundary. One battle is settled by
+exactly one mode, as stated under Admission (`settlement_mode_conflict`).
+
+## Saga: battle-settlement
+
+The release default. Saga ID is the battle UUID, never `.N`: a saga does not abort and
+restart, it compensates. The fixed definition, in order:
+
+| # | Step | Operation | Kind | Compensation |
+| --- | --- | --- | --- | --- |
+| 1 | `settle_currency` | `users.settle_battle` | COMPENSATABLE | `users.reverse_settlement` |
+| 2 | `award_xp_primary` | `tamagotchi.award_xp` (winner primary, 60, BATTLE, battle ID) | COMPENSATABLE | `tamagotchi.revoke_xp` |
+| 3 | `award_xp_secondary` | `tamagotchi.award_xp` (winner secondary, 40, BATTLE, battle ID) | COMPENSATABLE | `tamagotchi.revoke_xp` |
+| 4 | `grant_access` | `tamagotchi.grant_access` (staked creature, winner, BATTLE_LOSS) | PIVOT | none: access is never revoked |
+| 5 | `credit_access_cap` | `users.credit_global` (winner, 50, `BATTLE_ACCESS_CAP`, battle ID) | RETRIABLE | none; SKIPPED unless step 4 answered CAP_REACHED |
+| 6 | `release_engagement` | `tamagotchi.release_engagement` | FINALIZER | none; SKIPPED when the plan has no engagement |
+| 7 | `mark_settled` | `battle.mark_settled` (outcome, access outcome) | FINALIZER | none; always last |
+
+**Forward path.** Steps 1-5 run one at a time, then the finalizers. Access outcome is
+step 4's answer: GRANTED or ALREADY_HOLDER, or CAP_COMPENSATED once step 5 succeeds.
+The saga ends COMPLETED with outcome SETTLED.
+
+**Compensation path.** When a step before the pivot fails, the compensatable steps that
+completed or may have completed are compensated in reverse order (3, 2, 1), then the
+finalizers run. The saga ends COMPENSATED with outcome COMPENSATED and access NO_ACCESS;
+`mark_settled` records exactly that. After the pivot has succeeded the saga never
+compensates.
+
+**What counts as a failure.** A participant's definite business refusal is a failure at
+once. A transport failure, timeout or uncertain reply is retried with the same effect
+key, because every step operation is IDEMPOTENT with COMMAND_KEY and a retry returns the
+stored result. Per step kind:
+
+| Kind | Attempts | Then |
+| --- | --- | --- |
+| COMPENSATABLE | 3 | Failed: compensate. The step itself is compensated too, because it may have applied. |
+| PIVOT | until a definite answer, within the forward deadline | A definite refusal compensates. An uncertain pivot is **never** compensated: past the deadline the saga becomes SAGA_NEEDS_ATTENTION. |
+| RETRIABLE, FINALIZER, compensations | until they succeed, up to 10 minutes per step | SAGA_NEEDS_ATTENTION |
+
+Attempts get a 2.5 s timeout and backoff 1, 2, 4, 8 s, capped at 30 s. Each attempt has a
+fresh deadline and context, the same effect key `{saga_id}:{step}:{execute|compensate}`
+and the same persisted Call message ID for its logical action.
+
+**Deadline.** The forward deadline is 10 minutes after admission (`deadline_at`). A saga
+that has not passed the pivot by then compensates. Compensation and finalizers are not
+bound by it; they have their own 10 minutes per step.
+
+**Compensations must be safe without the forward step.** A compensation can arrive for a
+step whose forward call never applied, or before a late forward call arrives:
+
+- `users.reverse_settlement` for an unsettled battle records a tombstone and moves
+  nothing; a later settlement is `409 battle_settlement_reversed` (as above).
+- `tamagotchi.revoke_xp` for an effect that does not exist records a tombstone for
+  `(tamagotchi_id, BATTLE, battle ID)` and succeeds with nothing changed; a later
+  `award_xp` with that key is `409 xp_award_revoked`. A repeated revoke returns its
+  first result.
+
+**Durability and restart.** StartSaga commits the saga and its plan, answers
+SAGA_RUNNING and returns; no participant call runs on the inbound request budget. Each
+step's state, attempts and Call message ID are written before and after every call, in
+the Broker database (`sagas`, `saga_steps`). After a restart the Broker resumes every
+non-terminal saga at its current step and resends an in-flight call with the same key.
+Same ID and plan returns the current SagaView; a changed plan is ALREADY_EXISTS.
+
+**SAGA_NEEDS_ATTENTION** is terminal for automation: retries stop and the saga keeps its
+last step states for an operator. When it is reached because the pivot stayed uncertain,
+`release_engagement` still runs first (releasing is safe whatever the pivot did), but
+`mark_settled` does not, because the outcome is unknown. Battle's status check sees it and records
+`NEEDS_ATTENTION`, as it does today for a settlement half that keeps failing.
+
+**Demo faults.** A `fail` fault answers `502 fault_injected`, which the saga treats as
+uncertain and retries with the same key. To show a compensation, inject it with `count` 3
+on a compensatable step (for example `tamagotchi.award_xp`), so all three attempts fail.
+A `delay` fault longer than the 2.5 s attempt timeout makes the attempts time out instead.
+
+**Observability.** `sagas_total{definition,outcome}`, `saga_step_attempts_total{step,result}`
+and `saga_compensations_total{step}`. Log lines `saga started`, `saga step failed`,
+`saga compensating`, `saga finished` with `saga_id`, `step`, `attempt` and `reason`,
+never request or reply bodies.
 
 ## Management and acceptance
 
@@ -127,8 +204,18 @@ does not expose these administration ports publicly.
 
 Existing admin authorization protects GET /v1/transactions[/{id}] and
 GET /v1/sagas[/{id}]. Responses expose progress/reasons, not credentials or bodies.
+`GET /v1/sagas` takes `state` (a SagaState name), `limit` (1-100, default 20) and an
+opaque `before` cursor, and answers `{"items": [SagaView], "next_before": …}` newest
+first; `GET /v1/sagas/{id}` answers one SagaView with every step. JSON field names are
+the proto names; enum values are their names.
 
 Test async starts, changed-plan conflicts, uncertain start replay, two prepare
 waves, repeated actual votes, vote NO, late prepares, restart around each decision
 boundary, prepared-transaction failover, phase-two lost replies and authoritative
 absence races. Component doubles are distinct from real participant acceptance.
+
+Saga acceptance: the happy path with GRANTED, ALREADY_HOLDER and CAP_REACHED; a refusal
+at each compensatable step and at the pivot; an uncertain pivot reaching the deadline;
+a compensation arriving before its late forward call; a Broker restart before, during
+and after the pivot; a lost reply at every step; mode conflict with 2PC; and the
+finalizers running on both paths.
