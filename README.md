@@ -1740,9 +1740,22 @@ docker compose up -d --wait
 | `compose.monitoring.yaml` | Prometheus and Grafana, see [Monitoring](deploy/monitoring.md) |
 | `compose.tracing.yaml` | Jaeger and the OpenTelemetry settings of every service |
 | `compose.cache.yaml` | Valkey shards `cache-0..2` and `CACHE_NODES` for every domain service, see [contracts/cache.md](contracts/cache.md) |
+| `compose.demo.yaml` | The demo switches: `FAULT_INJECTION_ENABLED` for Tamagotchi and User Management. Never in the release stack |
 
 Combine them with repeated `-f`, for example
 `docker compose -f compose.yaml -f compose.monitoring.yaml up -d`.
+
+For Lab 5, `./up.sh lab5` combines `compose.yaml` with every Lab 5 overlay present
+(`ha`, `cache`, `warehouse`, `monitoring`, `tracing`, `demo`, in that order) and runs
+`up -d --wait`. `--only cache,demo` picks overlays, and anything after it goes to
+`docker compose`:
+
+```bash
+./up.sh lab5                         # whole Lab 5 stack
+./up.sh lab5 --only cache,demo       # base stack with the cache and the demo switches
+./up.sh lab5 ps                      # any compose command on the same files
+./up.sh lab5 files                   # print the compose files it would use
+```
 
 Startup order is databases and log volumes, Discovery, User Management (it
 serves the issuer keys the Broker checks), the Broker, the domain services and
