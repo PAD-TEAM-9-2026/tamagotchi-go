@@ -2,10 +2,16 @@
 #
 #   docker compose -f compose.yaml -f compose.warehouse.yaml up -d
 #
-# A separate PostgreSQL for the star schema the ETL service loads. It is never one of the
-# service databases and is not replicated: a full ETL run rebuilds it. The ETL service creates
-# its tables and its `etl` bookkeeping schema; this file only provides the empty database.
-# The host port is on loopback, for analysis queries only.
+# `warehouse`: a separate PostgreSQL for the star schema. It is never one of the service
+# databases and is not replicated: a full ETL run rebuilds it. Its host port is on loopback, for
+# analysis queries only.
+#
+# `etl`: the ETL service (services/etl). It reads every service database as etl_reader, loads
+# the warehouse at startup and every ETL_INTERVAL_SECONDS, creates the tables and its `etl`
+# bookkeeping schema, and serves the admin run endpoints on loopback port 3011. Until
+# mihaelacatan/etl-service:5.0.0 is published, Compose builds that tag from the submodule.
+# With the HA overlay, set ETL_SOURCE_HOST=pg-haproxy and ETL_SOURCE_PORT=5001 in .env so it
+# reads from the replicas.
 services:
   warehouse:
     image: postgres:17.12-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
@@ -23,5 +29,44 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+  etl:
+    image: mihaelacatan/etl-service:5.0.0
+    build: ../services/etl
+    restart: unless-stopped
+    depends_on:
+      warehouse:
+        condition: service_healthy
+    environment:
+      LOG_LEVEL: ${ETL_LOG_LEVEL:-info}
+      ETL_INTERVAL_SECONDS: ${ETL_INTERVAL_SECONDS:-300}
+      WAREHOUSE_DB_HOST: warehouse
+      WAREHOUSE_DB_PORT: 5432
+      WAREHOUSE_DB_NAME: ${WAREHOUSE_DB_NAME:-warehouse}
+      WAREHOUSE_DB_USER: ${WAREHOUSE_DB_USER:-warehouse}
+      WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD:?set WAREHOUSE_DB_PASSWORD in .env}
+      # Source databases: the shared PostgreSQL, or the HA read-only port (see above). A source
+      # that is not up yet only fails its own extracts; the next run retries them.
+      ETL_SOURCE_HOST: ${ETL_SOURCE_HOST:-database}
+      ETL_SOURCE_PORT: ${ETL_SOURCE_PORT:-5432}
+      ETL_READER_PASSWORD: ${ETL_READER_PASSWORD:?set ETL_READER_PASSWORD in .env}
+      USER_MANAGEMENT_DB_NAME: ${USER_MANAGEMENT_DB_NAME:-user_management}
+      BATTLE_DB_NAME: ${BATTLE_DB_NAME:-battle}
+      TAMAGOTCHI_DB_NAME: ${TAMAGOTCHI_DB_NAME:-tamagotchi}
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:-notification}
+      GUILD_DB_NAME: ${GUILD_DB_NAME:-guild}
+      REGISTRY_DB_NAME: ${REGISTRY_DB_NAME:-registry}
+      MAP_DB_NAME: ${MAP_DB_NAME:-map}
+      MONSTER_RAID_DB_NAME: ${MONSTER_RAID_DB_NAME:-monster_raid}
+      # Admin tokens are checked against User Management's keys, as for the Broker.
+      USER_MANAGEMENT_URL: http://user-management:3001
+      SERVICE_DISCOVERY_URL: http://service-discovery:3009
+      INSTANCE_HOST: etl
+    ports:
+      - "127.0.0.1:${ETL_PORT:-3011}:3011"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3011/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
 volumes:
   shared-warehouse-data:
