@@ -86,19 +86,52 @@ message TransactionView {
   repeated ParticipantView participants = 7;
   google.protobuf.Timestamp updated_at = 8;
 }
-// Saga state/step details are reviewed jointly with the saga owner before freeze.
+// battle-settlement saga. Step names, kinds and order are fixed by contracts/transactions.md.
+enum SagaState {
+  SAGA_STATE_UNSPECIFIED = 0;
+  SAGA_RUNNING = 1;          // forward steps, then finalizers
+  SAGA_COMPENSATING = 2;     // undoing completed compensatable steps, then finalizers
+  SAGA_COMPLETED = 3;        // terminal: settled, outcome SETTLED
+  SAGA_COMPENSATED = 4;      // terminal: undone, outcome COMPENSATED, access NO_ACCESS
+  SAGA_NEEDS_ATTENTION = 5; // terminal for automation: a must-succeed step ran out of time
+}
+enum SagaStepKind {
+  SAGA_STEP_KIND_UNSPECIFIED = 0;
+  STEP_KIND_COMPENSATABLE = 1;    // undone in reverse order if the saga compensates
+  STEP_KIND_PIVOT = 2;            // after it succeeds the saga can only go forward
+  STEP_KIND_RETRIABLE = 3;        // after the pivot: retried until it succeeds
+  STEP_KIND_FINALIZER = 4;        // runs at the end of both paths, retried until it succeeds
+}
+enum SagaStepState {
+  SAGA_STEP_STATE_UNSPECIFIED = 0;
+  STEP_PENDING = 1;
+  STEP_RUNNING = 2;
+  STEP_SUCCEEDED = 3;
+  STEP_FAILED = 4;       // definite failure, or attempts exhausted
+  STEP_COMPENSATING = 5;
+  STEP_COMPENSATED = 6;
+  STEP_SKIPPED = 7;      // not needed: no cap credit, no engagement, or never started
+}
 message SagaView {
   string saga_id = 1;
   string battle_id = 2;
-  string state = 3;
-  string reason = 4;
+  SagaState state = 3;
+  string reason = 4;    // stable code of the failure that decided the path, empty otherwise
   AccessOutcome access_outcome = 5;
-  repeated SagaStepView steps = 6;
+  repeated SagaStepView steps = 6; // in definition order
   google.protobuf.Timestamp updated_at = 7;
+  SettlementOutcome outcome = 8;   // UNSPECIFIED until terminal
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp deadline_at = 10; // forward deadline, created_at + 10 minutes
 }
 message SagaStepView {
-  string step = 1;
-  string state = 2;
-  uint32 attempts = 3;
-  string reason = 4;
+  string step = 1;      // e.g. settle_currency
+  SagaStepState state = 2;
+  uint32 attempts = 3;  // forward attempts
+  string reason = 4;    // last failure code, empty otherwise
+  SagaStepKind kind = 5;
+  string operation = 6; // forward operation, e.g. users.settle_battle
+  string compensation = 7; // compensating operation, empty when none
+  uint32 compensation_attempts = 8;
+  optional google.protobuf.Timestamp next_attempt_at = 9;
 }
