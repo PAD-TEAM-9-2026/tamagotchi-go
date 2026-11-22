@@ -1,0 +1,1517 @@
+{
+  "spec": "contracts/cache.md",
+  "hash": "md5, first 8 bytes, big-endian unsigned 64-bit",
+  "virtual_nodes": 128,
+  "keys": [
+    {
+      "key": "tamagotchi:v1:creature:b4406ebd-270a-1c10-a1dc-bcb277b0fbb1",
+      "hash": "5459976550706870763"
+    },
+    {
+      "key": "tamagotchi:v1:creature:c6c49c80-1d83-9c26-2da6-35cbbaa94f3f",
+      "hash": "6517673666109981562"
+    },
+    {
+      "key": "tamagotchi:v1:creature:c6829ed5-6950-846d-07c6-59dab6f5a7be",
+      "hash": "12952525344956121476"
+    },
+    {
+      "key": "tamagotchi:v1:creature:17b50ce5-e655-c523-7efc-56250ca5036a",
+      "hash": "8087414499176410099"
+    },
+    {
+      "key": "tamagotchi:v1:creature:8eb3c42f-5ec2-3d83-e54a-85a68f140746",
+      "hash": "12459789792418722445"
+    },
+    {
+      "key": "tamagotchi:v1:creature:e75763fe-b59f-e08d-a921-eb611a2cc028",
+      "hash": "14510940481071804721"
+    },
+    {
+      "key": "tamagotchi:v1:creature:6a6351df-6a4a-4a24-7a72-3ac9032a343b",
+      "hash": "15176006270494461485"
+    },
+    {
+      "key": "tamagotchi:v1:creature:20a07263-3e32-db28-52ed-46bd63c48d46",
+      "hash": "5746630059302400742"
+    },
+    {
+      "key": "tamagotchi:v1:creature:f2299654-2034-292d-ae96-334dedc8c26b",
+      "hash": "17259544681022182344"
+    },
+    {
+      "key": "tamagotchi:v1:creature:ff13f44f-1dfe-2606-38ef-5533a74bd2b2",
+      "hash": "14743866564408570345"
+    },
+    {
+      "key": "tamagotchi:v1:creature:a10fdfa4-7f1f-2e7a-9cc8-15799e38b4ae",
+      "hash": "1634565453834637684"
+    },
+    {
+      "key": "tamagotchi:v1:creature:91a1c51a-5d2c-483b-f837-9e5a73210ef8",
+      "hash": "10576894996896645778"
+    },
+    {
+      "key": "tamagotchi:v1:creature:2162415e-4360-2135-1c91-418a7bde6cc1",
+      "hash": "14825383447099515285"
+    },
+    {
+      "key": "tamagotchi:v1:collection:d9d96033-8ae6-39aa-a6f1-024beae41d5d",
+      "hash": "8687030198204470714"
+    },
+    {
+      "key": "tamagotchi:v1:collection:75aac9d1-05b9-1f6f-a01a-d0c69feee23c",
+      "hash": "1623848737897207933"
+    },
+    {
+      "key": "tamagotchi:v1:collection:a012377a-509a-9e52-b0ea-4a33fbe4684a",
+      "hash": "17807014448052620045"
+    },
+    {
+      "key": "tamagotchi:v1:collection:55420ef9-7b65-4be3-f101-5a48b5054fa4",
+      "hash": "7844626766400476701"
+    },
+    {
+      "key": "tamagotchi:v1:collection:766b8bb1-d605-02ec-3175-d83db01bd7d5",
+      "hash": "12442726262985022636"
+    },
+    {
+      "key": "tamagotchi:v1:collection:3e265020-ed36-747d-d720-e74ccb306cfc",
+      "hash": "3674299185076522028"
+    },
+    {
+      "key": "tamagotchi:v1:collection:e7661e41-6819-9c25-206f-26306e51511d",
+      "hash": "7101969800359931762"
+    },
+    {
+      "key": "tamagotchi:v1:collection:fa9e10bf-9dba-738b-0625-1fd0af92c3dc",
+      "hash": "9070875045860248524"
+    },
+    {
+      "key": "tamagotchi:v1:collection:f2790493-260c-1d73-a1a7-36c755d456cd",
+      "hash": "11059610819411294233"
+    },
+    {
+      "key": "tamagotchi:v1:collection:9c3ab785-469b-435e-742e-71d91484abaa",
+      "hash": "16891731181490422273"
+    },
+    {
+      "key": "tamagotchi:v1:collection:679b9ec7-7452-e842-8174-088bf3bf2d9e",
+      "hash": "2836042852578879715"
+    },
+    {
+      "key": "tamagotchi:v1:collection:21e33a01-8757-b065-0c89-e31f65887d67",
+      "hash": "8650969413165696279"
+    },
+    {
+      "key": "tamagotchi:v1:collection:b29d6118-003f-8d48-df21-e0d5e8f1603e",
+      "hash": "109193681449848784"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:8cce0768-260e-3c11-1b96-167edaa798f0",
+      "hash": "1064645899013462427"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:0b22400e-e139-cdb4-243e-2a9b7e024a13",
+      "hash": "1079495483492765937"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:bf7ed569-a1d5-7791-3645-84a5cf226a67",
+      "hash": "10563269035006637094"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:d34391c0-bf64-6476-d423-1b0cca0d9384",
+      "hash": "13940128492358862353"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:a78cabb5-2dd5-77ff-27a8-d045be950e11",
+      "hash": "13915277224709633234"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:d2304068-928f-708a-5360-e39bee9a1473",
+      "hash": "13054015641022447490"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:5f3cf987-67b2-c99f-c8d9-9a30eec8a817",
+      "hash": "16345448372625149823"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:50ca4ca7-6666-842d-5a95-499ee1310eb2",
+      "hash": "15170309942131006482"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:5ae2302b-b785-1f17-b13e-4ccdccb48977",
+      "hash": "17289583113922818464"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:5c41becd-61f5-6613-03de-755c7b36fd6f",
+      "hash": "1014854446347387824"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:3647d004-9664-bdb8-ccab-dbbe3aa6b009",
+      "hash": "3846836155069164944"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:271f0e5d-4203-dd3b-15bc-0357333a94c2",
+      "hash": "3906405641596016932"
+    },
+    {
+      "key": "tamagotchi:v1:type-matrix:2e886f6a-951d-034a-84a4-1304480de088",
+      "hash": "2222437147990587694"
+    },
+    {
+      "key": "notification:v1:history:6e05ec4a-0eb4-ac07-80e2-d1030444e49e",
+      "hash": "9072306754139102386"
+    },
+    {
+      "key": "notification:v1:history:45e48999-fb3c-312e-cc8f-1f867f89769c",
+      "hash": "9584873632851114218"
+    },
+    {
+      "key": "notification:v1:history:9f2f1637-8475-b15d-342a-aa4dc87db8d5",
+      "hash": "1362875172130681264"
+    },
+    {
+      "key": "notification:v1:history:f00697d6-a811-7ab5-f48e-2bed826f0c9c",
+      "hash": "5702425054801489762"
+    },
+    {
+      "key": "notification:v1:history:5c16513d-cded-ebf7-5b1c-a3a0d90b5508",
+      "hash": "3919448387319564525"
+    },
+    {
+      "key": "notification:v1:history:67b6520c-1cdc-2ca0-2a7b-111c374ac271",
+      "hash": "5384208124662034352"
+    },
+    {
+      "key": "notification:v1:history:b997f843-72c4-d9b8-c5b9-b004177865bc",
+      "hash": "12023196223214120837"
+    },
+    {
+      "key": "notification:v1:history:1051b42b-6dec-d005-1a4a-02ff576ad81a",
+      "hash": "14405477704022223285"
+    },
+    {
+      "key": "notification:v1:history:e94d0880-d7e5-cc5a-ac25-713bc2243dad",
+      "hash": "1960803982658557464"
+    },
+    {
+      "key": "notification:v1:history:b8baecc2-3f08-dce3-2a5e-62381c301d48",
+      "hash": "15146088740355642805"
+    },
+    {
+      "key": "notification:v1:history:aad834a7-f0f7-439c-1bf9-6a388b831361",
+      "hash": "1821809159683741342"
+    },
+    {
+      "key": "notification:v1:history:1d836424-ce04-b2fc-168d-2e1f1ebe32b0",
+      "hash": "7776328653329723344"
+    },
+    {
+      "key": "notification:v1:history:89338f21-4655-2c26-4524-f8401a2c9efe",
+      "hash": "2198854766257235015"
+    },
+    {
+      "key": "notification:v1:preferences:064de921-da05-a046-4538-c705bec29b54",
+      "hash": "6700412202749699975"
+    },
+    {
+      "key": "notification:v1:preferences:90c0b4ee-d85b-5d2c-84f2-a7079b6735a2",
+      "hash": "9495475735040036488"
+    },
+    {
+      "key": "notification:v1:preferences:1e80188d-e60b-3564-d06b-d70097a9a02a",
+      "hash": "9912829080177170928"
+    },
+    {
+      "key": "notification:v1:preferences:4d309d5a-e85c-f710-c9a1-83cc0b8962e5",
+      "hash": "4780407477461405616"
+    },
+    {
+      "key": "notification:v1:preferences:2e9f0ed7-c482-c891-ce50-64a0abe6997e",
+      "hash": "1329699142106867388"
+    },
+    {
+      "key": "notification:v1:preferences:00c78ca9-2687-7ed9-769c-aacb6423ab86",
+      "hash": "12717736486771836867"
+    },
+    {
+      "key": "notification:v1:preferences:ee0230de-8fe1-4915-e984-ae229c2925bf",
+      "hash": "7012398104667151954"
+    },
+    {
+      "key": "notification:v1:preferences:a780f771-40c1-1134-0669-a9abf04743b5",
+      "hash": "8851511894878137763"
+    },
+    {
+      "key": "notification:v1:preferences:a8dec0a7-c7b9-efae-bc66-5e810df52416",
+      "hash": "6650188857365796951"
+    },
+    {
+      "key": "notification:v1:preferences:c42f800d-2538-b839-c008-7a8ac5555799",
+      "hash": "9415909537718497124"
+    },
+    {
+      "key": "notification:v1:preferences:466b12a9-9670-99c5-80e8-fabb158be861",
+      "hash": "15810535294148130677"
+    },
+    {
+      "key": "notification:v1:preferences:ce7c52c5-76d5-3318-031a-cfd4c98fc48a",
+      "hash": "10117275905098046673"
+    },
+    {
+      "key": "notification:v1:preferences:35a84280-87e9-f8d4-bbee-50e0fa3ad40a",
+      "hash": "3182534818175017002"
+    },
+    {
+      "key": "registry:v1:package:7684ee01-5b92-1c2e-74fd-9449e2933ed4",
+      "hash": "3893425499452750237"
+    },
+    {
+      "key": "registry:v1:package:cce0b29b-5c19-db16-a1a8-02ad23cf79b1",
+      "hash": "2311750797808549681"
+    },
+    {
+      "key": "registry:v1:package:6cb3a5fd-bf2a-143b-8a81-00630e677a26",
+      "hash": "15354787699399008912"
+    },
+    {
+      "key": "registry:v1:package:fa654827-918c-ad28-fadd-83e6dc5d18a1",
+      "hash": "4592606245878088332"
+    },
+    {
+      "key": "registry:v1:package:819d710d-c276-2a0b-e5c7-c409d11e71a2",
+      "hash": "16084387375608961787"
+    },
+    {
+      "key": "registry:v1:package:fd65b7af-231f-4495-6e47-7aef174715bf",
+      "hash": "6005424555535389164"
+    },
+    {
+      "key": "registry:v1:package:e6cc4595-0a18-9703-263d-142f7b4cf484",
+      "hash": "7043855110677643445"
+    },
+    {
+      "key": "registry:v1:package:2c953a44-ca7e-4308-6b69-832213bfc6f1",
+      "hash": "12066563056709314738"
+    },
+    {
+      "key": "registry:v1:package:4c62ef17-b900-a2ba-5b1e-8236b77cdccc",
+      "hash": "7618043658259266970"
+    },
+    {
+      "key": "registry:v1:package:3ab2c47e-4e26-59f4-4e5c-22207a3e918e",
+      "hash": "13956981715086580046"
+    },
+    {
+      "key": "registry:v1:package:de2f0d0a-c789-adcc-2317-8b799f3b92fe",
+      "hash": "5750721908791846556"
+    },
+    {
+      "key": "registry:v1:package:b4f952fa-c5f7-b674-aaa3-d0e8dda3c89c",
+      "hash": "7047417426165912930"
+    },
+    {
+      "key": "registry:v1:package:63db70eb-4c46-942d-8f5c-7ed0df619aad",
+      "hash": "5532439069808346857"
+    },
+    {
+      "key": "registry:v1:stat-definitions:e30600d8-2f85-922a-26ab-5963b217fac2",
+      "hash": "5017839692083109477"
+    },
+    {
+      "key": "registry:v1:stat-definitions:22f2e720-c227-3d94-0710-69295e2d4363",
+      "hash": "7695872299190248828"
+    },
+    {
+      "key": "registry:v1:stat-definitions:de617d52-0b6d-ef91-854d-91022ab8b9da",
+      "hash": "17742265476925836828"
+    },
+    {
+      "key": "registry:v1:stat-definitions:b3f9e204-459a-02dd-eb97-8a54afc3f66c",
+      "hash": "12222945044691670337"
+    },
+    {
+      "key": "registry:v1:stat-definitions:24e1e4d0-ad72-a87e-1305-7deaa57a6def",
+      "hash": "7058811168255799105"
+    },
+    {
+      "key": "registry:v1:stat-definitions:5abd27a7-da9b-153a-4253-3a96e13113c2",
+      "hash": "2505956673789731422"
+    },
+    {
+      "key": "registry:v1:stat-definitions:c3da3e3c-59c8-f4fa-7811-e364696eeaf6",
+      "hash": "15911960619590314071"
+    },
+    {
+      "key": "registry:v1:stat-definitions:af5cf2d1-3771-37d0-8c7c-86700062df63",
+      "hash": "6086148598576662305"
+    },
+    {
+      "key": "registry:v1:stat-definitions:648480d5-f9d1-f697-ad8b-23fc56fd6944",
+      "hash": "12431628721561791455"
+    },
+    {
+      "key": "registry:v1:stat-definitions:19bbe47d-9868-6287-34c7-5283249310c9",
+      "hash": "17359041009276519111"
+    },
+    {
+      "key": "registry:v1:stat-definitions:44bfe492-716b-2464-2597-80af200af4be",
+      "hash": "17974863824733056172"
+    },
+    {
+      "key": "registry:v1:stat-definitions:33a3e14b-0bfa-f945-c32b-c834b3c8d670",
+      "hash": "9729831463945947723"
+    },
+    {
+      "key": "registry:v1:stat-definitions:b2169413-f800-53a2-cd75-901af3c45f0b",
+      "hash": "9728439197852452491"
+    },
+    {
+      "key": "guild:v1:guild:72608968-bd6e-7164-9539-d80d94f14b83",
+      "hash": "10974299440762032575"
+    },
+    {
+      "key": "guild:v1:guild:84017c25-ad75-a239-9956-b3265dcb6e3e",
+      "hash": "16945353397593594638"
+    },
+    {
+      "key": "guild:v1:guild:91d81fa7-8a40-88d9-6754-22c7930037c2",
+      "hash": "2856810321036440080"
+    },
+    {
+      "key": "guild:v1:guild:ef956582-3ea1-aa04-ec5a-0f72d53da2c2",
+      "hash": "18387599371024038018"
+    },
+    {
+      "key": "guild:v1:guild:ecd51747-c7b2-7336-253d-1a0ca91d4f5a",
+      "hash": "15266984664720627131"
+    },
+    {
+      "key": "guild:v1:guild:ff0b923d-eed0-b351-54c8-2aed4cf161d0",
+      "hash": "2340180857887023281"
+    },
+    {
+      "key": "guild:v1:guild:4b3b358b-978e-8ffb-7279-ca5a50256f98",
+      "hash": "400969925762020767"
+    },
+    {
+      "key": "guild:v1:guild:3bb1f41e-0593-3868-b311-df49f87db5c0",
+      "hash": "7620874449771499008"
+    },
+    {
+      "key": "guild:v1:guild:0ef87a99-9830-c205-196d-4eafbfec3a56",
+      "hash": "16280964710070276892"
+    },
+    {
+      "key": "guild:v1:guild:6f4e2e2d-98c1-83b7-469f-16afb2bc4036",
+      "hash": "4703857105651739917"
+    },
+    {
+      "key": "guild:v1:guild:86fcefa3-4fda-799f-90bc-c87da19fde02",
+      "hash": "8334359521715339773"
+    },
+    {
+      "key": "guild:v1:guild:d12ceb8a-5ec3-d235-7f30-1575ac4ac151",
+      "hash": "11930725105075839200"
+    },
+    {
+      "key": "guild:v1:guild:37da522b-0316-b835-cd82-01bf976bb318",
+      "hash": "15646320778175316028"
+    },
+    {
+      "key": "guild:v1:members:c89de37f-d77e-1c9d-feec-c7ce4d3dcb1b",
+      "hash": "9265658725242295923"
+    },
+    {
+      "key": "guild:v1:members:186948af-839a-e07f-61a3-442a04e88ebd",
+      "hash": "16670631563302313846"
+    },
+    {
+      "key": "guild:v1:members:ae7f8b3d-4284-b644-3d6f-0156e5533740",
+      "hash": "8083696654310678083"
+    },
+    {
+      "key": "guild:v1:members:82c79d55-176d-4112-296e-d0de47f67411",
+      "hash": "14648656573230603681"
+    },
+    {
+      "key": "guild:v1:members:a15be061-6bd9-6dcf-92a0-82cf26b42ef5",
+      "hash": "14083465718104423704"
+    },
+    {
+      "key": "guild:v1:members:b648243b-2ca3-f329-e4d5-219d12db1955",
+      "hash": "2437338993375050244"
+    },
+    {
+      "key": "guild:v1:members:78d31e1f-ba04-a8fd-0eac-bf9ba0f4cc9a",
+      "hash": "7167415844981194935"
+    },
+    {
+      "key": "guild:v1:members:f07d0648-f06a-bab1-ee99-d56064b3d972",
+      "hash": "10609005535614434392"
+    },
+    {
+      "key": "guild:v1:members:166f3fc8-9895-3e66-f657-92dcfdbdcc95",
+      "hash": "4340643543175170868"
+    },
+    {
+      "key": "guild:v1:members:116cacf1-84ca-2db8-f6a9-ce9fd675fb03",
+      "hash": "16531936151913785489"
+    },
+    {
+      "key": "guild:v1:members:0fed22a2-91b6-d5ee-2d98-425b6fb0b476",
+      "hash": "8764470072749101384"
+    },
+    {
+      "key": "guild:v1:members:68e0f8db-1a6f-cb74-c7d1-5b5711c53f19",
+      "hash": "12454635849968443573"
+    },
+    {
+      "key": "guild:v1:members:a681066a-5f16-f2a6-6760-cf3542784ae4",
+      "hash": "18307484399896648209"
+    },
+    {
+      "key": "users:v1:profile:c36cc321-e765-5ded-f0f4-0f4d87d14178",
+      "hash": "15167514403505445242"
+    },
+    {
+      "key": "users:v1:profile:2fbe47a5-854d-9c9d-a625-cc7f7dffbb77",
+      "hash": "7482948607346173507"
+    },
+    {
+      "key": "users:v1:profile:4b5d7f70-ac65-7c15-8374-57d791c95e02",
+      "hash": "14628034042662887883"
+    },
+    {
+      "key": "users:v1:profile:122497e9-1bd7-5418-2f3d-053d5cab806a",
+      "hash": "15856105653079474395"
+    },
+    {
+      "key": "users:v1:profile:02e59986-ef92-b53b-59bb-9a3008203f11",
+      "hash": "7571736622350061082"
+    },
+    {
+      "key": "users:v1:profile:ee82752c-f8a5-0e41-3a93-70a10d688ac5",
+      "hash": "910121830250392178"
+    },
+    {
+      "key": "users:v1:profile:774953a6-933a-b8dd-04a0-db7ac649aaca",
+      "hash": "4427594451667575459"
+    },
+    {
+      "key": "users:v1:profile:2f2e2be6-48d7-658e-aacd-1e9136b97421",
+      "hash": "8079217199890318087"
+    },
+    {
+      "key": "users:v1:profile:f7a7787d-047e-783d-fc2a-5ec2337f59af",
+      "hash": "3259770563088674105"
+    },
+    {
+      "key": "users:v1:profile:0927ed78-31df-241c-9b01-07923b28e918",
+      "hash": "11418853871028396983"
+    },
+    {
+      "key": "users:v1:profile:8e4b216e-ff96-dbac-9fec-f7630ab4dbcc",
+      "hash": "17060397433397799638"
+    },
+    {
+      "key": "users:v1:profile:22fedd6e-0147-b5c5-2dd6-185ebd260bf3",
+      "hash": "6899746519621993741"
+    },
+    {
+      "key": "users:v1:profile:92cc0600-1477-84fe-a6a9-dab69312062e",
+      "hash": "15085905316960685769"
+    },
+    {
+      "key": "users:v1:wallet:ad8c4fa4-2979-d2b0-fdba-c438e9938745",
+      "hash": "15800782519039655695"
+    },
+    {
+      "key": "users:v1:wallet:89cc0f39-fcf9-8aea-7d25-6a86dfcadf35",
+      "hash": "3454481856534567715"
+    },
+    {
+      "key": "users:v1:wallet:6d618331-42e3-e274-98c2-c74a9352dd80",
+      "hash": "3386358838529469834"
+    },
+    {
+      "key": "users:v1:wallet:b680b360-e7f9-35e6-85d6-a8fc5185b3e9",
+      "hash": "3980355409314554510"
+    },
+    {
+      "key": "users:v1:wallet:9b136cf7-c328-8584-ad97-b9d1f5d1a90b",
+      "hash": "13807646372682347749"
+    },
+    {
+      "key": "users:v1:wallet:a20f6c00-4214-bdce-6aca-c024a9168d35",
+      "hash": "5128430211974559355"
+    },
+    {
+      "key": "users:v1:wallet:3205e811-15b1-f690-cd25-d6d6ab28bd1a",
+      "hash": "2591482319700932226"
+    },
+    {
+      "key": "users:v1:wallet:a709f2d9-ab77-4aab-76de-72fb9504ae0b",
+      "hash": "2530303307981172222"
+    },
+    {
+      "key": "users:v1:wallet:9ecf94c2-bdc2-5aab-6e65-ea7893187ac2",
+      "hash": "1862099868236320330"
+    },
+    {
+      "key": "users:v1:wallet:fd2d82e2-7f4c-a338-bd78-f7015d624ede",
+      "hash": "11023417255825788800"
+    },
+    {
+      "key": "users:v1:wallet:bd92f27a-4f8b-cd2a-c0c2-128d97570921",
+      "hash": "3056298194808180822"
+    },
+    {
+      "key": "users:v1:wallet:0d2f0ca2-8e5e-4f6e-35d4-df13402193f7",
+      "hash": "7244862069171333148"
+    },
+    {
+      "key": "users:v1:wallet:bc7af262-9757-38dd-d989-808c708f9053",
+      "hash": "3258068163190906540"
+    },
+    {
+      "key": "battle:v1:battle:08eb7740-01a8-f467-3f29-298737dbac77",
+      "hash": "9588166771337754248"
+    },
+    {
+      "key": "battle:v1:battle:6d5778ed-0b4c-145c-1154-d1bcb0af087e",
+      "hash": "13096400324041579398"
+    },
+    {
+      "key": "battle:v1:battle:f3e5e746-382d-dd45-a4e8-997c843d71d1",
+      "hash": "8466939599277731469"
+    },
+    {
+      "key": "battle:v1:battle:83a06f04-8644-8dc6-fae8-5743065143fc",
+      "hash": "669514854917804465"
+    },
+    {
+      "key": "battle:v1:battle:21c5cbd0-ea49-951f-bb4a-9dec9b605d3e",
+      "hash": "11506610172287796606"
+    },
+    {
+      "key": "battle:v1:battle:8ed39380-345a-32fc-9abc-70b2f909864f",
+      "hash": "7869719982840413325"
+    },
+    {
+      "key": "battle:v1:battle:1f36eac3-95dd-068e-c94e-48552a027bcc",
+      "hash": "11090651490761425675"
+    },
+    {
+      "key": "battle:v1:battle:6f1e0ec5-fc6c-2ce5-b196-dd58da21888e",
+      "hash": "10034356546843264852"
+    },
+    {
+      "key": "battle:v1:battle:c6e7b9b4-0de9-31bc-b8aa-308947e09298",
+      "hash": "10238334065295464999"
+    },
+    {
+      "key": "battle:v1:battle:ad946e8a-13ad-e1cf-347b-1920d2197e17",
+      "hash": "4901859452273629709"
+    },
+    {
+      "key": "battle:v1:battle:5f62c2c9-dd2c-0f7d-338a-1e8f41ac1f29",
+      "hash": "13488139594326917635"
+    },
+    {
+      "key": "battle:v1:battle:e3558702-aa61-9082-1d55-78111bdc4466",
+      "hash": "11599246446024138465"
+    },
+    {
+      "key": "battle:v1:battle:35d2be45-aa2e-2e7e-84c1-b2a4bf9b85ad",
+      "hash": "12236035449168140945"
+    },
+    {
+      "key": "map:v1:region:5c3ae8af-60e2-960d-f613-83fd03a1d71b",
+      "hash": "17626023207561216100"
+    },
+    {
+      "key": "map:v1:region:c5c3b4df-1c09-3b10-322f-b1f2894d2917",
+      "hash": "1897774804899983308"
+    },
+    {
+      "key": "map:v1:region:3495a5ec-2384-6f8d-5706-c3227583397f",
+      "hash": "8828805011892818888"
+    },
+    {
+      "key": "map:v1:region:201eec52-cdfc-38de-b8b3-ee6a575df7d4",
+      "hash": "10251740471191730001"
+    },
+    {
+      "key": "map:v1:region:3923061d-587d-264d-85ed-d14be9ec87ba",
+      "hash": "14178894071999375774"
+    },
+    {
+      "key": "map:v1:region:9485b436-58b4-66c4-830d-4665beec619a",
+      "hash": "1672417862942384089"
+    },
+    {
+      "key": "map:v1:region:1655f407-2f43-fcb9-2fdf-720488454915",
+      "hash": "17698838355870833872"
+    },
+    {
+      "key": "map:v1:region:9fa0a22e-bf34-c5df-cfa4-8428526cdc96",
+      "hash": "3617217050641311594"
+    },
+    {
+      "key": "map:v1:region:87c25888-199f-2268-f974-654692e54635",
+      "hash": "3451427843541567422"
+    },
+    {
+      "key": "map:v1:region:0fc05d48-25e7-78a4-9c75-d2e2de1f8b6b",
+      "hash": "9077900086035674522"
+    },
+    {
+      "key": "map:v1:region:ecc79ae2-77e0-fd06-3acf-2630ca2a2d2c",
+      "hash": "14245033292195402166"
+    },
+    {
+      "key": "map:v1:region:9f2c8273-7c97-e95e-5376-2dc56dfdeebe",
+      "hash": "5514834642349834856"
+    },
+    {
+      "key": "map:v1:region:62784ffc-71f0-5c96-b67a-b7252e320a5a",
+      "hash": "8239666402787420482"
+    },
+    {
+      "key": "raid:v1:raid:65044072-c56c-48d4-f6e2-1c7883d5d9e1",
+      "hash": "8588123184160809161"
+    },
+    {
+      "key": "raid:v1:raid:fc86780a-f473-26c7-7b76-bf3a43a924ed",
+      "hash": "15007187653131900141"
+    },
+    {
+      "key": "raid:v1:raid:ed7c08e9-5f7f-e70e-e182-aa57580661ae",
+      "hash": "14678532302077750842"
+    },
+    {
+      "key": "raid:v1:raid:8f28689e-7a49-504f-f503-8f088d89e1e9",
+      "hash": "3607944760719559782"
+    },
+    {
+      "key": "raid:v1:raid:a33a3407-debb-dee1-6a21-dff73eba4bcd",
+      "hash": "4105881305341630930"
+    },
+    {
+      "key": "raid:v1:raid:8b99deed-8006-cc2f-57e1-c3578149157e",
+      "hash": "14313856288870610692"
+    },
+    {
+      "key": "raid:v1:raid:07bf0f64-9a0a-9672-7646-b50b585882fc",
+      "hash": "18002681939226561435"
+    },
+    {
+      "key": "raid:v1:raid:734b86dc-d505-fd90-d928-f8f0655d02c6",
+      "hash": "15535921834088189865"
+    },
+    {
+      "key": "raid:v1:raid:4f444cca-63e9-2130-2e9e-8e9de3c83bae",
+      "hash": "9757634639471061770"
+    },
+    {
+      "key": "raid:v1:raid:5ffc02e9-3168-b81a-9705-ea66fb23d4c9",
+      "hash": "9302934377231606648"
+    },
+    {
+      "key": "raid:v1:raid:2ec7938b-44a0-5c65-4ccd-fa6932eb89c4",
+      "hash": "3682663157551563252"
+    },
+    {
+      "key": "raid:v1:raid:32674cd5-9453-0279-80bf-d63dbb0f2d2f",
+      "hash": "16324896377903846808"
+    },
+    {
+      "key": "raid:v1:raid:aceedc97-8b96-603f-339a-0abd787f3f98",
+      "hash": "15229864981785166517"
+    },
+    {
+      "key": "notification:v1:history:f5f1b8e8-a885-b8ad-01a7-17783f381411:3f44a63d825c586e",
+      "hash": "17579253801699795190"
+    },
+    {
+      "key": "notification:v1:history:bdb1dd10-5679-979c-a82b-28edd1c8ccd2:623796c6a0f17db6",
+      "hash": "521761427018025153"
+    },
+    {
+      "key": "notification:v1:history:fbb798c2-5241-0201-2e7b-d22eef00e52d:d8363f1419501ad7",
+      "hash": "3248146646620361754"
+    },
+    {
+      "key": "notification:v1:history:fea49869-c27f-0e59-616d-4ad24a81a6db:18f5a22e677bd7df",
+      "hash": "10022699091212338877"
+    },
+    {
+      "key": "notification:v1:history:c66ca535-e218-492e-3239-5c878db167bc:182771aafb964157",
+      "hash": "13597986994252962252"
+    },
+    {
+      "key": "notification:v1:history:a1361490-1058-3166-74fd-382120a6441b:50463cf8806a39dc",
+      "hash": "9375804757283396488"
+    },
+    {
+      "key": "notification:v1:history:a8c21558-8dad-a603-a265-18f65c4882cc:486f0d8eeea36b2e",
+      "hash": "4127782614116674711"
+    },
+    {
+      "key": "notification:v1:history:7ba6918e-058c-b5e6-8801-02477295103f:c2e54c26eedeb172",
+      "hash": "14511572352710280058"
+    },
+    {
+      "key": "notification:v1:history:059b1946-0852-6e7a-96a1-b1fa675af8aa:22d3632f59e091d7",
+      "hash": "8771220030282046084"
+    },
+    {
+      "key": "notification:v1:history:a67d66ed-f7b4-8138-3cd6-96c44c15e821:5a14810f2a7b9411",
+      "hash": "12760960011309759894"
+    },
+    {
+      "key": "cache-0#0",
+      "hash": "146176822303492358"
+    },
+    {
+      "key": "cache-1#64",
+      "hash": "10491546501566584034"
+    },
+    {
+      "key": "cache-2#127",
+      "hash": "2492221311930647178"
+    },
+    {
+      "key": "notification:v1:preferences:ünïcødé-ключ",
+      "hash": "17542827535799215521"
+    },
+    {
+      "key": "x",
+      "hash": "11372966064927047732"
+    },
+    {
+      "key": "registry:v1:package:pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+      "hash": "1188275970046799251"
+    },
+    {
+      "key": "tamagotchi:v1:creature:98660da4-66cd-a75e-c5fa-559984a31d32",
+      "hash": "18444990735819051337"
+    },
+    {
+      "key": "tamagotchi:v1:creature:a3064e2e-dc51-a63b-3bbe-7d1cff502923",
+      "hash": "18444332347779390815"
+    }
+  ],
+  "cases": [
+    {
+      "name": "three_nodes",
+      "nodes": [
+        "cache-0",
+        "cache-1",
+        "cache-2"
+      ],
+      "first_points": [
+        {
+          "point": "58884931962805957",
+          "node": "cache-0"
+        },
+        {
+          "point": "87156741469998581",
+          "node": "cache-1"
+        },
+        {
+          "point": "88619522666657081",
+          "node": "cache-0"
+        },
+        {
+          "point": "145009058219963207",
+          "node": "cache-1"
+        },
+        {
+          "point": "145164524687460755",
+          "node": "cache-2"
+        }
+      ],
+      "last_point": {
+        "point": "18438186825314142970",
+        "node": "cache-2"
+      },
+      "expected": {
+        "tamagotchi:v1:creature:b4406ebd-270a-1c10-a1dc-bcb277b0fbb1": "cache-2",
+        "tamagotchi:v1:creature:c6c49c80-1d83-9c26-2da6-35cbbaa94f3f": "cache-0",
+        "tamagotchi:v1:creature:c6829ed5-6950-846d-07c6-59dab6f5a7be": "cache-0",
+        "tamagotchi:v1:creature:17b50ce5-e655-c523-7efc-56250ca5036a": "cache-1",
+        "tamagotchi:v1:creature:8eb3c42f-5ec2-3d83-e54a-85a68f140746": "cache-1",
+        "tamagotchi:v1:creature:e75763fe-b59f-e08d-a921-eb611a2cc028": "cache-0",
+        "tamagotchi:v1:creature:6a6351df-6a4a-4a24-7a72-3ac9032a343b": "cache-1",
+        "tamagotchi:v1:creature:20a07263-3e32-db28-52ed-46bd63c48d46": "cache-1",
+        "tamagotchi:v1:creature:f2299654-2034-292d-ae96-334dedc8c26b": "cache-0",
+        "tamagotchi:v1:creature:ff13f44f-1dfe-2606-38ef-5533a74bd2b2": "cache-1",
+        "tamagotchi:v1:creature:a10fdfa4-7f1f-2e7a-9cc8-15799e38b4ae": "cache-2",
+        "tamagotchi:v1:creature:91a1c51a-5d2c-483b-f837-9e5a73210ef8": "cache-0",
+        "tamagotchi:v1:creature:2162415e-4360-2135-1c91-418a7bde6cc1": "cache-1",
+        "tamagotchi:v1:collection:d9d96033-8ae6-39aa-a6f1-024beae41d5d": "cache-1",
+        "tamagotchi:v1:collection:75aac9d1-05b9-1f6f-a01a-d0c69feee23c": "cache-2",
+        "tamagotchi:v1:collection:a012377a-509a-9e52-b0ea-4a33fbe4684a": "cache-0",
+        "tamagotchi:v1:collection:55420ef9-7b65-4be3-f101-5a48b5054fa4": "cache-1",
+        "tamagotchi:v1:collection:766b8bb1-d605-02ec-3175-d83db01bd7d5": "cache-1",
+        "tamagotchi:v1:collection:3e265020-ed36-747d-d720-e74ccb306cfc": "cache-0",
+        "tamagotchi:v1:collection:e7661e41-6819-9c25-206f-26306e51511d": "cache-0",
+        "tamagotchi:v1:collection:fa9e10bf-9dba-738b-0625-1fd0af92c3dc": "cache-0",
+        "tamagotchi:v1:collection:f2790493-260c-1d73-a1a7-36c755d456cd": "cache-1",
+        "tamagotchi:v1:collection:9c3ab785-469b-435e-742e-71d91484abaa": "cache-0",
+        "tamagotchi:v1:collection:679b9ec7-7452-e842-8174-088bf3bf2d9e": "cache-1",
+        "tamagotchi:v1:collection:21e33a01-8757-b065-0c89-e31f65887d67": "cache-1",
+        "tamagotchi:v1:collection:b29d6118-003f-8d48-df21-e0d5e8f1603e": "cache-1",
+        "tamagotchi:v1:type-matrix:8cce0768-260e-3c11-1b96-167edaa798f0": "cache-1",
+        "tamagotchi:v1:type-matrix:0b22400e-e139-cdb4-243e-2a9b7e024a13": "cache-1",
+        "tamagotchi:v1:type-matrix:bf7ed569-a1d5-7791-3645-84a5cf226a67": "cache-0",
+        "tamagotchi:v1:type-matrix:d34391c0-bf64-6476-d423-1b0cca0d9384": "cache-2",
+        "tamagotchi:v1:type-matrix:a78cabb5-2dd5-77ff-27a8-d045be950e11": "cache-2",
+        "tamagotchi:v1:type-matrix:d2304068-928f-708a-5360-e39bee9a1473": "cache-0",
+        "tamagotchi:v1:type-matrix:5f3cf987-67b2-c99f-c8d9-9a30eec8a817": "cache-2",
+        "tamagotchi:v1:type-matrix:50ca4ca7-6666-842d-5a95-499ee1310eb2": "cache-1",
+        "tamagotchi:v1:type-matrix:5ae2302b-b785-1f17-b13e-4ccdccb48977": "cache-0",
+        "tamagotchi:v1:type-matrix:5c41becd-61f5-6613-03de-755c7b36fd6f": "cache-0",
+        "tamagotchi:v1:type-matrix:3647d004-9664-bdb8-ccab-dbbe3aa6b009": "cache-1",
+        "tamagotchi:v1:type-matrix:271f0e5d-4203-dd3b-15bc-0357333a94c2": "cache-0",
+        "tamagotchi:v1:type-matrix:2e886f6a-951d-034a-84a4-1304480de088": "cache-2",
+        "notification:v1:history:6e05ec4a-0eb4-ac07-80e2-d1030444e49e": "cache-0",
+        "notification:v1:history:45e48999-fb3c-312e-cc8f-1f867f89769c": "cache-1",
+        "notification:v1:history:9f2f1637-8475-b15d-342a-aa4dc87db8d5": "cache-0",
+        "notification:v1:history:f00697d6-a811-7ab5-f48e-2bed826f0c9c": "cache-0",
+        "notification:v1:history:5c16513d-cded-ebf7-5b1c-a3a0d90b5508": "cache-0",
+        "notification:v1:history:67b6520c-1cdc-2ca0-2a7b-111c374ac271": "cache-2",
+        "notification:v1:history:b997f843-72c4-d9b8-c5b9-b004177865bc": "cache-1",
+        "notification:v1:history:1051b42b-6dec-d005-1a4a-02ff576ad81a": "cache-0",
+        "notification:v1:history:e94d0880-d7e5-cc5a-ac25-713bc2243dad": "cache-0",
+        "notification:v1:history:b8baecc2-3f08-dce3-2a5e-62381c301d48": "cache-0",
+        "notification:v1:history:aad834a7-f0f7-439c-1bf9-6a388b831361": "cache-1",
+        "notification:v1:history:1d836424-ce04-b2fc-168d-2e1f1ebe32b0": "cache-1",
+        "notification:v1:history:89338f21-4655-2c26-4524-f8401a2c9efe": "cache-0",
+        "notification:v1:preferences:064de921-da05-a046-4538-c705bec29b54": "cache-0",
+        "notification:v1:preferences:90c0b4ee-d85b-5d2c-84f2-a7079b6735a2": "cache-1",
+        "notification:v1:preferences:1e80188d-e60b-3564-d06b-d70097a9a02a": "cache-2",
+        "notification:v1:preferences:4d309d5a-e85c-f710-c9a1-83cc0b8962e5": "cache-0",
+        "notification:v1:preferences:2e9f0ed7-c482-c891-ce50-64a0abe6997e": "cache-0",
+        "notification:v1:preferences:00c78ca9-2687-7ed9-769c-aacb6423ab86": "cache-2",
+        "notification:v1:preferences:ee0230de-8fe1-4915-e984-ae229c2925bf": "cache-2",
+        "notification:v1:preferences:a780f771-40c1-1134-0669-a9abf04743b5": "cache-2",
+        "notification:v1:preferences:a8dec0a7-c7b9-efae-bc66-5e810df52416": "cache-0",
+        "notification:v1:preferences:c42f800d-2538-b839-c008-7a8ac5555799": "cache-1",
+        "notification:v1:preferences:466b12a9-9670-99c5-80e8-fabb158be861": "cache-2",
+        "notification:v1:preferences:ce7c52c5-76d5-3318-031a-cfd4c98fc48a": "cache-0",
+        "notification:v1:preferences:35a84280-87e9-f8d4-bbee-50e0fa3ad40a": "cache-1",
+        "registry:v1:package:7684ee01-5b92-1c2e-74fd-9449e2933ed4": "cache-0",
+        "registry:v1:package:cce0b29b-5c19-db16-a1a8-02ad23cf79b1": "cache-2",
+        "registry:v1:package:6cb3a5fd-bf2a-143b-8a81-00630e677a26": "cache-1",
+        "registry:v1:package:fa654827-918c-ad28-fadd-83e6dc5d18a1": "cache-2",
+        "registry:v1:package:819d710d-c276-2a0b-e5c7-c409d11e71a2": "cache-1",
+        "registry:v1:package:fd65b7af-231f-4495-6e47-7aef174715bf": "cache-2",
+        "registry:v1:package:e6cc4595-0a18-9703-263d-142f7b4cf484": "cache-2",
+        "registry:v1:package:2c953a44-ca7e-4308-6b69-832213bfc6f1": "cache-1",
+        "registry:v1:package:4c62ef17-b900-a2ba-5b1e-8236b77cdccc": "cache-1",
+        "registry:v1:package:3ab2c47e-4e26-59f4-4e5c-22207a3e918e": "cache-0",
+        "registry:v1:package:de2f0d0a-c789-adcc-2317-8b799f3b92fe": "cache-1",
+        "registry:v1:package:b4f952fa-c5f7-b674-aaa3-d0e8dda3c89c": "cache-2",
+        "registry:v1:package:63db70eb-4c46-942d-8f5c-7ed0df619aad": "cache-2",
+        "registry:v1:stat-definitions:e30600d8-2f85-922a-26ab-5963b217fac2": "cache-1",
+        "registry:v1:stat-definitions:22f2e720-c227-3d94-0710-69295e2d4363": "cache-1",
+        "registry:v1:stat-definitions:de617d52-0b6d-ef91-854d-91022ab8b9da": "cache-0",
+        "registry:v1:stat-definitions:b3f9e204-459a-02dd-eb97-8a54afc3f66c": "cache-0",
+        "registry:v1:stat-definitions:24e1e4d0-ad72-a87e-1305-7deaa57a6def": "cache-0",
+        "registry:v1:stat-definitions:5abd27a7-da9b-153a-4253-3a96e13113c2": "cache-0",
+        "registry:v1:stat-definitions:c3da3e3c-59c8-f4fa-7811-e364696eeaf6": "cache-0",
+        "registry:v1:stat-definitions:af5cf2d1-3771-37d0-8c7c-86700062df63": "cache-1",
+        "registry:v1:stat-definitions:648480d5-f9d1-f697-ad8b-23fc56fd6944": "cache-1",
+        "registry:v1:stat-definitions:19bbe47d-9868-6287-34c7-5283249310c9": "cache-2",
+        "registry:v1:stat-definitions:44bfe492-716b-2464-2597-80af200af4be": "cache-1",
+        "registry:v1:stat-definitions:33a3e14b-0bfa-f945-c32b-c834b3c8d670": "cache-2",
+        "registry:v1:stat-definitions:b2169413-f800-53a2-cd75-901af3c45f0b": "cache-2",
+        "guild:v1:guild:72608968-bd6e-7164-9539-d80d94f14b83": "cache-0",
+        "guild:v1:guild:84017c25-ad75-a239-9956-b3265dcb6e3e": "cache-2",
+        "guild:v1:guild:91d81fa7-8a40-88d9-6754-22c7930037c2": "cache-2",
+        "guild:v1:guild:ef956582-3ea1-aa04-ec5a-0f72d53da2c2": "cache-2",
+        "guild:v1:guild:ecd51747-c7b2-7336-253d-1a0ca91d4f5a": "cache-1",
+        "guild:v1:guild:ff0b923d-eed0-b351-54c8-2aed4cf161d0": "cache-1",
+        "guild:v1:guild:4b3b358b-978e-8ffb-7279-ca5a50256f98": "cache-2",
+        "guild:v1:guild:3bb1f41e-0593-3868-b311-df49f87db5c0": "cache-0",
+        "guild:v1:guild:0ef87a99-9830-c205-196d-4eafbfec3a56": "cache-1",
+        "guild:v1:guild:6f4e2e2d-98c1-83b7-469f-16afb2bc4036": "cache-0",
+        "guild:v1:guild:86fcefa3-4fda-799f-90bc-c87da19fde02": "cache-0",
+        "guild:v1:guild:d12ceb8a-5ec3-d235-7f30-1575ac4ac151": "cache-1",
+        "guild:v1:guild:37da522b-0316-b835-cd82-01bf976bb318": "cache-0",
+        "guild:v1:members:c89de37f-d77e-1c9d-feec-c7ce4d3dcb1b": "cache-2",
+        "guild:v1:members:186948af-839a-e07f-61a3-442a04e88ebd": "cache-0",
+        "guild:v1:members:ae7f8b3d-4284-b644-3d6f-0156e5533740": "cache-1",
+        "guild:v1:members:82c79d55-176d-4112-296e-d0de47f67411": "cache-2",
+        "guild:v1:members:a15be061-6bd9-6dcf-92a0-82cf26b42ef5": "cache-0",
+        "guild:v1:members:b648243b-2ca3-f329-e4d5-219d12db1955": "cache-1",
+        "guild:v1:members:78d31e1f-ba04-a8fd-0eac-bf9ba0f4cc9a": "cache-1",
+        "guild:v1:members:f07d0648-f06a-bab1-ee99-d56064b3d972": "cache-0",
+        "guild:v1:members:166f3fc8-9895-3e66-f657-92dcfdbdcc95": "cache-0",
+        "guild:v1:members:116cacf1-84ca-2db8-f6a9-ce9fd675fb03": "cache-1",
+        "guild:v1:members:0fed22a2-91b6-d5ee-2d98-425b6fb0b476": "cache-1",
+        "guild:v1:members:68e0f8db-1a6f-cb74-c7d1-5b5711c53f19": "cache-1",
+        "guild:v1:members:a681066a-5f16-f2a6-6760-cf3542784ae4": "cache-0",
+        "users:v1:profile:c36cc321-e765-5ded-f0f4-0f4d87d14178": "cache-1",
+        "users:v1:profile:2fbe47a5-854d-9c9d-a625-cc7f7dffbb77": "cache-1",
+        "users:v1:profile:4b5d7f70-ac65-7c15-8374-57d791c95e02": "cache-2",
+        "users:v1:profile:122497e9-1bd7-5418-2f3d-053d5cab806a": "cache-0",
+        "users:v1:profile:02e59986-ef92-b53b-59bb-9a3008203f11": "cache-0",
+        "users:v1:profile:ee82752c-f8a5-0e41-3a93-70a10d688ac5": "cache-2",
+        "users:v1:profile:774953a6-933a-b8dd-04a0-db7ac649aaca": "cache-1",
+        "users:v1:profile:2f2e2be6-48d7-658e-aacd-1e9136b97421": "cache-1",
+        "users:v1:profile:f7a7787d-047e-783d-fc2a-5ec2337f59af": "cache-0",
+        "users:v1:profile:0927ed78-31df-241c-9b01-07923b28e918": "cache-1",
+        "users:v1:profile:8e4b216e-ff96-dbac-9fec-f7630ab4dbcc": "cache-1",
+        "users:v1:profile:22fedd6e-0147-b5c5-2dd6-185ebd260bf3": "cache-2",
+        "users:v1:profile:92cc0600-1477-84fe-a6a9-dab69312062e": "cache-0",
+        "users:v1:wallet:ad8c4fa4-2979-d2b0-fdba-c438e9938745": "cache-2",
+        "users:v1:wallet:89cc0f39-fcf9-8aea-7d25-6a86dfcadf35": "cache-2",
+        "users:v1:wallet:6d618331-42e3-e274-98c2-c74a9352dd80": "cache-1",
+        "users:v1:wallet:b680b360-e7f9-35e6-85d6-a8fc5185b3e9": "cache-0",
+        "users:v1:wallet:9b136cf7-c328-8584-ad97-b9d1f5d1a90b": "cache-0",
+        "users:v1:wallet:a20f6c00-4214-bdce-6aca-c024a9168d35": "cache-0",
+        "users:v1:wallet:3205e811-15b1-f690-cd25-d6d6ab28bd1a": "cache-0",
+        "users:v1:wallet:a709f2d9-ab77-4aab-76de-72fb9504ae0b": "cache-0",
+        "users:v1:wallet:9ecf94c2-bdc2-5aab-6e65-ea7893187ac2": "cache-0",
+        "users:v1:wallet:fd2d82e2-7f4c-a338-bd78-f7015d624ede": "cache-1",
+        "users:v1:wallet:bd92f27a-4f8b-cd2a-c0c2-128d97570921": "cache-0",
+        "users:v1:wallet:0d2f0ca2-8e5e-4f6e-35d4-df13402193f7": "cache-0",
+        "users:v1:wallet:bc7af262-9757-38dd-d989-808c708f9053": "cache-0",
+        "battle:v1:battle:08eb7740-01a8-f467-3f29-298737dbac77": "cache-1",
+        "battle:v1:battle:6d5778ed-0b4c-145c-1154-d1bcb0af087e": "cache-0",
+        "battle:v1:battle:f3e5e746-382d-dd45-a4e8-997c843d71d1": "cache-1",
+        "battle:v1:battle:83a06f04-8644-8dc6-fae8-5743065143fc": "cache-2",
+        "battle:v1:battle:21c5cbd0-ea49-951f-bb4a-9dec9b605d3e": "cache-2",
+        "battle:v1:battle:8ed39380-345a-32fc-9abc-70b2f909864f": "cache-1",
+        "battle:v1:battle:1f36eac3-95dd-068e-c94e-48552a027bcc": "cache-1",
+        "battle:v1:battle:6f1e0ec5-fc6c-2ce5-b196-dd58da21888e": "cache-0",
+        "battle:v1:battle:c6e7b9b4-0de9-31bc-b8aa-308947e09298": "cache-1",
+        "battle:v1:battle:ad946e8a-13ad-e1cf-347b-1920d2197e17": "cache-2",
+        "battle:v1:battle:5f62c2c9-dd2c-0f7d-338a-1e8f41ac1f29": "cache-2",
+        "battle:v1:battle:e3558702-aa61-9082-1d55-78111bdc4466": "cache-2",
+        "battle:v1:battle:35d2be45-aa2e-2e7e-84c1-b2a4bf9b85ad": "cache-0",
+        "map:v1:region:5c3ae8af-60e2-960d-f613-83fd03a1d71b": "cache-2",
+        "map:v1:region:c5c3b4df-1c09-3b10-322f-b1f2894d2917": "cache-0",
+        "map:v1:region:3495a5ec-2384-6f8d-5706-c3227583397f": "cache-2",
+        "map:v1:region:201eec52-cdfc-38de-b8b3-ee6a575df7d4": "cache-1",
+        "map:v1:region:3923061d-587d-264d-85ed-d14be9ec87ba": "cache-0",
+        "map:v1:region:9485b436-58b4-66c4-830d-4665beec619a": "cache-1",
+        "map:v1:region:1655f407-2f43-fcb9-2fdf-720488454915": "cache-2",
+        "map:v1:region:9fa0a22e-bf34-c5df-cfa4-8428526cdc96": "cache-1",
+        "map:v1:region:87c25888-199f-2268-f974-654692e54635": "cache-2",
+        "map:v1:region:0fc05d48-25e7-78a4-9c75-d2e2de1f8b6b": "cache-0",
+        "map:v1:region:ecc79ae2-77e0-fd06-3acf-2630ca2a2d2c": "cache-0",
+        "map:v1:region:9f2c8273-7c97-e95e-5376-2dc56dfdeebe": "cache-2",
+        "map:v1:region:62784ffc-71f0-5c96-b67a-b7252e320a5a": "cache-0",
+        "raid:v1:raid:65044072-c56c-48d4-f6e2-1c7883d5d9e1": "cache-2",
+        "raid:v1:raid:fc86780a-f473-26c7-7b76-bf3a43a924ed": "cache-0",
+        "raid:v1:raid:ed7c08e9-5f7f-e70e-e182-aa57580661ae": "cache-1",
+        "raid:v1:raid:8f28689e-7a49-504f-f503-8f088d89e1e9": "cache-1",
+        "raid:v1:raid:a33a3407-debb-dee1-6a21-dff73eba4bcd": "cache-0",
+        "raid:v1:raid:8b99deed-8006-cc2f-57e1-c3578149157e": "cache-0",
+        "raid:v1:raid:07bf0f64-9a0a-9672-7646-b50b585882fc": "cache-2",
+        "raid:v1:raid:734b86dc-d505-fd90-d928-f8f0655d02c6": "cache-1",
+        "raid:v1:raid:4f444cca-63e9-2130-2e9e-8e9de3c83bae": "cache-2",
+        "raid:v1:raid:5ffc02e9-3168-b81a-9705-ea66fb23d4c9": "cache-2",
+        "raid:v1:raid:2ec7938b-44a0-5c65-4ccd-fa6932eb89c4": "cache-0",
+        "raid:v1:raid:32674cd5-9453-0279-80bf-d63dbb0f2d2f": "cache-2",
+        "raid:v1:raid:aceedc97-8b96-603f-339a-0abd787f3f98": "cache-1",
+        "notification:v1:history:f5f1b8e8-a885-b8ad-01a7-17783f381411:3f44a63d825c586e": "cache-2",
+        "notification:v1:history:bdb1dd10-5679-979c-a82b-28edd1c8ccd2:623796c6a0f17db6": "cache-2",
+        "notification:v1:history:fbb798c2-5241-0201-2e7b-d22eef00e52d:d8363f1419501ad7": "cache-0",
+        "notification:v1:history:fea49869-c27f-0e59-616d-4ad24a81a6db:18f5a22e677bd7df": "cache-0",
+        "notification:v1:history:c66ca535-e218-492e-3239-5c878db167bc:182771aafb964157": "cache-1",
+        "notification:v1:history:a1361490-1058-3166-74fd-382120a6441b:50463cf8806a39dc": "cache-1",
+        "notification:v1:history:a8c21558-8dad-a603-a265-18f65c4882cc:486f0d8eeea36b2e": "cache-0",
+        "notification:v1:history:7ba6918e-058c-b5e6-8801-02477295103f:c2e54c26eedeb172": "cache-0",
+        "notification:v1:history:059b1946-0852-6e7a-96a1-b1fa675af8aa:22d3632f59e091d7": "cache-1",
+        "notification:v1:history:a67d66ed-f7b4-8138-3cd6-96c44c15e821:5a14810f2a7b9411": "cache-1",
+        "cache-0#0": "cache-0",
+        "cache-1#64": "cache-1",
+        "cache-2#127": "cache-2",
+        "notification:v1:preferences:ünïcødé-ключ": "cache-0",
+        "x": "cache-2",
+        "registry:v1:package:pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp": "cache-0",
+        "tamagotchi:v1:creature:98660da4-66cd-a75e-c5fa-559984a31d32": "cache-0",
+        "tamagotchi:v1:creature:a3064e2e-dc51-a63b-3bbe-7d1cff502923": "cache-0"
+      }
+    },
+    {
+      "name": "cache_1_removed",
+      "nodes": [
+        "cache-0",
+        "cache-2"
+      ],
+      "first_points": [
+        {
+          "point": "58884931962805957",
+          "node": "cache-0"
+        },
+        {
+          "point": "88619522666657081",
+          "node": "cache-0"
+        },
+        {
+          "point": "145164524687460755",
+          "node": "cache-2"
+        },
+        {
+          "point": "145658629890888112",
+          "node": "cache-0"
+        },
+        {
+          "point": "146176822303492358",
+          "node": "cache-0"
+        }
+      ],
+      "last_point": {
+        "point": "18438186825314142970",
+        "node": "cache-2"
+      },
+      "expected": {
+        "tamagotchi:v1:creature:b4406ebd-270a-1c10-a1dc-bcb277b0fbb1": "cache-2",
+        "tamagotchi:v1:creature:c6c49c80-1d83-9c26-2da6-35cbbaa94f3f": "cache-0",
+        "tamagotchi:v1:creature:c6829ed5-6950-846d-07c6-59dab6f5a7be": "cache-0",
+        "tamagotchi:v1:creature:17b50ce5-e655-c523-7efc-56250ca5036a": "cache-0",
+        "tamagotchi:v1:creature:8eb3c42f-5ec2-3d83-e54a-85a68f140746": "cache-2",
+        "tamagotchi:v1:creature:e75763fe-b59f-e08d-a921-eb611a2cc028": "cache-0",
+        "tamagotchi:v1:creature:6a6351df-6a4a-4a24-7a72-3ac9032a343b": "cache-0",
+        "tamagotchi:v1:creature:20a07263-3e32-db28-52ed-46bd63c48d46": "cache-2",
+        "tamagotchi:v1:creature:f2299654-2034-292d-ae96-334dedc8c26b": "cache-0",
+        "tamagotchi:v1:creature:ff13f44f-1dfe-2606-38ef-5533a74bd2b2": "cache-2",
+        "tamagotchi:v1:creature:a10fdfa4-7f1f-2e7a-9cc8-15799e38b4ae": "cache-2",
+        "tamagotchi:v1:creature:91a1c51a-5d2c-483b-f837-9e5a73210ef8": "cache-0",
+        "tamagotchi:v1:creature:2162415e-4360-2135-1c91-418a7bde6cc1": "cache-2",
+        "tamagotchi:v1:collection:d9d96033-8ae6-39aa-a6f1-024beae41d5d": "cache-2",
+        "tamagotchi:v1:collection:75aac9d1-05b9-1f6f-a01a-d0c69feee23c": "cache-2",
+        "tamagotchi:v1:collection:a012377a-509a-9e52-b0ea-4a33fbe4684a": "cache-0",
+        "tamagotchi:v1:collection:55420ef9-7b65-4be3-f101-5a48b5054fa4": "cache-0",
+        "tamagotchi:v1:collection:766b8bb1-d605-02ec-3175-d83db01bd7d5": "cache-2",
+        "tamagotchi:v1:collection:3e265020-ed36-747d-d720-e74ccb306cfc": "cache-0",
+        "tamagotchi:v1:collection:e7661e41-6819-9c25-206f-26306e51511d": "cache-0",
+        "tamagotchi:v1:collection:fa9e10bf-9dba-738b-0625-1fd0af92c3dc": "cache-0",
+        "tamagotchi:v1:collection:f2790493-260c-1d73-a1a7-36c755d456cd": "cache-0",
+        "tamagotchi:v1:collection:9c3ab785-469b-435e-742e-71d91484abaa": "cache-0",
+        "tamagotchi:v1:collection:679b9ec7-7452-e842-8174-088bf3bf2d9e": "cache-2",
+        "tamagotchi:v1:collection:21e33a01-8757-b065-0c89-e31f65887d67": "cache-2",
+        "tamagotchi:v1:collection:b29d6118-003f-8d48-df21-e0d5e8f1603e": "cache-2",
+        "tamagotchi:v1:type-matrix:8cce0768-260e-3c11-1b96-167edaa798f0": "cache-0",
+        "tamagotchi:v1:type-matrix:0b22400e-e139-cdb4-243e-2a9b7e024a13": "cache-0",
+        "tamagotchi:v1:type-matrix:bf7ed569-a1d5-7791-3645-84a5cf226a67": "cache-0",
+        "tamagotchi:v1:type-matrix:d34391c0-bf64-6476-d423-1b0cca0d9384": "cache-2",
+        "tamagotchi:v1:type-matrix:a78cabb5-2dd5-77ff-27a8-d045be950e11": "cache-2",
+        "tamagotchi:v1:type-matrix:d2304068-928f-708a-5360-e39bee9a1473": "cache-0",
+        "tamagotchi:v1:type-matrix:5f3cf987-67b2-c99f-c8d9-9a30eec8a817": "cache-2",
+        "tamagotchi:v1:type-matrix:50ca4ca7-6666-842d-5a95-499ee1310eb2": "cache-0",
+        "tamagotchi:v1:type-matrix:5ae2302b-b785-1f17-b13e-4ccdccb48977": "cache-0",
+        "tamagotchi:v1:type-matrix:5c41becd-61f5-6613-03de-755c7b36fd6f": "cache-0",
+        "tamagotchi:v1:type-matrix:3647d004-9664-bdb8-ccab-dbbe3aa6b009": "cache-2",
+        "tamagotchi:v1:type-matrix:271f0e5d-4203-dd3b-15bc-0357333a94c2": "cache-0",
+        "tamagotchi:v1:type-matrix:2e886f6a-951d-034a-84a4-1304480de088": "cache-2",
+        "notification:v1:history:6e05ec4a-0eb4-ac07-80e2-d1030444e49e": "cache-0",
+        "notification:v1:history:45e48999-fb3c-312e-cc8f-1f867f89769c": "cache-2",
+        "notification:v1:history:9f2f1637-8475-b15d-342a-aa4dc87db8d5": "cache-0",
+        "notification:v1:history:f00697d6-a811-7ab5-f48e-2bed826f0c9c": "cache-0",
+        "notification:v1:history:5c16513d-cded-ebf7-5b1c-a3a0d90b5508": "cache-0",
+        "notification:v1:history:67b6520c-1cdc-2ca0-2a7b-111c374ac271": "cache-2",
+        "notification:v1:history:b997f843-72c4-d9b8-c5b9-b004177865bc": "cache-0",
+        "notification:v1:history:1051b42b-6dec-d005-1a4a-02ff576ad81a": "cache-0",
+        "notification:v1:history:e94d0880-d7e5-cc5a-ac25-713bc2243dad": "cache-0",
+        "notification:v1:history:b8baecc2-3f08-dce3-2a5e-62381c301d48": "cache-0",
+        "notification:v1:history:aad834a7-f0f7-439c-1bf9-6a388b831361": "cache-2",
+        "notification:v1:history:1d836424-ce04-b2fc-168d-2e1f1ebe32b0": "cache-0",
+        "notification:v1:history:89338f21-4655-2c26-4524-f8401a2c9efe": "cache-0",
+        "notification:v1:preferences:064de921-da05-a046-4538-c705bec29b54": "cache-0",
+        "notification:v1:preferences:90c0b4ee-d85b-5d2c-84f2-a7079b6735a2": "cache-2",
+        "notification:v1:preferences:1e80188d-e60b-3564-d06b-d70097a9a02a": "cache-2",
+        "notification:v1:preferences:4d309d5a-e85c-f710-c9a1-83cc0b8962e5": "cache-0",
+        "notification:v1:preferences:2e9f0ed7-c482-c891-ce50-64a0abe6997e": "cache-0",
+        "notification:v1:preferences:00c78ca9-2687-7ed9-769c-aacb6423ab86": "cache-2",
+        "notification:v1:preferences:ee0230de-8fe1-4915-e984-ae229c2925bf": "cache-2",
+        "notification:v1:preferences:a780f771-40c1-1134-0669-a9abf04743b5": "cache-2",
+        "notification:v1:preferences:a8dec0a7-c7b9-efae-bc66-5e810df52416": "cache-0",
+        "notification:v1:preferences:c42f800d-2538-b839-c008-7a8ac5555799": "cache-2",
+        "notification:v1:preferences:466b12a9-9670-99c5-80e8-fabb158be861": "cache-2",
+        "notification:v1:preferences:ce7c52c5-76d5-3318-031a-cfd4c98fc48a": "cache-0",
+        "notification:v1:preferences:35a84280-87e9-f8d4-bbee-50e0fa3ad40a": "cache-0",
+        "registry:v1:package:7684ee01-5b92-1c2e-74fd-9449e2933ed4": "cache-0",
+        "registry:v1:package:cce0b29b-5c19-db16-a1a8-02ad23cf79b1": "cache-2",
+        "registry:v1:package:6cb3a5fd-bf2a-143b-8a81-00630e677a26": "cache-0",
+        "registry:v1:package:fa654827-918c-ad28-fadd-83e6dc5d18a1": "cache-2",
+        "registry:v1:package:819d710d-c276-2a0b-e5c7-c409d11e71a2": "cache-0",
+        "registry:v1:package:fd65b7af-231f-4495-6e47-7aef174715bf": "cache-2",
+        "registry:v1:package:e6cc4595-0a18-9703-263d-142f7b4cf484": "cache-2",
+        "registry:v1:package:2c953a44-ca7e-4308-6b69-832213bfc6f1": "cache-0",
+        "registry:v1:package:4c62ef17-b900-a2ba-5b1e-8236b77cdccc": "cache-0",
+        "registry:v1:package:3ab2c47e-4e26-59f4-4e5c-22207a3e918e": "cache-0",
+        "registry:v1:package:de2f0d0a-c789-adcc-2317-8b799f3b92fe": "cache-2",
+        "registry:v1:package:b4f952fa-c5f7-b674-aaa3-d0e8dda3c89c": "cache-2",
+        "registry:v1:package:63db70eb-4c46-942d-8f5c-7ed0df619aad": "cache-2",
+        "registry:v1:stat-definitions:e30600d8-2f85-922a-26ab-5963b217fac2": "cache-2",
+        "registry:v1:stat-definitions:22f2e720-c227-3d94-0710-69295e2d4363": "cache-0",
+        "registry:v1:stat-definitions:de617d52-0b6d-ef91-854d-91022ab8b9da": "cache-0",
+        "registry:v1:stat-definitions:b3f9e204-459a-02dd-eb97-8a54afc3f66c": "cache-0",
+        "registry:v1:stat-definitions:24e1e4d0-ad72-a87e-1305-7deaa57a6def": "cache-0",
+        "registry:v1:stat-definitions:5abd27a7-da9b-153a-4253-3a96e13113c2": "cache-0",
+        "registry:v1:stat-definitions:c3da3e3c-59c8-f4fa-7811-e364696eeaf6": "cache-0",
+        "registry:v1:stat-definitions:af5cf2d1-3771-37d0-8c7c-86700062df63": "cache-2",
+        "registry:v1:stat-definitions:648480d5-f9d1-f697-ad8b-23fc56fd6944": "cache-2",
+        "registry:v1:stat-definitions:19bbe47d-9868-6287-34c7-5283249310c9": "cache-2",
+        "registry:v1:stat-definitions:44bfe492-716b-2464-2597-80af200af4be": "cache-0",
+        "registry:v1:stat-definitions:33a3e14b-0bfa-f945-c32b-c834b3c8d670": "cache-2",
+        "registry:v1:stat-definitions:b2169413-f800-53a2-cd75-901af3c45f0b": "cache-2",
+        "guild:v1:guild:72608968-bd6e-7164-9539-d80d94f14b83": "cache-0",
+        "guild:v1:guild:84017c25-ad75-a239-9956-b3265dcb6e3e": "cache-2",
+        "guild:v1:guild:91d81fa7-8a40-88d9-6754-22c7930037c2": "cache-2",
+        "guild:v1:guild:ef956582-3ea1-aa04-ec5a-0f72d53da2c2": "cache-2",
+        "guild:v1:guild:ecd51747-c7b2-7336-253d-1a0ca91d4f5a": "cache-0",
+        "guild:v1:guild:ff0b923d-eed0-b351-54c8-2aed4cf161d0": "cache-2",
+        "guild:v1:guild:4b3b358b-978e-8ffb-7279-ca5a50256f98": "cache-2",
+        "guild:v1:guild:3bb1f41e-0593-3868-b311-df49f87db5c0": "cache-0",
+        "guild:v1:guild:0ef87a99-9830-c205-196d-4eafbfec3a56": "cache-2",
+        "guild:v1:guild:6f4e2e2d-98c1-83b7-469f-16afb2bc4036": "cache-0",
+        "guild:v1:guild:86fcefa3-4fda-799f-90bc-c87da19fde02": "cache-0",
+        "guild:v1:guild:d12ceb8a-5ec3-d235-7f30-1575ac4ac151": "cache-0",
+        "guild:v1:guild:37da522b-0316-b835-cd82-01bf976bb318": "cache-0",
+        "guild:v1:members:c89de37f-d77e-1c9d-feec-c7ce4d3dcb1b": "cache-2",
+        "guild:v1:members:186948af-839a-e07f-61a3-442a04e88ebd": "cache-0",
+        "guild:v1:members:ae7f8b3d-4284-b644-3d6f-0156e5533740": "cache-0",
+        "guild:v1:members:82c79d55-176d-4112-296e-d0de47f67411": "cache-2",
+        "guild:v1:members:a15be061-6bd9-6dcf-92a0-82cf26b42ef5": "cache-0",
+        "guild:v1:members:b648243b-2ca3-f329-e4d5-219d12db1955": "cache-0",
+        "guild:v1:members:78d31e1f-ba04-a8fd-0eac-bf9ba0f4cc9a": "cache-0",
+        "guild:v1:members:f07d0648-f06a-bab1-ee99-d56064b3d972": "cache-0",
+        "guild:v1:members:166f3fc8-9895-3e66-f657-92dcfdbdcc95": "cache-0",
+        "guild:v1:members:116cacf1-84ca-2db8-f6a9-ce9fd675fb03": "cache-0",
+        "guild:v1:members:0fed22a2-91b6-d5ee-2d98-425b6fb0b476": "cache-2",
+        "guild:v1:members:68e0f8db-1a6f-cb74-c7d1-5b5711c53f19": "cache-2",
+        "guild:v1:members:a681066a-5f16-f2a6-6760-cf3542784ae4": "cache-0",
+        "users:v1:profile:c36cc321-e765-5ded-f0f4-0f4d87d14178": "cache-0",
+        "users:v1:profile:2fbe47a5-854d-9c9d-a625-cc7f7dffbb77": "cache-0",
+        "users:v1:profile:4b5d7f70-ac65-7c15-8374-57d791c95e02": "cache-2",
+        "users:v1:profile:122497e9-1bd7-5418-2f3d-053d5cab806a": "cache-0",
+        "users:v1:profile:02e59986-ef92-b53b-59bb-9a3008203f11": "cache-0",
+        "users:v1:profile:ee82752c-f8a5-0e41-3a93-70a10d688ac5": "cache-2",
+        "users:v1:profile:774953a6-933a-b8dd-04a0-db7ac649aaca": "cache-2",
+        "users:v1:profile:2f2e2be6-48d7-658e-aacd-1e9136b97421": "cache-0",
+        "users:v1:profile:f7a7787d-047e-783d-fc2a-5ec2337f59af": "cache-0",
+        "users:v1:profile:0927ed78-31df-241c-9b01-07923b28e918": "cache-2",
+        "users:v1:profile:8e4b216e-ff96-dbac-9fec-f7630ab4dbcc": "cache-2",
+        "users:v1:profile:22fedd6e-0147-b5c5-2dd6-185ebd260bf3": "cache-2",
+        "users:v1:profile:92cc0600-1477-84fe-a6a9-dab69312062e": "cache-0",
+        "users:v1:wallet:ad8c4fa4-2979-d2b0-fdba-c438e9938745": "cache-2",
+        "users:v1:wallet:89cc0f39-fcf9-8aea-7d25-6a86dfcadf35": "cache-2",
+        "users:v1:wallet:6d618331-42e3-e274-98c2-c74a9352dd80": "cache-2",
+        "users:v1:wallet:b680b360-e7f9-35e6-85d6-a8fc5185b3e9": "cache-0",
+        "users:v1:wallet:9b136cf7-c328-8584-ad97-b9d1f5d1a90b": "cache-0",
+        "users:v1:wallet:a20f6c00-4214-bdce-6aca-c024a9168d35": "cache-0",
+        "users:v1:wallet:3205e811-15b1-f690-cd25-d6d6ab28bd1a": "cache-0",
+        "users:v1:wallet:a709f2d9-ab77-4aab-76de-72fb9504ae0b": "cache-0",
+        "users:v1:wallet:9ecf94c2-bdc2-5aab-6e65-ea7893187ac2": "cache-0",
+        "users:v1:wallet:fd2d82e2-7f4c-a338-bd78-f7015d624ede": "cache-0",
+        "users:v1:wallet:bd92f27a-4f8b-cd2a-c0c2-128d97570921": "cache-0",
+        "users:v1:wallet:0d2f0ca2-8e5e-4f6e-35d4-df13402193f7": "cache-0",
+        "users:v1:wallet:bc7af262-9757-38dd-d989-808c708f9053": "cache-0",
+        "battle:v1:battle:08eb7740-01a8-f467-3f29-298737dbac77": "cache-2",
+        "battle:v1:battle:6d5778ed-0b4c-145c-1154-d1bcb0af087e": "cache-0",
+        "battle:v1:battle:f3e5e746-382d-dd45-a4e8-997c843d71d1": "cache-2",
+        "battle:v1:battle:83a06f04-8644-8dc6-fae8-5743065143fc": "cache-2",
+        "battle:v1:battle:21c5cbd0-ea49-951f-bb4a-9dec9b605d3e": "cache-2",
+        "battle:v1:battle:8ed39380-345a-32fc-9abc-70b2f909864f": "cache-0",
+        "battle:v1:battle:1f36eac3-95dd-068e-c94e-48552a027bcc": "cache-0",
+        "battle:v1:battle:6f1e0ec5-fc6c-2ce5-b196-dd58da21888e": "cache-0",
+        "battle:v1:battle:c6e7b9b4-0de9-31bc-b8aa-308947e09298": "cache-0",
+        "battle:v1:battle:ad946e8a-13ad-e1cf-347b-1920d2197e17": "cache-2",
+        "battle:v1:battle:5f62c2c9-dd2c-0f7d-338a-1e8f41ac1f29": "cache-2",
+        "battle:v1:battle:e3558702-aa61-9082-1d55-78111bdc4466": "cache-2",
+        "battle:v1:battle:35d2be45-aa2e-2e7e-84c1-b2a4bf9b85ad": "cache-0",
+        "map:v1:region:5c3ae8af-60e2-960d-f613-83fd03a1d71b": "cache-2",
+        "map:v1:region:c5c3b4df-1c09-3b10-322f-b1f2894d2917": "cache-0",
+        "map:v1:region:3495a5ec-2384-6f8d-5706-c3227583397f": "cache-2",
+        "map:v1:region:201eec52-cdfc-38de-b8b3-ee6a575df7d4": "cache-0",
+        "map:v1:region:3923061d-587d-264d-85ed-d14be9ec87ba": "cache-0",
+        "map:v1:region:9485b436-58b4-66c4-830d-4665beec619a": "cache-2",
+        "map:v1:region:1655f407-2f43-fcb9-2fdf-720488454915": "cache-2",
+        "map:v1:region:9fa0a22e-bf34-c5df-cfa4-8428526cdc96": "cache-0",
+        "map:v1:region:87c25888-199f-2268-f974-654692e54635": "cache-2",
+        "map:v1:region:0fc05d48-25e7-78a4-9c75-d2e2de1f8b6b": "cache-0",
+        "map:v1:region:ecc79ae2-77e0-fd06-3acf-2630ca2a2d2c": "cache-0",
+        "map:v1:region:9f2c8273-7c97-e95e-5376-2dc56dfdeebe": "cache-2",
+        "map:v1:region:62784ffc-71f0-5c96-b67a-b7252e320a5a": "cache-0",
+        "raid:v1:raid:65044072-c56c-48d4-f6e2-1c7883d5d9e1": "cache-2",
+        "raid:v1:raid:fc86780a-f473-26c7-7b76-bf3a43a924ed": "cache-0",
+        "raid:v1:raid:ed7c08e9-5f7f-e70e-e182-aa57580661ae": "cache-2",
+        "raid:v1:raid:8f28689e-7a49-504f-f503-8f088d89e1e9": "cache-0",
+        "raid:v1:raid:a33a3407-debb-dee1-6a21-dff73eba4bcd": "cache-0",
+        "raid:v1:raid:8b99deed-8006-cc2f-57e1-c3578149157e": "cache-0",
+        "raid:v1:raid:07bf0f64-9a0a-9672-7646-b50b585882fc": "cache-2",
+        "raid:v1:raid:734b86dc-d505-fd90-d928-f8f0655d02c6": "cache-2",
+        "raid:v1:raid:4f444cca-63e9-2130-2e9e-8e9de3c83bae": "cache-2",
+        "raid:v1:raid:5ffc02e9-3168-b81a-9705-ea66fb23d4c9": "cache-2",
+        "raid:v1:raid:2ec7938b-44a0-5c65-4ccd-fa6932eb89c4": "cache-0",
+        "raid:v1:raid:32674cd5-9453-0279-80bf-d63dbb0f2d2f": "cache-2",
+        "raid:v1:raid:aceedc97-8b96-603f-339a-0abd787f3f98": "cache-0",
+        "notification:v1:history:f5f1b8e8-a885-b8ad-01a7-17783f381411:3f44a63d825c586e": "cache-2",
+        "notification:v1:history:bdb1dd10-5679-979c-a82b-28edd1c8ccd2:623796c6a0f17db6": "cache-2",
+        "notification:v1:history:fbb798c2-5241-0201-2e7b-d22eef00e52d:d8363f1419501ad7": "cache-0",
+        "notification:v1:history:fea49869-c27f-0e59-616d-4ad24a81a6db:18f5a22e677bd7df": "cache-0",
+        "notification:v1:history:c66ca535-e218-492e-3239-5c878db167bc:182771aafb964157": "cache-0",
+        "notification:v1:history:a1361490-1058-3166-74fd-382120a6441b:50463cf8806a39dc": "cache-2",
+        "notification:v1:history:a8c21558-8dad-a603-a265-18f65c4882cc:486f0d8eeea36b2e": "cache-0",
+        "notification:v1:history:7ba6918e-058c-b5e6-8801-02477295103f:c2e54c26eedeb172": "cache-0",
+        "notification:v1:history:059b1946-0852-6e7a-96a1-b1fa675af8aa:22d3632f59e091d7": "cache-2",
+        "notification:v1:history:a67d66ed-f7b4-8138-3cd6-96c44c15e821:5a14810f2a7b9411": "cache-0",
+        "cache-0#0": "cache-0",
+        "cache-1#64": "cache-0",
+        "cache-2#127": "cache-2",
+        "notification:v1:preferences:ünïcødé-ключ": "cache-0",
+        "x": "cache-2",
+        "registry:v1:package:pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp": "cache-0",
+        "tamagotchi:v1:creature:98660da4-66cd-a75e-c5fa-559984a31d32": "cache-0",
+        "tamagotchi:v1:creature:a3064e2e-dc51-a63b-3bbe-7d1cff502923": "cache-0"
+      }
+    },
+    {
+      "name": "cache_3_added",
+      "nodes": [
+        "cache-0",
+        "cache-1",
+        "cache-2",
+        "cache-3"
+      ],
+      "first_points": [
+        {
+          "point": "58884931962805957",
+          "node": "cache-0"
+        },
+        {
+          "point": "67155174980555425",
+          "node": "cache-3"
+        },
+        {
+          "point": "87156741469998581",
+          "node": "cache-1"
+        },
+        {
+          "point": "88619522666657081",
+          "node": "cache-0"
+        },
+        {
+          "point": "145009058219963207",
+          "node": "cache-1"
+        }
+      ],
+      "last_point": {
+        "point": "18438186825314142970",
+        "node": "cache-2"
+      },
+      "expected": {
+        "tamagotchi:v1:creature:b4406ebd-270a-1c10-a1dc-bcb277b0fbb1": "cache-2",
+        "tamagotchi:v1:creature:c6c49c80-1d83-9c26-2da6-35cbbaa94f3f": "cache-0",
+        "tamagotchi:v1:creature:c6829ed5-6950-846d-07c6-59dab6f5a7be": "cache-0",
+        "tamagotchi:v1:creature:17b50ce5-e655-c523-7efc-56250ca5036a": "cache-1",
+        "tamagotchi:v1:creature:8eb3c42f-5ec2-3d83-e54a-85a68f140746": "cache-1",
+        "tamagotchi:v1:creature:e75763fe-b59f-e08d-a921-eb611a2cc028": "cache-0",
+        "tamagotchi:v1:creature:6a6351df-6a4a-4a24-7a72-3ac9032a343b": "cache-1",
+        "tamagotchi:v1:creature:20a07263-3e32-db28-52ed-46bd63c48d46": "cache-3",
+        "tamagotchi:v1:creature:f2299654-2034-292d-ae96-334dedc8c26b": "cache-0",
+        "tamagotchi:v1:creature:ff13f44f-1dfe-2606-38ef-5533a74bd2b2": "cache-1",
+        "tamagotchi:v1:creature:a10fdfa4-7f1f-2e7a-9cc8-15799e38b4ae": "cache-2",
+        "tamagotchi:v1:creature:91a1c51a-5d2c-483b-f837-9e5a73210ef8": "cache-0",
+        "tamagotchi:v1:creature:2162415e-4360-2135-1c91-418a7bde6cc1": "cache-1",
+        "tamagotchi:v1:collection:d9d96033-8ae6-39aa-a6f1-024beae41d5d": "cache-3",
+        "tamagotchi:v1:collection:75aac9d1-05b9-1f6f-a01a-d0c69feee23c": "cache-2",
+        "tamagotchi:v1:collection:a012377a-509a-9e52-b0ea-4a33fbe4684a": "cache-0",
+        "tamagotchi:v1:collection:55420ef9-7b65-4be3-f101-5a48b5054fa4": "cache-3",
+        "tamagotchi:v1:collection:766b8bb1-d605-02ec-3175-d83db01bd7d5": "cache-1",
+        "tamagotchi:v1:collection:3e265020-ed36-747d-d720-e74ccb306cfc": "cache-0",
+        "tamagotchi:v1:collection:e7661e41-6819-9c25-206f-26306e51511d": "cache-0",
+        "tamagotchi:v1:collection:fa9e10bf-9dba-738b-0625-1fd0af92c3dc": "cache-0",
+        "tamagotchi:v1:collection:f2790493-260c-1d73-a1a7-36c755d456cd": "cache-1",
+        "tamagotchi:v1:collection:9c3ab785-469b-435e-742e-71d91484abaa": "cache-0",
+        "tamagotchi:v1:collection:679b9ec7-7452-e842-8174-088bf3bf2d9e": "cache-1",
+        "tamagotchi:v1:collection:21e33a01-8757-b065-0c89-e31f65887d67": "cache-3",
+        "tamagotchi:v1:collection:b29d6118-003f-8d48-df21-e0d5e8f1603e": "cache-1",
+        "tamagotchi:v1:type-matrix:8cce0768-260e-3c11-1b96-167edaa798f0": "cache-1",
+        "tamagotchi:v1:type-matrix:0b22400e-e139-cdb4-243e-2a9b7e024a13": "cache-1",
+        "tamagotchi:v1:type-matrix:bf7ed569-a1d5-7791-3645-84a5cf226a67": "cache-0",
+        "tamagotchi:v1:type-matrix:d34391c0-bf64-6476-d423-1b0cca0d9384": "cache-2",
+        "tamagotchi:v1:type-matrix:a78cabb5-2dd5-77ff-27a8-d045be950e11": "cache-2",
+        "tamagotchi:v1:type-matrix:d2304068-928f-708a-5360-e39bee9a1473": "cache-0",
+        "tamagotchi:v1:type-matrix:5f3cf987-67b2-c99f-c8d9-9a30eec8a817": "cache-2",
+        "tamagotchi:v1:type-matrix:50ca4ca7-6666-842d-5a95-499ee1310eb2": "cache-1",
+        "tamagotchi:v1:type-matrix:5ae2302b-b785-1f17-b13e-4ccdccb48977": "cache-0",
+        "tamagotchi:v1:type-matrix:5c41becd-61f5-6613-03de-755c7b36fd6f": "cache-0",
+        "tamagotchi:v1:type-matrix:3647d004-9664-bdb8-ccab-dbbe3aa6b009": "cache-1",
+        "tamagotchi:v1:type-matrix:271f0e5d-4203-dd3b-15bc-0357333a94c2": "cache-3",
+        "tamagotchi:v1:type-matrix:2e886f6a-951d-034a-84a4-1304480de088": "cache-3",
+        "notification:v1:history:6e05ec4a-0eb4-ac07-80e2-d1030444e49e": "cache-0",
+        "notification:v1:history:45e48999-fb3c-312e-cc8f-1f867f89769c": "cache-1",
+        "notification:v1:history:9f2f1637-8475-b15d-342a-aa4dc87db8d5": "cache-0",
+        "notification:v1:history:f00697d6-a811-7ab5-f48e-2bed826f0c9c": "cache-0",
+        "notification:v1:history:5c16513d-cded-ebf7-5b1c-a3a0d90b5508": "cache-3",
+        "notification:v1:history:67b6520c-1cdc-2ca0-2a7b-111c374ac271": "cache-2",
+        "notification:v1:history:b997f843-72c4-d9b8-c5b9-b004177865bc": "cache-1",
+        "notification:v1:history:1051b42b-6dec-d005-1a4a-02ff576ad81a": "cache-0",
+        "notification:v1:history:e94d0880-d7e5-cc5a-ac25-713bc2243dad": "cache-0",
+        "notification:v1:history:b8baecc2-3f08-dce3-2a5e-62381c301d48": "cache-3",
+        "notification:v1:history:aad834a7-f0f7-439c-1bf9-6a388b831361": "cache-1",
+        "notification:v1:history:1d836424-ce04-b2fc-168d-2e1f1ebe32b0": "cache-3",
+        "notification:v1:history:89338f21-4655-2c26-4524-f8401a2c9efe": "cache-0",
+        "notification:v1:preferences:064de921-da05-a046-4538-c705bec29b54": "cache-0",
+        "notification:v1:preferences:90c0b4ee-d85b-5d2c-84f2-a7079b6735a2": "cache-1",
+        "notification:v1:preferences:1e80188d-e60b-3564-d06b-d70097a9a02a": "cache-2",
+        "notification:v1:preferences:4d309d5a-e85c-f710-c9a1-83cc0b8962e5": "cache-3",
+        "notification:v1:preferences:2e9f0ed7-c482-c891-ce50-64a0abe6997e": "cache-3",
+        "notification:v1:preferences:00c78ca9-2687-7ed9-769c-aacb6423ab86": "cache-2",
+        "notification:v1:preferences:ee0230de-8fe1-4915-e984-ae229c2925bf": "cache-2",
+        "notification:v1:preferences:a780f771-40c1-1134-0669-a9abf04743b5": "cache-2",
+        "notification:v1:preferences:a8dec0a7-c7b9-efae-bc66-5e810df52416": "cache-0",
+        "notification:v1:preferences:c42f800d-2538-b839-c008-7a8ac5555799": "cache-1",
+        "notification:v1:preferences:466b12a9-9670-99c5-80e8-fabb158be861": "cache-3",
+        "notification:v1:preferences:ce7c52c5-76d5-3318-031a-cfd4c98fc48a": "cache-0",
+        "notification:v1:preferences:35a84280-87e9-f8d4-bbee-50e0fa3ad40a": "cache-1",
+        "registry:v1:package:7684ee01-5b92-1c2e-74fd-9449e2933ed4": "cache-3",
+        "registry:v1:package:cce0b29b-5c19-db16-a1a8-02ad23cf79b1": "cache-2",
+        "registry:v1:package:6cb3a5fd-bf2a-143b-8a81-00630e677a26": "cache-1",
+        "registry:v1:package:fa654827-918c-ad28-fadd-83e6dc5d18a1": "cache-3",
+        "registry:v1:package:819d710d-c276-2a0b-e5c7-c409d11e71a2": "cache-1",
+        "registry:v1:package:fd65b7af-231f-4495-6e47-7aef174715bf": "cache-2",
+        "registry:v1:package:e6cc4595-0a18-9703-263d-142f7b4cf484": "cache-2",
+        "registry:v1:package:2c953a44-ca7e-4308-6b69-832213bfc6f1": "cache-1",
+        "registry:v1:package:4c62ef17-b900-a2ba-5b1e-8236b77cdccc": "cache-1",
+        "registry:v1:package:3ab2c47e-4e26-59f4-4e5c-22207a3e918e": "cache-0",
+        "registry:v1:package:de2f0d0a-c789-adcc-2317-8b799f3b92fe": "cache-3",
+        "registry:v1:package:b4f952fa-c5f7-b674-aaa3-d0e8dda3c89c": "cache-2",
+        "registry:v1:package:63db70eb-4c46-942d-8f5c-7ed0df619aad": "cache-2",
+        "registry:v1:stat-definitions:e30600d8-2f85-922a-26ab-5963b217fac2": "cache-1",
+        "registry:v1:stat-definitions:22f2e720-c227-3d94-0710-69295e2d4363": "cache-3",
+        "registry:v1:stat-definitions:de617d52-0b6d-ef91-854d-91022ab8b9da": "cache-3",
+        "registry:v1:stat-definitions:b3f9e204-459a-02dd-eb97-8a54afc3f66c": "cache-3",
+        "registry:v1:stat-definitions:24e1e4d0-ad72-a87e-1305-7deaa57a6def": "cache-0",
+        "registry:v1:stat-definitions:5abd27a7-da9b-153a-4253-3a96e13113c2": "cache-0",
+        "registry:v1:stat-definitions:c3da3e3c-59c8-f4fa-7811-e364696eeaf6": "cache-0",
+        "registry:v1:stat-definitions:af5cf2d1-3771-37d0-8c7c-86700062df63": "cache-1",
+        "registry:v1:stat-definitions:648480d5-f9d1-f697-ad8b-23fc56fd6944": "cache-1",
+        "registry:v1:stat-definitions:19bbe47d-9868-6287-34c7-5283249310c9": "cache-2",
+        "registry:v1:stat-definitions:44bfe492-716b-2464-2597-80af200af4be": "cache-1",
+        "registry:v1:stat-definitions:33a3e14b-0bfa-f945-c32b-c834b3c8d670": "cache-2",
+        "registry:v1:stat-definitions:b2169413-f800-53a2-cd75-901af3c45f0b": "cache-2",
+        "guild:v1:guild:72608968-bd6e-7164-9539-d80d94f14b83": "cache-0",
+        "guild:v1:guild:84017c25-ad75-a239-9956-b3265dcb6e3e": "cache-2",
+        "guild:v1:guild:91d81fa7-8a40-88d9-6754-22c7930037c2": "cache-2",
+        "guild:v1:guild:ef956582-3ea1-aa04-ec5a-0f72d53da2c2": "cache-2",
+        "guild:v1:guild:ecd51747-c7b2-7336-253d-1a0ca91d4f5a": "cache-1",
+        "guild:v1:guild:ff0b923d-eed0-b351-54c8-2aed4cf161d0": "cache-1",
+        "guild:v1:guild:4b3b358b-978e-8ffb-7279-ca5a50256f98": "cache-3",
+        "guild:v1:guild:3bb1f41e-0593-3868-b311-df49f87db5c0": "cache-0",
+        "guild:v1:guild:0ef87a99-9830-c205-196d-4eafbfec3a56": "cache-1",
+        "guild:v1:guild:6f4e2e2d-98c1-83b7-469f-16afb2bc4036": "cache-3",
+        "guild:v1:guild:86fcefa3-4fda-799f-90bc-c87da19fde02": "cache-0",
+        "guild:v1:guild:d12ceb8a-5ec3-d235-7f30-1575ac4ac151": "cache-1",
+        "guild:v1:guild:37da522b-0316-b835-cd82-01bf976bb318": "cache-0",
+        "guild:v1:members:c89de37f-d77e-1c9d-feec-c7ce4d3dcb1b": "cache-2",
+        "guild:v1:members:186948af-839a-e07f-61a3-442a04e88ebd": "cache-0",
+        "guild:v1:members:ae7f8b3d-4284-b644-3d6f-0156e5533740": "cache-1",
+        "guild:v1:members:82c79d55-176d-4112-296e-d0de47f67411": "cache-2",
+        "guild:v1:members:a15be061-6bd9-6dcf-92a0-82cf26b42ef5": "cache-0",
+        "guild:v1:members:b648243b-2ca3-f329-e4d5-219d12db1955": "cache-1",
+        "guild:v1:members:78d31e1f-ba04-a8fd-0eac-bf9ba0f4cc9a": "cache-1",
+        "guild:v1:members:f07d0648-f06a-bab1-ee99-d56064b3d972": "cache-0",
+        "guild:v1:members:166f3fc8-9895-3e66-f657-92dcfdbdcc95": "cache-0",
+        "guild:v1:members:116cacf1-84ca-2db8-f6a9-ce9fd675fb03": "cache-1",
+        "guild:v1:members:0fed22a2-91b6-d5ee-2d98-425b6fb0b476": "cache-1",
+        "guild:v1:members:68e0f8db-1a6f-cb74-c7d1-5b5711c53f19": "cache-1",
+        "guild:v1:members:a681066a-5f16-f2a6-6760-cf3542784ae4": "cache-0",
+        "users:v1:profile:c36cc321-e765-5ded-f0f4-0f4d87d14178": "cache-1",
+        "users:v1:profile:2fbe47a5-854d-9c9d-a625-cc7f7dffbb77": "cache-1",
+        "users:v1:profile:4b5d7f70-ac65-7c15-8374-57d791c95e02": "cache-2",
+        "users:v1:profile:122497e9-1bd7-5418-2f3d-053d5cab806a": "cache-0",
+        "users:v1:profile:02e59986-ef92-b53b-59bb-9a3008203f11": "cache-0",
+        "users:v1:profile:ee82752c-f8a5-0e41-3a93-70a10d688ac5": "cache-2",
+        "users:v1:profile:774953a6-933a-b8dd-04a0-db7ac649aaca": "cache-1",
+        "users:v1:profile:2f2e2be6-48d7-658e-aacd-1e9136b97421": "cache-1",
+        "users:v1:profile:f7a7787d-047e-783d-fc2a-5ec2337f59af": "cache-0",
+        "users:v1:profile:0927ed78-31df-241c-9b01-07923b28e918": "cache-1",
+        "users:v1:profile:8e4b216e-ff96-dbac-9fec-f7630ab4dbcc": "cache-1",
+        "users:v1:profile:22fedd6e-0147-b5c5-2dd6-185ebd260bf3": "cache-2",
+        "users:v1:profile:92cc0600-1477-84fe-a6a9-dab69312062e": "cache-3",
+        "users:v1:wallet:ad8c4fa4-2979-d2b0-fdba-c438e9938745": "cache-3",
+        "users:v1:wallet:89cc0f39-fcf9-8aea-7d25-6a86dfcadf35": "cache-2",
+        "users:v1:wallet:6d618331-42e3-e274-98c2-c74a9352dd80": "cache-3",
+        "users:v1:wallet:b680b360-e7f9-35e6-85d6-a8fc5185b3e9": "cache-0",
+        "users:v1:wallet:9b136cf7-c328-8584-ad97-b9d1f5d1a90b": "cache-0",
+        "users:v1:wallet:a20f6c00-4214-bdce-6aca-c024a9168d35": "cache-3",
+        "users:v1:wallet:3205e811-15b1-f690-cd25-d6d6ab28bd1a": "cache-0",
+        "users:v1:wallet:a709f2d9-ab77-4aab-76de-72fb9504ae0b": "cache-0",
+        "users:v1:wallet:9ecf94c2-bdc2-5aab-6e65-ea7893187ac2": "cache-0",
+        "users:v1:wallet:fd2d82e2-7f4c-a338-bd78-f7015d624ede": "cache-3",
+        "users:v1:wallet:bd92f27a-4f8b-cd2a-c0c2-128d97570921": "cache-3",
+        "users:v1:wallet:0d2f0ca2-8e5e-4f6e-35d4-df13402193f7": "cache-0",
+        "users:v1:wallet:bc7af262-9757-38dd-d989-808c708f9053": "cache-0",
+        "battle:v1:battle:08eb7740-01a8-f467-3f29-298737dbac77": "cache-1",
+        "battle:v1:battle:6d5778ed-0b4c-145c-1154-d1bcb0af087e": "cache-0",
+        "battle:v1:battle:f3e5e746-382d-dd45-a4e8-997c843d71d1": "cache-3",
+        "battle:v1:battle:83a06f04-8644-8dc6-fae8-5743065143fc": "cache-2",
+        "battle:v1:battle:21c5cbd0-ea49-951f-bb4a-9dec9b605d3e": "cache-3",
+        "battle:v1:battle:8ed39380-345a-32fc-9abc-70b2f909864f": "cache-3",
+        "battle:v1:battle:1f36eac3-95dd-068e-c94e-48552a027bcc": "cache-1",
+        "battle:v1:battle:6f1e0ec5-fc6c-2ce5-b196-dd58da21888e": "cache-3",
+        "battle:v1:battle:c6e7b9b4-0de9-31bc-b8aa-308947e09298": "cache-1",
+        "battle:v1:battle:ad946e8a-13ad-e1cf-347b-1920d2197e17": "cache-2",
+        "battle:v1:battle:5f62c2c9-dd2c-0f7d-338a-1e8f41ac1f29": "cache-3",
+        "battle:v1:battle:e3558702-aa61-9082-1d55-78111bdc4466": "cache-2",
+        "battle:v1:battle:35d2be45-aa2e-2e7e-84c1-b2a4bf9b85ad": "cache-0",
+        "map:v1:region:5c3ae8af-60e2-960d-f613-83fd03a1d71b": "cache-2",
+        "map:v1:region:c5c3b4df-1c09-3b10-322f-b1f2894d2917": "cache-0",
+        "map:v1:region:3495a5ec-2384-6f8d-5706-c3227583397f": "cache-3",
+        "map:v1:region:201eec52-cdfc-38de-b8b3-ee6a575df7d4": "cache-1",
+        "map:v1:region:3923061d-587d-264d-85ed-d14be9ec87ba": "cache-3",
+        "map:v1:region:9485b436-58b4-66c4-830d-4665beec619a": "cache-1",
+        "map:v1:region:1655f407-2f43-fcb9-2fdf-720488454915": "cache-2",
+        "map:v1:region:9fa0a22e-bf34-c5df-cfa4-8428526cdc96": "cache-1",
+        "map:v1:region:87c25888-199f-2268-f974-654692e54635": "cache-2",
+        "map:v1:region:0fc05d48-25e7-78a4-9c75-d2e2de1f8b6b": "cache-0",
+        "map:v1:region:ecc79ae2-77e0-fd06-3acf-2630ca2a2d2c": "cache-3",
+        "map:v1:region:9f2c8273-7c97-e95e-5376-2dc56dfdeebe": "cache-2",
+        "map:v1:region:62784ffc-71f0-5c96-b67a-b7252e320a5a": "cache-0",
+        "raid:v1:raid:65044072-c56c-48d4-f6e2-1c7883d5d9e1": "cache-2",
+        "raid:v1:raid:fc86780a-f473-26c7-7b76-bf3a43a924ed": "cache-3",
+        "raid:v1:raid:ed7c08e9-5f7f-e70e-e182-aa57580661ae": "cache-1",
+        "raid:v1:raid:8f28689e-7a49-504f-f503-8f088d89e1e9": "cache-1",
+        "raid:v1:raid:a33a3407-debb-dee1-6a21-dff73eba4bcd": "cache-0",
+        "raid:v1:raid:8b99deed-8006-cc2f-57e1-c3578149157e": "cache-0",
+        "raid:v1:raid:07bf0f64-9a0a-9672-7646-b50b585882fc": "cache-2",
+        "raid:v1:raid:734b86dc-d505-fd90-d928-f8f0655d02c6": "cache-1",
+        "raid:v1:raid:4f444cca-63e9-2130-2e9e-8e9de3c83bae": "cache-2",
+        "raid:v1:raid:5ffc02e9-3168-b81a-9705-ea66fb23d4c9": "cache-2",
+        "raid:v1:raid:2ec7938b-44a0-5c65-4ccd-fa6932eb89c4": "cache-0",
+        "raid:v1:raid:32674cd5-9453-0279-80bf-d63dbb0f2d2f": "cache-2",
+        "raid:v1:raid:aceedc97-8b96-603f-339a-0abd787f3f98": "cache-1",
+        "notification:v1:history:f5f1b8e8-a885-b8ad-01a7-17783f381411:3f44a63d825c586e": "cache-2",
+        "notification:v1:history:bdb1dd10-5679-979c-a82b-28edd1c8ccd2:623796c6a0f17db6": "cache-3",
+        "notification:v1:history:fbb798c2-5241-0201-2e7b-d22eef00e52d:d8363f1419501ad7": "cache-0",
+        "notification:v1:history:fea49869-c27f-0e59-616d-4ad24a81a6db:18f5a22e677bd7df": "cache-3",
+        "notification:v1:history:c66ca535-e218-492e-3239-5c878db167bc:182771aafb964157": "cache-3",
+        "notification:v1:history:a1361490-1058-3166-74fd-382120a6441b:50463cf8806a39dc": "cache-1",
+        "notification:v1:history:a8c21558-8dad-a603-a265-18f65c4882cc:486f0d8eeea36b2e": "cache-0",
+        "notification:v1:history:7ba6918e-058c-b5e6-8801-02477295103f:c2e54c26eedeb172": "cache-0",
+        "notification:v1:history:059b1946-0852-6e7a-96a1-b1fa675af8aa:22d3632f59e091d7": "cache-1",
+        "notification:v1:history:a67d66ed-f7b4-8138-3cd6-96c44c15e821:5a14810f2a7b9411": "cache-1",
+        "cache-0#0": "cache-0",
+        "cache-1#64": "cache-1",
+        "cache-2#127": "cache-2",
+        "notification:v1:preferences:ünïcødé-ключ": "cache-0",
+        "x": "cache-2",
+        "registry:v1:package:pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp": "cache-0",
+        "tamagotchi:v1:creature:98660da4-66cd-a75e-c5fa-559984a31d32": "cache-0",
+        "tamagotchi:v1:creature:a3064e2e-dc51-a63b-3bbe-7d1cff502923": "cache-0"
+      }
+    }
+  ]
+}
