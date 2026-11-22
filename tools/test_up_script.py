@@ -63,6 +63,13 @@ class UpScriptTests(unittest.TestCase):
         self.assertIn('  user-management:\n    environment:\n      FAULT_INJECTION_ENABLED: "true"', demo)
         self.assertNotIn('FAULT_INJECTION_ENABLED', (ROOT / 'deploy/compose.yaml').read_text())
 
+    def test_demo_overlay_publishes_the_fault_switch_ports_on_loopback_only(self):
+        demo = (ROOT / 'deploy/compose.demo.yaml').read_text()
+
+        self.assertIn('- "127.0.0.1:3103-3104:3000"', demo)
+        self.assertIn('- "127.0.0.1:3101-3102:3001"', demo)
+        self.assertNotIn('- "310', demo)
+
 
 if __name__ == '__main__':
     unittest.main()
