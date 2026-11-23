@@ -1,4 +1,4 @@
--- The schema of battle through its AddSettlementMode migration, one statement block for every migration in order, with the history rows, so a later
+-- The schema of battle through its AddTxAbortFences migration, one statement block for every migration in order, with the history rows, so a later
 -- `dotnet ef database update` runs cleanly against a volume that was initialized from this file instead of via EF.
 -- Generated from the service's migrations with `dotnet ef migrations script`; regenerate it, never edit it by hand.
 -- A volume that already exists is brought up to date with upgrade.sql in this folder.
@@ -175,6 +175,26 @@ ALTER TABLE "Battles" ADD "SettlementMode" integer NOT NULL DEFAULT 0;
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20261121163024_AddSettlementMode', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+ALTER TABLE "Battles" ADD "SettlementAccessStep" integer;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261122131820_AddSettlementAccessStep', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+CREATE TABLE "TxAbortFences" (
+    "TxId" character varying(150) NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_TxAbortFences" PRIMARY KEY ("TxId")
+);
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261122193021_AddTxAbortFences', '10.0.12');
 
 COMMIT;
 
