@@ -107,31 +107,12 @@ collection emptied by loss, and both are gone.
 
 ## Architecture
 
-![Architecture: clients reach the Gateway over REST, and the Gateway sends every public operation to the custom Message Broker over mTLS gRPC; the broker queues, balances and delivers calls to the two replicas of each service, carries typed service-to-service calls and outbox events through topics and subscriber queues, and keeps its work in its own PostgreSQL database; Service Discovery gives the broker instances, load and subscriptions and sends alerts to Discord; Prometheus, Grafana and Jaeger collect metrics and traces; Guild chat sockets and the JWKS bootstrap stay direct](docs/img/architecture_diagram.png)
+![Architecture: clients reach the Gateway over REST, and the Gateway sends every public operation to the custom Message Broker over mTLS gRPC; the broker queues, balances and delivers calls to the two replicas of each service, carries typed service-to-service calls and outbox events, and runs the 2PC coordinator and the saga orchestrator for battle settlement; every database, the broker's included, lives on a three-node Patroni PostgreSQL cluster behind pg-haproxy (:5000 primary, :5001 replicas); domain services cache reads in three Valkey shards through a client-side consistent-hashing ring; the ETL service extracts from the replicas into the warehouse; Service Discovery tracks instances and sends alerts to Discord; Prometheus, Grafana and Jaeger collect metrics and traces; Guild chat sockets and the JWKS reads stay direct](docs/img/architecture_diagram.png)
 
 Every public API request goes Client → Gateway → Message Broker → service, and
 services call each other and publish events only through the Broker. There is no
 RabbitMQ and no service-to-service HTTP. `deploy/compose.yaml` defines this stack with numeric image pins; see
 [Deployment](#deployment) for publication and startup requirements.
-
-```mermaid
-flowchart LR
-    Client[Client] -->|HTTP / JSON| Gateway
-    Gateway -->|mTLS Call / user assertion| Broker[Message Broker]
-    Broker -->|Execute / signed context| Services[Domain replicas]
-    Services -->|Typed Call / service token| Broker
-    Services -->|Outbox Publish| Broker
-    Broker -->|Deliver / receipt deduplication| Subscribers[Subscriber replicas]
-    Broker --> BrokerDB[(Broker PostgreSQL)]
-    Broker -->|Instances and load| Discovery[Service Discovery]
-    Services -->|Status and subscriptions| Discovery
-    Discovery -->|Health / load alerts| Discord
-    Client -->|Negotiated WebSocket| Guild[Guild replicas / socket ingress]
-    Prometheus -->|Metrics| Broker
-    Prometheus -->|Metrics| Services
-    Broker -->|Log export, read only| Logs[(Service log volumes)]
-    Grafana --> Prometheus
-```
 
 Each domain service owns its database, effects and authorization. Synchronous
 service dependencies become typed gRPC calls through Broker; committed facts
