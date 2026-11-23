@@ -199,6 +199,30 @@ service (`GET /v1/logs/download?from=&to=&correlation_id=`). Its internal gRPC
 listener is 5010 and its metrics port 9090. [Structured log volumes](deploy/log-volumes.md)
 and [Monitoring](deploy/monitoring.md) describe the log and metrics setup.
 
+#### Settlement inspection
+
+Use a User Management access token with the `admin` role on the Broker
+management port. These read-only routes require a Broker image with the
+coordinator and `BROKER_GRPC_ENABLED=true`.
+
+| Route | Result |
+|---|---|
+| `GET /v1/transactions?limit=20` | Recent 2PC attempts in `items`, newest update first |
+| `GET /v1/transactions/{id}` | One 2PC attempt with its decision and participant progress |
+| `GET /v1/sagas?limit=20` | Sagas in `items`, newest first, with `next_before` or `null` |
+| `GET /v1/sagas/{id}` | One saga with its outcome and every step |
+
+Both lists accept `limit` from 1 to 100 and default to 20. For the saga list,
+omit `state` for all states and pass `next_before` as `before` to continue.
+Look up a 2PC attempt by `transaction_id`, including any retry suffix. Its
+view contains `battle_id`, `state`, `decision`, `reason`, `access_outcome`,
+`updated_at`, and each participant's `service`, `prepared`, `settled`, and
+`reason`. Look up a saga by `saga_id`, the battle UUID. Its view includes
+`state`, `outcome`, `access_outcome`, `reason`, timestamps, and step progress
+with attempt counts and `next_attempt_at`. The views expose progress and
+reasons. See the [settlement contract](contracts/transactions.md) for state
+and recovery semantics.
+
 ## Technologies
 
 | Service | Stack | Database | Why |
@@ -285,6 +309,28 @@ and loads a star schema of dimensions and facts into the warehouse every few min
 Each owner writes the extract files for their own data. No personal data is copied.
 The tables, the extract format, incremental loading and the run endpoints are in
 [contracts/warehouse.md](contracts/warehouse.md).
+
+#### ETL run management
+
+Use a User Management access token with the `admin` role directly on the ETL
+port (3011 with the warehouse overlay).
+
+| Route | Result |
+|---|---|
+| `POST /v1/etl/runs` | `202` with the running `EtlRun`, or `409 etl_run_in_progress` with the existing `run_id` |
+| `GET /v1/etl/runs?limit=20` | `200` with an `EtlRunPage`, newest first, `limit` 1 to 100 |
+| `GET /v1/etl/runs/{runId}` | `200` with the `EtlRun` and its `extracts`, or `404 run_not_found` |
+
+- [`EtlRun`](contracts/warehouse.md#etlrun) contains `run_id`, `trigger`
+  (`STARTUP`, `SCHEDULED`, or `MANUAL`), `status` (`RUNNING`, `SUCCEEDED`,
+  `PARTIAL`, or `FAILED`), `started_at`, and `finished_at` (null while running).
+- [`EtlRunPage`](contracts/warehouse.md#etlrunpage) contains `items` and an
+  opaque `next_before`. Pass it as `before` to continue. It is null on the
+  last page.
+- [`ExtractRun`](contracts/warehouse.md#extractrun) contains `file`, `table`,
+  `status` (`SUCCEEDED`, `FAILED`, or `REJECTED`), `rows_read`, `rows_upserted`,
+  `watermark_before`, `watermark_after`, `duration_ms`, and a redacted `error`
+  or null. Poll the run detail until it reaches a terminal status.
 
 ## Communication contract
 
