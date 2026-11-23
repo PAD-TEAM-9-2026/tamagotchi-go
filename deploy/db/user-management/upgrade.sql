@@ -1,4 +1,4 @@
--- Brings an existing user-management database up to the schema of user-management through its GrantEtlReader migration. Safe to run again: each migration is applied only
+-- Brings an existing user-management database up to the schema of user-management through its AddTxAbortFences migration. Safe to run again: each migration is applied only
 -- if its row is not in "__EFMigrationsHistory" yet, so it adds what is missing and touches nothing that is there.
 -- Generated with `dotnet ef migrations script --idempotent`. Run it as the service's database user, for example
 --   docker compose exec -T database psql -U ${USER_MANAGEMENT_DB_USER} -d ${USER_MANAGEMENT_DB_NAME} -v ON_ERROR_STOP=1 < deploy/db/user-management/upgrade.sql
@@ -503,6 +503,28 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261121131424_GrantEtlReader') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
     VALUES ('20261121131424_GrantEtlReader', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261122192102_AddTxAbortFences') THEN
+    CREATE TABLE "TxAbortFences" (
+        "TxId" character varying(150) NOT NULL,
+        "CreatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_TxAbortFences" PRIMARY KEY ("TxId")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261122192102_AddTxAbortFences') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261122192102_AddTxAbortFences', '10.0.12');
     END IF;
 END $EF$;
 COMMIT;
