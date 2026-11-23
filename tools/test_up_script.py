@@ -70,6 +70,12 @@ class UpScriptTests(unittest.TestCase):
         self.assertIn('- "127.0.0.1:3101-3102:3001"', demo)
         self.assertNotIn('- "310', demo)
 
+    def test_demo_overlay_settles_battles_through_the_coordinator(self):
+        demo = (ROOT / 'deploy/compose.demo.yaml').read_text()
+
+        self.assertIn('  battle:\n    environment:\n      SETTLEMENT_MODE: ${SETTLEMENT_MODE:-2pc}', demo)
+        self.assertNotIn('SETTLEMENT_MODE', (ROOT / 'deploy/compose.yaml').read_text())
+
 
 if __name__ == '__main__':
     unittest.main()

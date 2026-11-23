@@ -124,5 +124,6 @@ The fault requests call Tamagotchi's two replicas directly on the demo overlay's
 loopback ports (`tamagotchi_admin_url`, `tamagotchi_admin_url_2`) with
 `admin_credential`, a User Management token with the `admin` role. Use Send, not
 Runner: each scenario arms one fault for the next settlement, and arming an
-operation again replaces its fault. After a demo whose fault was not used, send the
+operation again replaces its fault. `compose.demo.yaml` runs Battle with
+`SETTLEMENT_MODE=2pc`; set `SETTLEMENT_MODE=saga` in `.env` for the saga scenario. After a demo whose fault was not used, send the
 Defuse requests.

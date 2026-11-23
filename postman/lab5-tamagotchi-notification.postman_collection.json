@@ -944,10 +944,10 @@
     },
     {
       "name": "2PC abort: a slow participant",
-      "description": "Send, then settle a battle in 2PC mode. The prepare outlasts the 2.5 s budget, so the coordinator aborts on its deadline.",
+      "description": "Send, then settle a battle in 2PC mode. Each prepare attempt waits out its call deadline, and the Broker retries about every 5 s; six delays outlast the 30 s prepare deadline, so the coordinator aborts with prepare_deadline_elapsed and Battle's next attempt commits.",
       "item": [
         {
-          "name": "Arm: the next prepare takes 3 s, past the 2.5 s budget",
+          "name": "Arm: the next six prepares wait 30 s, past the prepare deadline",
           "event": [
             {
               "listen": "test",
@@ -956,7 +956,7 @@
                 "exec": [
                   "pm.test('200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
-                  "pm.test('armed as asked', () => pm.expect(body).to.eql({\"operation\": \"tamagotchi.tx_prepare\", \"mode\": \"delay\", \"delay_ms\": 3000, \"remaining\": 1}));"
+                  "pm.test('armed as asked', () => pm.expect(body).to.eql({\"operation\": \"tamagotchi.tx_prepare\", \"mode\": \"delay\", \"delay_ms\": 30000, \"remaining\": 6}));"
                 ]
               }
             }
@@ -986,7 +986,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"operation\": \"tamagotchi.tx_prepare\",\n  \"mode\": \"delay\",\n  \"delay_ms\": 3000,\n  \"count\": 1\n}"
+              "raw": "{\n  \"operation\": \"tamagotchi.tx_prepare\",\n  \"mode\": \"delay\",\n  \"delay_ms\": 30000,\n  \"count\": 6\n}"
             }
           }
         }
