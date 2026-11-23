@@ -1,0 +1,1140 @@
+{
+  "info": {
+    "name": "Lab 5 Tamagotchi and Notification",
+    "description": "Cache and fault-switch checks for Tamagotchi and Notification on the ./up.sh lab5 stack. Cache requests go through the Gateway as demo_user_id, who must hold a creature. Fault requests call Tamagotchi's replicas directly on the demo overlay's loopback ports with admin_credential, a User Management token with the admin role.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Tamagotchi cache",
+      "description": "Run in order. A first read may be MISS or HIT; the next read of the same key within its TTL (type matrix 3600 s, collection first page 60 s, creature 300 s) must be HIT. Pages with limit or cursor are never cached.",
+      "item": [
+        {
+          "name": "Type matrix, first read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is MISS or HIT', () => {",
+                  "  pm.expect([\"MISS\", \"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/types/matrix",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "types",
+                "matrix"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Type matrix again is a HIT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is HIT', () => {",
+                  "  pm.expect([\"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/types/matrix",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "types",
+                "matrix"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Collection, first page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is MISS or HIT', () => {",
+                  "  pm.expect([\"MISS\", \"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});",
+                  "const body = pm.response.json();",
+                  "const pet = body.primary ?? body.secondary[0];",
+                  "pm.test('the demo user holds a creature', () => pm.expect(pet).to.be.an('object'));",
+                  "pm.collectionVariables.set('cache_pet_id', pet.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{demo_user_id}}/collection",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "collection"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Collection again is a HIT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is HIT', () => {",
+                  "  pm.expect([\"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{demo_user_id}}/collection",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "collection"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A page with a limit skips the cache",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is MISS', () => {",
+                  "  pm.expect([\"MISS\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/users/{{demo_user_id}}/collection?limit=1",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "collection"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Creature, first read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is MISS or HIT', () => {",
+                  "  pm.expect([\"MISS\", \"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{cache_pet_id}}",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "tamagotchis",
+                "{{cache_pet_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Creature again is a HIT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is HIT', () => {",
+                  "  pm.expect([\"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/tamagotchis/{{cache_pet_id}}",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "tamagotchis",
+                "{{cache_pet_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification cache",
+      "description": "Run in order. Saving the preferences deletes their key after the commit, so the next read is MISS and the one after it HIT. History caches only the first page, for 30 s.",
+      "item": [
+        {
+          "name": "Preferences, first read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is MISS or HIT', () => {",
+                  "  pm.expect([\"MISS\", \"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});",
+                  "pm.collectionVariables.set('cache_preferences_etag', pm.response.headers.get('ETag'));",
+                  "pm.collectionVariables.set('cache_muted', JSON.stringify(pm.response.json().muted_categories));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{notification_base_url}}/v1/users/{{demo_user_id}}/preferences",
+              "host": [
+                "{{notification_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Preferences again is a HIT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is HIT', () => {",
+                  "  pm.expect([\"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{notification_base_url}}/v1/users/{{demo_user_id}}/preferences",
+              "host": [
+                "{{notification_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Saving the same preferences deletes the key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cache_preferences_etag}}"
+              }
+            ],
+            "url": {
+              "raw": "{{notification_base_url}}/v1/users/{{demo_user_id}}/preferences",
+              "host": [
+                "{{notification_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "preferences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"muted_categories\": {{cache_muted}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Preferences after the write is a MISS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is MISS', () => {",
+                  "  pm.expect([\"MISS\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{notification_base_url}}/v1/users/{{demo_user_id}}/preferences",
+              "host": [
+                "{{notification_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Preferences once more is a HIT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is HIT', () => {",
+                  "  pm.expect([\"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{notification_base_url}}/v1/users/{{demo_user_id}}/preferences",
+              "host": [
+                "{{notification_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "History first page, first read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is MISS or HIT', () => {",
+                  "  pm.expect([\"MISS\", \"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{notification_base_url}}/v1/users/{{demo_user_id}}/notifications",
+              "host": [
+                "{{notification_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "History first page again is a HIT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is HIT', () => {",
+                  "  pm.expect([\"HIT\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{notification_base_url}}/v1/users/{{demo_user_id}}/notifications",
+              "host": [
+                "{{notification_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A history page with a limit skips the cache",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('X-Cache is MISS', () => {",
+                  "  pm.expect([\"MISS\"]).to.include(pm.response.headers.get('X-Cache'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{notification_base_url}}/v1/users/{{demo_user_id}}/notifications?limit=5",
+              "host": [
+                "{{notification_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "users",
+                "{{demo_user_id}}",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fault switch refusals",
+      "description": "Change nothing. The switch is only on the service port, needs the admin role and accepts only Tamagotchi's own internal operations.",
+      "item": [
+        {
+          "name": "The Gateway does not route the fault switch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 unknown_route', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.json().code).to.eql('unknown_route');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_base_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"tamagotchi.tx_prepare\",\n  \"mode\": \"vote_no\",\n  \"count\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "No token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 unauthenticated', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().code).to.eql('unauthenticated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "A user without the admin role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 admin_required', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().code).to.eql('admin_required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demo_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            }
+          }
+        },
+        {
+          "name": "An operation Tamagotchi does not serve",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 unknown_operation', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().code).to.eql('unknown_operation');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"users.credit_global\",\n  \"mode\": \"fail\",\n  \"count\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "A delay without delay_ms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 invalid_fault', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().code).to.eql('invalid_fault');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"tamagotchi.tx_prepare\",\n  \"mode\": \"delay\",\n  \"count\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "List the armed faults",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2PC abort: a NO vote",
+      "description": "Send, then settle a battle in 2PC mode. Tamagotchi votes NO with reason fault_injected, the coordinator aborts, and Battle's next attempt (.1) commits. Faults live in the database, so both replicas share them.",
+      "item": [
+        {
+          "name": "Arm: Tamagotchi votes NO on the next prepare",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('armed as asked', () => pm.expect(body).to.eql({\"operation\": \"tamagotchi.tx_prepare\", \"mode\": \"vote_no\", \"delay_ms\": 0, \"remaining\": 1}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"tamagotchi.tx_prepare\",\n  \"mode\": \"vote_no\",\n  \"count\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "The other replica sees the same fault",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().items;",
+                  "pm.test('tamagotchi.tx_prepare is armed', () => {",
+                  "  const fault = items.find((f) => f.operation === 'tamagotchi.tx_prepare');",
+                  "  pm.expect(fault).to.include({ mode: 'vote_no', remaining: 1 });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url_2}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url_2}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2PC abort: a slow participant",
+      "description": "Send, then settle a battle in 2PC mode. The prepare outlasts the 2.5 s budget, so the coordinator aborts on its deadline.",
+      "item": [
+        {
+          "name": "Arm: the next prepare takes 3 s, past the 2.5 s budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('armed as asked', () => pm.expect(body).to.eql({\"operation\": \"tamagotchi.tx_prepare\", \"mode\": \"delay\", \"delay_ms\": 3000, \"remaining\": 1}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"tamagotchi.tx_prepare\",\n  \"mode\": \"delay\",\n  \"delay_ms\": 3000,\n  \"count\": 1\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Saga compensation",
+      "description": "Send, then settle a battle in saga mode. All three award_xp attempts answer 502 fault_injected, so the saga compensates: tamagotchi.revoke_xp records a tombstone for the award, the currency settlement is reversed and the engagement is released.",
+      "item": [
+        {
+          "name": "Arm: the next three XP awards fail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('armed as asked', () => pm.expect(body).to.eql({\"operation\": \"tamagotchi.award_xp\", \"mode\": \"fail\", \"delay_ms\": 0, \"remaining\": 3}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"tamagotchi.award_xp\",\n  \"mode\": \"fail\",\n  \"count\": 3\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Defuse",
+      "description": "Arming an operation replaces its fault, so these leave only a harmless 1 ms delay. Send them after a demo whose fault was not used.",
+      "item": [
+        {
+          "name": "Defuse the prepare fault with a 1 ms delay",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('armed as asked', () => pm.expect(body).to.eql({\"operation\": \"tamagotchi.tx_prepare\", \"mode\": \"delay\", \"delay_ms\": 1, \"remaining\": 1}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"tamagotchi.tx_prepare\",\n  \"mode\": \"delay\",\n  \"delay_ms\": 1,\n  \"count\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Defuse the XP award fault with a 1 ms delay",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('armed as asked', () => pm.expect(body).to.eql({\"operation\": \"tamagotchi.award_xp\", \"mode\": \"delay\", \"delay_ms\": 1, \"remaining\": 1}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_credential}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tamagotchi_admin_url}}/v1/admin/faults",
+              "host": [
+                "{{tamagotchi_admin_url}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "faults"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"tamagotchi.award_xp\",\n  \"mode\": \"delay\",\n  \"delay_ms\": 1,\n  \"count\": 1\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

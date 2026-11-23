@@ -111,3 +111,18 @@ XP awards, engagements and holder grants are service-only, so the Tamagotchi
 collection no longer fetches a Battle service token. Its holder and collection
 requests that expect the rival to co-hold the owner's creature need a grant that
 only a finished battle makes; with fresh users they fail.
+
+## Lab 5: Tamagotchi and Notification
+
+Import `lab5-tamagotchi-notification.postman_collection.json` and run it on the
+`./up.sh lab5` stack. The cache folders read through the Gateway as `demo_user_id`
+with `demo_credential`; that user must hold a creature. A first read may be MISS or
+HIT, and the next read of the same key must be HIT. Saving the Notification
+preferences deletes their key, so the read after it is MISS.
+
+The fault requests call Tamagotchi's two replicas directly on the demo overlay's
+loopback ports (`tamagotchi_admin_url`, `tamagotchi_admin_url_2`) with
+`admin_credential`, a User Management token with the `admin` role. Use Send, not
+Runner: each scenario arms one fault for the next settlement, and arming an
+operation again replaces its fault. After a demo whose fault was not used, send the
+Defuse requests.
