@@ -21,9 +21,12 @@ max_prepared_transactions=64 is consistent on all nodes. With no eligible sync
 standby, writes block and must be bounded by clients; availability is deliberately
 traded for replicated acknowledgements. No unconditional zero-loss claim.
 
-HAProxy checks /primary and /replica. Its writer backend uses inter3s/fall3/rise2
-and on-marked-down shutdown-sessions. Test an old primary that goes silent, not
-only a clean shutdown. There is no automatic replay of uncertain mutations.
+HAProxy checks /primary and /replica. Both backends use inter3s/fall3/rise2
+and on-marked-down shutdown-sessions. Client and server idle timeouts are
+30 minutes so ordinary connection pool idle periods do not reset healthy
+sessions. Services still enforce their own connection and command deadlines.
+Test both a silent old primary and a clean shutdown. There is no automatic
+replay of uncertain mutations.
 
 ## Service behavior
 
