@@ -34,6 +34,9 @@ services:
     image: postgis/postgis:17-3.6-alpine
     restart: unless-stopped
     platform: linux/amd64
+    # Two-phase commit participants (User Management, Tamagotchi, Battle) prepare their part with PREPARE TRANSACTION, which
+    # PostgreSQL refuses while this is 0, its default. The HA overlay sets the same value on every Patroni node.
+    command: ["postgres", "-c", "max_prepared_transactions=64"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
