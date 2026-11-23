@@ -1232,6 +1232,11 @@ the freshness window return `STALE`; observations older than the stored reading
 return `OUT_OF_ORDER`. A timestamp more than 60 seconds ahead returns
 `400 invalid_timestamp`. Refresh shared locations before a demonstration.
 
+With the optional sharded cache enabled, the self-only single-location GET
+reports `X-Cache: HIT` or `MISS` and uses a two-second TTL. Invalidation follows
+committed writes; a concurrent late read fill can remain stale until expiry.
+Nearby queries and encounter/visibility decisions always bypass that cache.
+
 Friends and enemies are visible while their location is fresh. Strangers appear
 within 6 metres, which is configurable.
 
@@ -1265,6 +1270,11 @@ Creation and cancellation require the Guild leader. Attacks require membership
 and a verified user matching `user_id`. Global listing requires a user; a guild
 filter requires membership. User detail/leaderboard reads require membership;
 verified service reads require `raid:read`. Plain identity headers grant no access.
+
+The optional single-raid display cache reports `X-Cache: HIT` or `MISS` with a
+two-second TTL. Membership is rechecked even on hits. Committed mutations and
+occurrence cancellation invalidate it; combat, admission, lists and leaderboards
+use current database state rather than this cached display response.
 
 Creation requires an active occurrence inside its availability window. Raid
 expiry is the earlier of configured duration and `available_until`. Boss

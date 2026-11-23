@@ -52,6 +52,10 @@ class FirstSliceTests(unittest.TestCase):
         self.assertTrue(all(o['public']['access'] == 'user' for o in mapped))
         self.assertFalse(any('internal' in o for o in mapped))
 
+    def test_only_the_single_location_read_exposes_the_map_cache_header(self):
+        mapped = [o for o in self.catalogue['operations'] if o['destination'] == 'map']
+        self.assertEqual(['map.get_location'], [o['name'] for o in mapped if 'x-cache' in o['public']['response_headers']])
+
     def test_ticket_is_typed_gateway_only_volatile_and_unsafe(self):
         ticket = next(o for o in self.catalogue['operations'] if o['name'] == 'guild.issue_chat_ticket')
         self.assertNotIn('public', ticket)
