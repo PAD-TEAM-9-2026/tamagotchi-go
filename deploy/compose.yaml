@@ -164,7 +164,7 @@ services:
 
   # User Management starts before the broker, which reads its keys at startup (contracts/identity.md).
   user-management:
-    image: patriciamoraru/user-management:5.0.0@sha256:bfa40d6cef1e771db5d15401b0020454b8a9b9925e8df271f641a9bd6f3f3a87
+    image: patriciamoraru/user-management:5.0.1@sha256:5990b956362210704de0be4b7eb938b2a81c7cd792da605c29c1a7ca72788886
     restart: unless-stopped
     pull_policy: always
     deploy:
