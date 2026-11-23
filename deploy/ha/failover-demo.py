@@ -113,6 +113,7 @@ def main():
         result['recovery_seconds'] = round(time.monotonic() - started, 3)
         wait_for(lambda: sql('SELECT count(*) FROM pg_prepared_xacts WHERE gid=%s', [gid]) == [[1]])
         sql('COMMIT PREPARED %s', [gid])
+        result['first_successful_write_seconds'] = round(time.monotonic() - started, 3)
         wait_for(lambda: sql('SELECT count(*) FROM ' + table) == [[2]])
         result.update(acknowledged_row_preserved=True, prepared_transaction_preserved=True,
                       prepared_transaction_committed=True)
