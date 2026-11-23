@@ -1,4 +1,4 @@
--- The schema of user-management through its GrantEtlReader migration, one statement block for every migration in order, with the history rows, so a later
+-- The schema of user-management through its AddTxAbortFences migration, one statement block for every migration in order, with the history rows, so a later
 -- `dotnet ef database update` runs cleanly against a volume that was initialized from this file instead of via EF.
 -- Generated from the service's migrations with `dotnet ef migrations script`; regenerate it, never edit it by hand.
 -- A volume that already exists is brought up to date with upgrade.sql in this folder.
@@ -283,5 +283,17 @@ END $$;
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20261121131424_GrantEtlReader', '10.0.12');
+
+COMMIT;
+
+START TRANSACTION;
+CREATE TABLE "TxAbortFences" (
+    "TxId" character varying(150) NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_TxAbortFences" PRIMARY KEY ("TxId")
+);
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20261122192102_AddTxAbortFences', '10.0.12');
 
 COMMIT;
