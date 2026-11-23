@@ -8,8 +8,8 @@
 #
 # `etl`: the ETL service (services/etl). It reads every service database as etl_reader, loads
 # the warehouse at startup and every ETL_INTERVAL_SECONDS, creates the tables and its `etl`
-# bookkeeping schema, and serves the admin run endpoints on loopback port 3011. Until
-# mihaelacatan/etl-service:5.0.0 is published, Compose builds that tag from the submodule.
+# bookkeeping schema, and serves the admin run endpoints on loopback port 3011. The image
+# is pinned by digest (AMD64 and ARM64), built from services/etl at the pinned commit.
 # With the HA overlay, `up.sh lab5` points it at the HA read-only port (pg-haproxy:5001),
 # since that overlay turns the single `database` off; ETL_SOURCE_HOST in .env overrides this.
 services:
@@ -30,8 +30,7 @@ services:
       timeout: 3s
       retries: 20
   etl:
-    image: mihaelacatan/etl-service:5.0.0
-    build: ../services/etl
+    image: mihaelacatan/etl-service:5.0.0@sha256:f056c311fa4affe616a4c9ae49a574f3b7adcae98353dbe67f4131513d5c7bfa
     restart: unless-stopped
     depends_on:
       warehouse:
