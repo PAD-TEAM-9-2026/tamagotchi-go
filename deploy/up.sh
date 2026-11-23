@@ -81,5 +81,16 @@ if [ ! -f .env ]; then
     exit 2
 fi
 
+# The HA overlay turns the single `database` off, so the ETL service reads the service databases
+# from the HA read-only port instead (contracts/database-ha.md), unless .env chooses a source.
+uses() {
+    case " $files " in *" compose.$1.yaml "*) return 0 ;; esac
+    return 1
+}
+if uses ha && uses warehouse && ! grep -Eq '^ETL_SOURCE_HOST=.+' .env; then
+    export ETL_SOURCE_HOST="${ETL_SOURCE_HOST:-pg-haproxy}"
+    export ETL_SOURCE_PORT="${ETL_SOURCE_PORT:-5001}"
+fi
+
 set -- $(for file in $files; do printf -- '-f %s ' "$file"; done) "$@"
 exec docker compose "$@"

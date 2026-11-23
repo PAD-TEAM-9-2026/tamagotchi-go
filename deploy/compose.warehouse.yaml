@@ -10,8 +10,8 @@
 # the warehouse at startup and every ETL_INTERVAL_SECONDS, creates the tables and its `etl`
 # bookkeeping schema, and serves the admin run endpoints on loopback port 3011. Until
 # mihaelacatan/etl-service:5.0.0 is published, Compose builds that tag from the submodule.
-# With the HA overlay, set ETL_SOURCE_HOST=pg-haproxy and ETL_SOURCE_PORT=5001 in .env so it
-# reads from the replicas.
+# With the HA overlay, `up.sh lab5` points it at the HA read-only port (pg-haproxy:5001),
+# since that overlay turns the single `database` off; ETL_SOURCE_HOST in .env overrides this.
 services:
   warehouse:
     image: postgres:17.12-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
