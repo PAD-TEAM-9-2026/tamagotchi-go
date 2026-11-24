@@ -280,7 +280,7 @@ services:
       retries: 24
 
   tamagotchi:
-    image: victoriamutruc/tamagotchi:4.0.1@sha256:ef70dd2bb16b4641e289dc1afef9263510982aacd7944485e056a4eb62fbb6b4
+    image: victoriamutruc/tamagotchi:5.0.0@sha256:c945a4deab73d2aa60d31633f5a65138b64d43e31a8b08ae399608ec83c281a0
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -320,7 +320,7 @@ services:
     healthcheck: *ready-node
 
   notification:
-    image: victoriamutruc/notification:4.0.1@sha256:2e3134baff8003427df2e00ab95d44c190dcf7ec136ee4e9e68581d914542c12
+    image: victoriamutruc/notification:5.0.0@sha256:e288083e6114b8cb508df89f0d37bceea56802d05ffe2b3edda56a765aac411e
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -573,7 +573,7 @@ services:
     healthcheck: *ready-dotnet-8080
 
   gateway:
-    image: victoriamutruc/gateway:4.0.1@sha256:95b977df4c8041b8779e339960fef1224708dfeca38750d70036801621992012
+    image: victoriamutruc/gateway:5.0.0@sha256:0be7ac53d67afba56b50ba4d7b03e7adcebcaba8243bb5ed7a591d50272c2719
     restart: unless-stopped
     pull_policy: always
     <<: *logs
