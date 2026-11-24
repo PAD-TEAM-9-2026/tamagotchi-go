@@ -13,3 +13,6 @@ services:
       FAULT_INJECTION_ENABLED: "true"
     ports:
       - "127.0.0.1:3101-3102:3001"
+  battle:
+    environment:
+      SETTLEMENT_MODE: ${SETTLEMENT_MODE:-2pc}
