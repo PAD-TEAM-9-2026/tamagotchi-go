@@ -1715,17 +1715,17 @@ and role in one PostGIS-enabled PostgreSQL container.
 
 | Service | Image | Digest | Host port |
 |---|---|---|---|
-| Gateway | `victoriamutruc/gateway:4.0.1` | `sha256:95b977df4c8041b8779e339960fef1224708dfeca38750d70036801621992012` | 3000 |
+| Gateway | `victoriamutruc/gateway:5.0.0` | `sha256:0be7ac53d67afba56b50ba4d7b03e7adcebcaba8243bb5ed7a591d50272c2719` | 3000 |
 | Service Discovery | `patriciamoraru/service-discovery:4.0.0` | `sha256:3b2564d5069654f765ad5f90acc7f0a32ef7d73569355aeea35fe59924a1404e` | 3009 (loopback) |
 | Message Broker | `sergedbs/message-broker:4.0.0` | `sha256:2f90a0d797a801d2dbf4a9fe7c3f5f5e8e9f76b1c138a0343063047308ddb8b2` | 3010 (loopback) |
 | User Management | `patriciamoraru/user-management:5.0.1` | `sha256:5990b956362210704de0be4b7eb938b2a81c7cd792da605c29c1a7ca72788886` | internal |
-| Tamagotchi | `victoriamutruc/tamagotchi:4.0.1` | `sha256:ef70dd2bb16b4641e289dc1afef9263510982aacd7944485e056a4eb62fbb6b4` | internal |
+| Tamagotchi | `victoriamutruc/tamagotchi:5.0.0` | `sha256:c945a4deab73d2aa60d31633f5a65138b64d43e31a8b08ae399608ec83c281a0` | internal |
 | Battle | `patriciamoraru/battle:5.0.0` | `sha256:1c07e6d529b40cb3a6e23df653af527110bed1e478df3ac493334acd05a2725b` | internal |
 | Guild | `mihaelacatan/guild-service:5.0.0` | `sha256:14aad0dc97630b0ae4c11635e641bcf6e0949135fef08e3454b0b431724d303a` | internal; socket balancer 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:5.0.0` | `sha256:1ce33681c9af9ca52350f5136fd7e405c75d8d40df533316b55d0ceffd84ebf0` | internal |
 | Map | `sergedbs/map:4.0.1` | `sha256:eeb02a6fad0bd761fed4c82032a18949a8c6399d6ffa8b7ba9b39d0757f3b8f5` | internal |
 | Monster Raid | `sergedbs/monster-raid:4.0.1` | `sha256:4ef141622e2eb82a5d335542d1592867a7113f3f42b4c6af9ee7f13b0bd13bb4` | internal |
-| Notification | `victoriamutruc/notification:4.0.1` | `sha256:2e3134baff8003427df2e00ab95d44c190dcf7ec136ee4e9e68581d914542c12` | internal |
+| Notification | `victoriamutruc/notification:5.0.0` | `sha256:e288083e6114b8cb508df89f0d37bceea56802d05ffe2b3edda56a765aac411e` | internal |
 | ETL Service (`compose.warehouse.yaml`) | `mihaelacatan/etl-service:5.0.0` | `sha256:f056c311fa4affe616a4c9ae49a574f3b7adcae98353dbe67f4131513d5c7bfa` | 3011 (loopback) |
 
 These numeric images are published for AMD64 and ARM64 and pinned by digest.
