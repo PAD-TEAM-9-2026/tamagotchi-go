@@ -1,0 +1,925 @@
+{
+  "info": {
+    "name": "Tamagotchi Go management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Gateway",
+      "item": [
+        {
+          "name": "Probes",
+          "item": [
+            {
+              "name": "Health",
+              "request": {
+                "method": "GET",
+                "url": "{{gateway_base_url}}/health",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ready",
+              "request": {
+                "method": "GET",
+                "url": "{{gateway_base_url}}/ready",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Status",
+              "request": {
+                "method": "GET",
+                "url": "{{gateway_base_url}}/status",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Negotiate Guild socket",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_base_url}}/gateway/v1/ws-negotiate",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demo_credential}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resource\": \"guild.chat\",\n  \"resource_id\": \"{{demo_guild_id}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Ticket returned\", () => pm.expect(pm.response.json().ticket).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Map demo asset",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{gateway_base_url}}/map/demo/index.html"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Asset media type\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"text/html\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HEAD Map demo asset",
+          "request": {
+            "method": "HEAD",
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{gateway_base_url}}/map/demo/app.js"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Asset media type\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"text/javascript\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Discovery",
+      "item": [
+        {
+          "name": "Probes",
+          "item": [
+            {
+              "name": "Health",
+              "request": {
+                "method": "GET",
+                "url": "{{discovery_url}}/health",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ready",
+              "request": {
+                "method": "GET",
+                "url": "{{discovery_url}}/ready",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Status",
+              "request": {
+                "method": "GET",
+                "url": "{{discovery_url}}/status",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "List services",
+          "request": {
+            "method": "GET",
+            "url": "{{discovery_url}}/v1/services",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"services list\", () => pm.expect(pm.response.json().services).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List routable instances",
+          "request": {
+            "method": "GET",
+            "url": "{{discovery_url}}/v1/services/{{discovery_service_name}}/instances?routable=true",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"instances list\", () => pm.expect(pm.response.json().instances).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get registered instance",
+          "request": {
+            "method": "GET",
+            "url": "{{discovery_url}}/v1/instances/{{discovery_instance_id}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Matches requested ID\", () => pm.expect(pm.response.json().instance_id).to.eql(pm.variables.get(\"discovery_instance_id\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List failure windows",
+          "request": {
+            "method": "GET",
+            "url": "{{discovery_url}}/v1/failures",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"windows list\", () => pm.expect(pm.response.json().windows).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Disposable registration lifecycle",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.get(\"discovery_url\");",
+                  "if (pm.environment.get(\"management_fixture_writes\") !== \"true\" ||",
+                  "    !/^http:\\/\\/(?:localhost|127\\.0\\.0\\.1|\\[::1\\]):[0-9]+$/.test(base)) {",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "item": [
+            {
+              "name": "Register disposable instance",
+              "request": {
+                "method": "POST",
+                "url": "{{discovery_url}}/v1/instances",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"instance_id\": \"{{discovery_fixture_id}}\",\n  \"service_name\": \"postman-fixture\",\n  \"host\": \"service-discovery\",\n  \"port\": 3009,\n  \"status_path\": \"/status\",\n  \"version\": \"1.0.0\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Report one failure for disposable instance",
+              "request": {
+                "method": "POST",
+                "url": "{{discovery_url}}/v1/instances/{{discovery_fixture_id}}/failures",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reporter\": \"postman-fixture\",\n  \"reason\": \"connection_error\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 202\", () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Deregister disposable instance",
+              "request": {
+                "method": "DELETE",
+                "url": "{{discovery_url}}/v1/instances/{{discovery_fixture_id}}",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Broker",
+      "item": [
+        {
+          "name": "Probes",
+          "item": [
+            {
+              "name": "Health",
+              "request": {
+                "method": "GET",
+                "url": "{{broker_admin_url}}/health",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ready",
+              "request": {
+                "method": "GET",
+                "url": "{{broker_admin_url}}/ready",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Status",
+              "request": {
+                "method": "GET",
+                "url": "{{broker_admin_url}}/status",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "List topics",
+          "request": {
+            "method": "GET",
+            "url": "{{broker_admin_url}}/v1/topics?limit=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List dead letters",
+          "request": {
+            "method": "GET",
+            "url": "{{broker_admin_url}}/v1/dead-letters?limit=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download recent logs",
+          "request": {
+            "method": "GET",
+            "url": "{{broker_admin_url}}/v1/logs/download?service=message-broker",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"ZIP response\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/zip\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List transactions",
+          "request": {
+            "method": "GET",
+            "url": "{{broker_admin_url}}/v1/transactions?limit=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"items list\", () => pm.expect(pm.response.json().items).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get transaction",
+          "request": {
+            "method": "GET",
+            "url": "{{broker_admin_url}}/v1/transactions/{{coordinator_transaction_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Matches requested ID\", () => pm.expect(pm.response.json().transaction_id).to.eql(pm.variables.get(\"coordinator_transaction_id\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List sagas",
+          "request": {
+            "method": "GET",
+            "url": "{{broker_admin_url}}/v1/sagas?limit=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"items list\", () => pm.expect(pm.response.json().items).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get saga",
+          "request": {
+            "method": "GET",
+            "url": "{{broker_admin_url}}/v1/sagas/{{coordinator_saga_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Matches requested ID\", () => pm.expect(pm.response.json().saga_id).to.eql(pm.variables.get(\"coordinator_saga_id\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refuse anonymous transaction list",
+          "request": {
+            "method": "GET",
+            "url": "{{broker_admin_url}}/v1/transactions",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ETL",
+      "item": [
+        {
+          "name": "Probes",
+          "item": [
+            {
+              "name": "Health",
+              "request": {
+                "method": "GET",
+                "url": "{{etl_url}}/health",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ready",
+              "request": {
+                "method": "GET",
+                "url": "{{etl_url}}/ready",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Status",
+              "request": {
+                "method": "GET",
+                "url": "{{etl_url}}/status",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "List warehouse runs",
+          "request": {
+            "method": "GET",
+            "url": "{{etl_url}}/v1/etl/runs?limit=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"items list\", () => pm.expect(pm.response.json().items).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get warehouse run",
+          "request": {
+            "method": "GET",
+            "url": "{{etl_url}}/v1/etl/runs/{{etl_run_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Matches requested ID\", () => pm.expect(pm.response.json().run_id).to.eql(pm.variables.get(\"etl_run_id\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refuse anonymous warehouse history",
+          "request": {
+            "method": "GET",
+            "url": "{{etl_url}}/v1/etl/runs",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start a fixture warehouse run",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.get(\"etl_url\");",
+                  "if (pm.environment.get(\"management_fixture_writes\") !== \"true\" ||",
+                  "    !/^http:\\/\\/(?:localhost|127\\.0\\.0\\.1|\\[::1\\]):[0-9]+$/.test(base)) {",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "item": [
+            {
+              "name": "Start warehouse run",
+              "request": {
+                "method": "POST",
+                "url": "{{etl_url}}/v1/etl/runs",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_credential}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP 202\", () => pm.response.to.have.status(202));",
+                      "pm.test(\"Run is running\", () => pm.expect(pm.response.json().status).to.eql(\"RUNNING\"));",
+                      "pm.environment.set(\"etl_run_id\", pm.response.json().run_id);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

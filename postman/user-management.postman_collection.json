@@ -74,6 +74,147 @@
   ],
   "item": [
     {
+      "name": "Session and scoped tokens",
+      "item": [
+        {
+          "name": "Start dedicated refresh session",
+          "request": {
+            "method": "POST",
+            "url": "{{user_management_base_url}}/v1/users/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{auth_fixture_email}}\",\n  \"password\": \"{{auth_fixture_password}}\",\n  \"package_id\": \"{{auth_fixture_package_id}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.variables.set(\"auth_fixture_refresh\", pm.response.json().refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rotate refresh token",
+          "request": {
+            "method": "POST",
+            "url": "{{user_management_base_url}}/v1/auth/refresh",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{auth_fixture_refresh}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Token rotates\", () => pm.expect(pm.response.json().refresh_token).to.be.a(\"string\").and.not.eql(pm.variables.get(\"auth_fixture_refresh\")));",
+                  "pm.test(\"Credentials are not cached\", () => pm.expect(pm.response.headers.get(\"Cache-Control\")).to.include(\"no-store\"));",
+                  "pm.variables.set(\"auth_fixture_refresh\", pm.response.json().refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revoke refresh session",
+          "request": {
+            "method": "POST",
+            "url": "{{user_management_base_url}}/v1/auth/logout",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{auth_fixture_refresh}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Issue scoped service token as admin",
+          "request": {
+            "method": "POST",
+            "url": "{{user_management_base_url}}/v1/service-tokens",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_credential}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service_name\": \"map\",\n  \"audience\": \"user-management\",\n  \"scopes\": [\n    \"users:read-relationships\"\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Service access token returned\", () => pm.expect(pm.response.json().access_token).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Probes",
       "item": [
         {

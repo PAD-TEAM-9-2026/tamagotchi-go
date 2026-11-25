@@ -1,6 +1,7 @@
 # Postman collections
 
-Import the eight service test collections, optional demo collection and `tamagotchi-go.postman_environment.json`.
+Import the eight service test collections, `management.postman_collection.json`
+and `tamagotchi-go.postman_environment.json`. The demo collection is optional.
 Select the **Tamagotchi Go Local** environment. The published stack
 (`deploy/compose.yaml`) exposes the Gateway on port 3000, the Guild socket
 ingress on 3004, Discovery on 127.0.0.1:3009 and the Broker on 127.0.0.1:3010.
@@ -11,12 +12,28 @@ service prefixes (`/users`, `/tamagotchi`, `/battle`, `/guild`, `/registry`,
 instances from Discovery: Health needs a registered instance and Readiness a
 healthy routable one.
 
-The collections contain only operations whose catalogue entry in
-`contracts/operations.v1.json` has a `public` section. Service-only operations,
+The service collections cover the public mappings in
+`contracts/operations.v1.json` and check service status via Discovery. Service-only operations,
 such as currency credits, relationship checks, XP awards, engagements, holder
 grants, Registry configuration reads and Guild chat tickets, run service to
 service through the Broker. The Gateway does not expose them and answers
 `404 unknown_route`, so they are not in the collections.
+
+The management collection uses direct loopback URLs for Discovery, Broker and
+ETL, plus Gateway's probes, Guild negotiation and Map demo assets. Provide
+`admin_credential` for Broker and ETL reads, a Guild member's
+`demo_credential` and `demo_guild_id` for negotiation, and real IDs from the
+list responses for instance, transaction, saga and ETL detail requests. ETL
+requires the warehouse overlay. Run the disposable Discovery registration and
+ETL start folders separately on a fixture stack with
+`management_fixture_writes=true`. Use a fresh `discovery_fixture_id` for each
+registration sequence and run its deregistration request at the end.
+
+Run User Management's **Session and scoped tokens** folder in the Collection
+Runner. Supply `auth_fixture_email`, `auth_fixture_password` and
+`auth_fixture_package_id` for a dedicated player. The login, rotation and
+logout use one run-local refresh token. The service-token request uses
+`admin_credential` and the existing Map relationship grant.
 
 Map uses two real dedicated test accounts: set `map_user_id`, `map_credential`,
 `map_neighbor_id` and `map_neighbor_credential` to matching user IDs and bearer
@@ -107,10 +124,9 @@ package with a configured starter and the documented care rules (FEED adds
 20 hunger and 5 XP). Do not select a package merely because it is active;
 Registry edit scenarios may leave active packages without starter definitions.
 
-XP awards, engagements and holder grants are service-only, so the Tamagotchi
-collection no longer fetches a Battle service token. Its holder and collection
-requests that expect the rival to co-hold the owner's creature need a grant that
-only a finished battle makes; with fresh users they fail.
+The Tamagotchi collection uses public Battle settlement to establish the
+co-holder fixture. Supply a distinct `tamagotchi_secondary_package_id` with
+a configured starter and keep the Battle coordinator available for this run.
 
 ## Lab 5: Tamagotchi and Notification
 
