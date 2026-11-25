@@ -34,7 +34,7 @@ Each service has its own private repository. They are linked here as submodules.
 | Gateway | `services/gateway` | Shared by the team |
 | Service Discovery | `services/service-discovery` | Shared by the team |
 | Message Broker | `services/message-broker` | Shared by the team |
-| ETL Service | `services/etl` | Mihaela |
+| ETL Service | `services/etl` | Shared by the team |
 
 
 ## Service boundaries
