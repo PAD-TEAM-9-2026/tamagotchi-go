@@ -405,9 +405,30 @@
                   "  pm.expect(body.status).to.eql('COMPLETED');",
                   "  pm.expect(body.loser_id).to.eql(pm.collectionVariables.get('challenger_id'));",
                   "  pm.expect(body.winner_id).to.eql(pm.collectionVariables.get('opponent_id'));",
-                  "  pm.expect(body.settlement_status).to.eql('DELIVERED');",
-                  "  pm.expect(body.access_grant_status).to.eql('GRANTED');",
-                  "});"
+                  "});",
+                  "if (pm.response.code !== 200) return;",
+                  "const initial = pm.response.json();",
+                  "const url = pm.variables.replaceIn('{{battle_base_url}}/v1/battles/{{battle_id}}');",
+                  "const authorization = 'Bearer ' + pm.variables.get('challenger_credential');",
+                  "const deadline = Date.now() + 30000;",
+                  "async function waitForSettlement() {",
+                  "  let battle = initial;",
+                  "  while (battle.settlement_status === 'PENDING' && Date.now() < deadline) {",
+                  "    await new Promise((resolve) => setTimeout(resolve, 500));",
+                  "    const reply = await new Promise((resolve, reject) => {",
+                  "      pm.sendRequest({url, method: 'GET', header: {Authorization: authorization}}, (error, response) => {",
+                  "        if (error) reject(error); else resolve(response);",
+                  "      });",
+                  "    });",
+                  "    pm.expect(reply.code, 'battle status read').to.eql(200);",
+                  "    battle = reply.json();",
+                  "  }",
+                  "  pm.test('settlement delivers and grants access', () => {",
+                  "    pm.expect(battle.settlement_status).to.eql('DELIVERED');",
+                  "    pm.expect(battle.access_grant_status).to.eql('GRANTED');",
+                  "  });",
+                  "}",
+                  "waitForSettlement().catch((error) => { pm.test('settlement status is readable', () => { throw error; }); });"
                 ]
               }
             }

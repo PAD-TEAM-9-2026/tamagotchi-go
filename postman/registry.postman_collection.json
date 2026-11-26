@@ -233,13 +233,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{registry_base_url}}/v1/packages?limit=10",
+              "raw": "{{registry_base_url}}/v1/packages",
               "host": [
                 "{{registry_base_url}}"
               ],
               "path": [
                 "v1",
-                "packages?limit=10"
+                "packages"
               ]
             }
           },
