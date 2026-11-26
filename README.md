@@ -1764,9 +1764,9 @@ and role in one PostGIS-enabled PostgreSQL container.
 | Gateway | `victoriamutruc/gateway:5.0.1` | `sha256:ce5812e5a48b2693d1657fb356aaa867d3bc959da90287e0e8661f042abf50b2` | 3000 |
 | Service Discovery | `patriciamoraru/service-discovery:5.0.0` | `sha256:137d59732f1b8df100ee386d5923cdbaf397693769b8cc152fb4484b3ae9682b` | 3009 (loopback) |
 | Message Broker | `sergedbs/message-broker:5.0.0` | `sha256:a6b6f36d7aff11c3ccf00283752d1779123431c7e364647969918a4f50e4db09` | 3010 (loopback) |
-| User Management | `patriciamoraru/user-management:5.0.1` | `sha256:5990b956362210704de0be4b7eb938b2a81c7cd792da605c29c1a7ca72788886` | internal |
+| User Management | `patriciamoraru/user-management:5.0.2` | `sha256:9810adac62bc4f1b17faf0eee481dd60eb3fff131b4afad68567c56254e0cc9c` | internal |
 | Tamagotchi | `victoriamutruc/tamagotchi:5.0.0` | `sha256:c945a4deab73d2aa60d31633f5a65138b64d43e31a8b08ae399608ec83c281a0` | internal |
-| Battle | `patriciamoraru/battle:5.0.0` | `sha256:1c07e6d529b40cb3a6e23df653af527110bed1e478df3ac493334acd05a2725b` | internal |
+| Battle | `patriciamoraru/battle:5.0.1` | `sha256:91184d8f6d2a0bc746a8608bba21ed913b479b6ca7bc92967921c89a2eea95f4` | internal |
 | Guild | `mihaelacatan/guild-service:5.0.0` | `sha256:14aad0dc97630b0ae4c11635e641bcf6e0949135fef08e3454b0b431724d303a` | internal; socket balancer 3004 |
 | Package Registry | `mihaelacatan/package-registry-service:5.0.0` | `sha256:1ce33681c9af9ca52350f5136fd7e405c75d8d40df533316b55d0ceffd84ebf0` | internal |
 | Map | `sergedbs/map:5.0.0` | `sha256:afe5d46219fd928b08175c26d386d40879742cb6f4c4d9263dea2a74962261ca` | internal |
