@@ -134,7 +134,7 @@ services:
       - notification-logs:/owned/notification
 
   service-discovery:
-    image: patriciamoraru/service-discovery:4.0.0@sha256:3b2564d5069654f765ad5f90acc7f0a32ef7d73569355aeea35fe59924a1404e
+    image: patriciamoraru/service-discovery:5.0.0@sha256:137d59732f1b8df100ee386d5923cdbaf397693769b8cc152fb4484b3ae9682b
     restart: unless-stopped
     pull_policy: always
     <<: *logs
@@ -217,7 +217,7 @@ services:
       retries: 12
 
   message-broker:
-    image: sergedbs/message-broker:4.0.0@sha256:2f90a0d797a801d2dbf4a9fe7c3f5f5e8e9f76b1c138a0343063047308ddb8b2
+    image: sergedbs/message-broker:5.0.0@sha256:a6b6f36d7aff11c3ccf00283752d1779123431c7e364647969918a4f50e4db09
     restart: unless-stopped
     pull_policy: always
     <<: *logs
@@ -499,7 +499,7 @@ services:
       retries: 12
 
   map:
-    image: sergedbs/map:4.0.1@sha256:eeb02a6fad0bd761fed4c82032a18949a8c6399d6ffa8b7ba9b39d0757f3b8f5
+    image: sergedbs/map:5.0.0@sha256:afe5d46219fd928b08175c26d386d40879742cb6f4c4d9263dea2a74962261ca
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -537,7 +537,7 @@ services:
     healthcheck: *ready-dotnet-8080
 
   monster-raid:
-    image: sergedbs/monster-raid:4.0.1@sha256:4ef141622e2eb82a5d335542d1592867a7113f3f42b4c6af9ee7f13b0bd13bb4
+    image: sergedbs/monster-raid:5.0.0@sha256:3d7d845c4b0bcc074c4e9349eaf926349a10563fa7c1ca9659f1bdf5b8980fb2
     restart: unless-stopped
     pull_policy: always
     deploy:
@@ -573,7 +573,7 @@ services:
     healthcheck: *ready-dotnet-8080
 
   gateway:
-    image: victoriamutruc/gateway:5.0.0@sha256:0be7ac53d67afba56b50ba4d7b03e7adcebcaba8243bb5ed7a591d50272c2719
+    image: victoriamutruc/gateway:5.0.1@sha256:ce5812e5a48b2693d1657fb356aaa867d3bc959da90287e0e8661f042abf50b2
     restart: unless-stopped
     pull_policy: always
     <<: *logs

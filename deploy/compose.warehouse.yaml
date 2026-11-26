@@ -30,7 +30,7 @@ services:
       timeout: 3s
       retries: 20
   etl:
-    image: mihaelacatan/etl-service:5.0.0@sha256:f056c311fa4affe616a4c9ae49a574f3b7adcae98353dbe67f4131513d5c7bfa
+    image: mihaelacatan/etl-service:5.0.1@sha256:92f022507350b843faf7a227bf32c786fd7caafc11d1c43f99a1a1fd74fe610c
     restart: unless-stopped
     depends_on:
       warehouse:
